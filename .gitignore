@@ -1,0 +1,9 @@
+# dot files and directories
+.idea/
+.DS_Store
+
+# Packaging related files
+MANIFEST
+build/
+dist/
+big_fish.egg-info/
