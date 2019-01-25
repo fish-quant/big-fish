@@ -1,4 +1,4 @@
-# dot files and directories
+# Dot files
 .idea/
 .DS_Store
 
@@ -7,3 +7,6 @@ MANIFEST
 build/
 dist/
 big_fish.egg-info/
+
+# Notebooks
+notebooks/

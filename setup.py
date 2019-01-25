@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -56,4 +55,3 @@ setup(name='big-fish',
       install_requires=REQUIRES,
       classifiers=CLASSIFIERS
       )
-
