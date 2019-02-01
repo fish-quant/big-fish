@@ -51,7 +51,7 @@ setup(name='big-fish',
       url='https://github.com/Henley13/big-fish',
       packages=find_packages(),
       license='MIT',
-      python_requires='>=3.6.8',
+      python_requires='>=3.6.0',
       install_requires=REQUIRES,
       classifiers=CLASSIFIERS
       )
