@@ -9,4 +9,10 @@ dist/
 big_fish.egg-info/
 
 # Notebooks
-notebooks/
+notebooks/*
+
+# Data
+data/*
+
+# Cache
+__pycache__/

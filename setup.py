@@ -14,6 +14,7 @@ DESCRIPTION = 'Toolbox for cell FISH images.'
 REQUIRES = [
       'numpy',
       'scikit-learn',
+      'scikit-image',
       'scipy',
       'tensorflow',
       'matplotlib'
