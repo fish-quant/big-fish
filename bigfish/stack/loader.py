@@ -28,24 +28,11 @@ def read_tif(path):
     Returns
     -------
     tensor : ndarray, np.float32
-        A 5-d tensor with shape (round, channel, z, y, x). Usually with smFISH
-        images there is only one round.
+        A 2-d or 3-d tensor with spatial dimensions.
 
     """
     # read image
-    image = io.imread(path)
-
-    # build the 5-d tensor
-    if image.ndim == 3:
-        # we had the round and the channel dimensions
-        tensor = image[np.newaxis, np.newaxis, :, :, :]
-    elif image.ndim == 2:
-        # we had the round, the channel and the z dimensions
-        tensor = image[np.newaxis, np.newaxis, np.newaxis, :, :]
-    else:
-        # we raise an error otherwise
-        raise ValueError("Image should be in 2-d or 3-d. A {0}-d image is not "
-                         "processed yet.".format(len(image.shape)))
+    tensor = io.imread(path)
 
     # cast the tensor as np.float32 and normalize it between 0 and 1
     if isinstance(tensor, np.unsignedinteger):
