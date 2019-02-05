@@ -12,7 +12,8 @@ big_fish.egg-info/
 notebooks/*
 
 # Data
-data/*
+data/input/*
+data/output/*
 
 # Cache
 __pycache__/
