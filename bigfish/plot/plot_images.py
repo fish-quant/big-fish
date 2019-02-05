@@ -7,8 +7,8 @@ Function to plot 2-d images.
 import matplotlib.pyplot as plt
 
 
-def plot_yx(tensor, round=0, channel=0, z=0, title=None, path_output=None,
-            ext="png"):
+def plot_yx(tensor, round=0, channel=0, z=0, title=None, framesize=(15, 15),
+            path_output=None, ext="png"):
     """Plot the selected x and Y dimensions of an image.
 
     Parameters
@@ -24,6 +24,8 @@ def plot_yx(tensor, round=0, channel=0, z=0, title=None, path_output=None,
         Indice of the z slice to keep.
     title : str
         Title of the image.
+    framesize : tuple
+        Size of the frame used to plot (plt.figure(figsize=framesize).
     path_output : str
         Path to save the image (without extension).
     ext : str or list
@@ -32,8 +34,6 @@ def plot_yx(tensor, round=0, channel=0, z=0, title=None, path_output=None,
 
     Returns
     -------
-    xy_tensor : np.ndarray, np.float32
-        The 2-d tensor plotted.
 
     """
     # get the 2-d tensor
@@ -48,7 +48,7 @@ def plot_yx(tensor, round=0, channel=0, z=0, title=None, path_output=None,
                          .format(tensor.shape))
 
     # plot
-    plt.figure(figsize=(15, 15))
+    plt.figure(figsize=framesize)
     plt.imshow(xy_tensor)
     if title is not None:
         plt.title(title, fontweight="bold", fontsize=25)
@@ -67,5 +67,5 @@ def plot_yx(tensor, round=0, channel=0, z=0, title=None, path_output=None,
             Warning("Plot is not saved because the extension is not valid: "
                     "{0}.".format(ext))
 
-    return xy_tensor
+    return
 
