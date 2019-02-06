@@ -5,7 +5,6 @@ Function used to read data from various sources and store them in a
 multidimensional tensor (np.ndarray) or a dataframe (pandas.DataFrame).
 """
 
-import os
 import pickle
 
 import numpy as np
@@ -17,8 +16,8 @@ from skimage import io, img_as_float32
 def read_tif(path):
     """Read an image with the .tif or .tiff extension.
 
-    The input image should be in 2-d or 3-d, with unsigned integer. The output
-    tensor is normalized between 0 and 1.
+    The input image should be in 2-d or 3-d, with unsigned integer 16 bits.
+    The output tensor is normalized between 0 and 1.
 
     Parameters
     ----------
@@ -35,7 +34,7 @@ def read_tif(path):
     tensor = io.imread(path)
 
     # cast the tensor as np.float32 and normalize it between 0 and 1
-    if isinstance(tensor, np.unsignedinteger):
+    if isinstance(tensor, np.ndarray) and tensor.dtype == np.uint16:
         tensor = img_as_float32(tensor)
     else:
         raise TypeError("{0} is not supported yet. Use unsigned integer "
@@ -114,68 +113,6 @@ def read_rna_json(path):
                              .format(col))
 
     return df
-
-
-def build_simulated_dataset(path_cell, path_rna, path_output=None):
-    """Build a dataset from the simulated coordinates of the nucleus, the
-    cytoplasm and the RNA.
-
-    Parameters
-    ----------
-    path_cell : str
-        Path of the json file with the 2D nucleus and cytoplasm coordinates
-        used by FishQuant to simulate the data.
-    path_rna : str
-        Path of the json file with the 3D RNA localization simulated by
-        FishQuant. If it is the path of a folder, all its json files will be
-        aggregated.
-    path_output : str
-        Path of the output file with the merged dataset. The final dataframe is
-        serialized and store in a pickle file.
-
-    Returns
-    -------
-    df : pandas.DataFrame
-        Dataframe with all the simulated cells, the coordinates of their
-        different elements and the localization pattern used to simulate them.
-    df_cell : pandas.DataFrame
-        Dataframe with the 2D coordinates of the nucleus and the cytoplasm of
-        actual cells used to simulate data.
-    df_rna : pandas.DataFrame
-        Dataframe with 3D coordinates of the simulated RNA, localization
-        pattern used to simulate them and its strength.
-
-    """
-    # read the cell data (nucleus + cytoplasm)
-    df_cell = read_cell_json(path_cell)
-    print("data cell: {0}".format(df_cell.shape))
-
-    # read the RNA data
-    if os.path.isdir(path_rna):
-        # we concatenate all the json file in the folder
-        simulations = []
-        for filename in os.listdir(path_rna):
-            if ".json" in filename:
-                path = os.path.join(path_rna, filename)
-                df_ = read_rna_json(path)
-                simulations.append(df_)
-        df_rna = pd.concat(simulations)
-        df_rna.reset_index(drop=True, inplace=True)
-
-    else:
-        # we directly read the json file
-        df_rna = read_rna_json(path_rna)
-    print("data rna: {0}".format(df_rna.shape))
-
-    # merge the dataframe
-    df = pd.merge(df_rna, df_cell, on="name_img_BGD")
-    print("data: {0}".format(df.shape))
-
-    # save output
-    if path_output is not None:
-        df.to_pickle(path_output)
-
-    return df, df_cell, df_rna
 
 
 def read_pickle(path):
