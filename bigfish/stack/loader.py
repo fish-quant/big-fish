@@ -10,14 +10,13 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from skimage import io, img_as_float32
+from skimage import io
 
 
 def read_tif(path):
     """Read an image with the .tif or .tiff extension.
 
     The input image should be in 2-d or 3-d, with unsigned integer 16 bits.
-    The output tensor is normalized between 0 and 1.
 
     Parameters
     ----------
@@ -26,19 +25,17 @@ def read_tif(path):
 
     Returns
     -------
-    tensor : ndarray, np.float32
+    tensor : ndarray, np.uint16
         A 2-d or 3-d tensor with spatial dimensions.
 
     """
     # read image
     tensor = io.imread(path)
 
-    # cast the tensor as np.float32 and normalize it between 0 and 1
-    if isinstance(tensor, np.ndarray) and tensor.dtype == np.uint16:
-        tensor = img_as_float32(tensor)
-    else:
-        raise TypeError("{0} is not supported yet. Use unsigned integer "
-                        "instead".format(tensor.dtype))
+    # check the image is in unsigned integer 16 bits
+    if not isinstance(tensor, np.ndarray) or tensor.dtype != np.uint16:
+        raise TypeError("{0} is not supported yet. Use unsigned integer 16 "
+                        "bits instead".format(tensor.dtype))
 
     return tensor
 
