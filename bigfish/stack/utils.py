@@ -93,10 +93,10 @@ def _check_dtype_array(array, dtype):
 
     # check the dtype of the array
     for dtype_expected in dtype:
-        if isinstance(array, dtype_expected):
+        if array.dtype == dtype_expected:
             return
     raise TypeError("{0} is not supported yet. Use one of those dtypes "
-                    "instead {1}.".format(array.dtype, dtype))
+                    "instead: {1}.".format(array.dtype, dtype))
 
 
 def _check_dim_array(array, ndim):
