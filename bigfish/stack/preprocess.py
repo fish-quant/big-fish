@@ -9,12 +9,16 @@ import os
 import numpy as np
 import pandas as pd
 
-from bigfish.stack.loader import read_tif, read_cell_json, read_rna_json
+from .loader import read_tif, read_cell_json, read_rna_json
+from .utils import check_array
 
 from skimage import img_as_ubyte, img_as_float32
 from skimage.morphology.selem import square
 from skimage.filters import rank
+from skimage.exposure import rescale_intensity
 
+
+# ### Simulated data ###
 
 def build_simulated_dataset(path_cell, path_rna, path_output=None):
     """Build a dataset from the simulated coordinates of the nucleus, the
@@ -78,23 +82,79 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
     return df, df_cell, df_rna
 
 
-
-
-
+# ### Real data ###
 
 def build_stack(recipe, input_folder, input_dimension=None):
-    """
+    """Build a 5-d tensor from the same field of view (fov).
+
+    The function stacks a set of images using a recipe mapping the
+    different images with the dimensions they represent. Each stacking step
+    add a new dimension to the original tensors (eg. we stack 2-d images with
+    the same xy coordinates, but different depths to get a 3-d image). If the
+    files we need to build a new dimension are not included in the
+    recipe, an empty dimension is added. This operation is repeated until we
+    get a 5-d tensor. We first operate on the z dimension, then the
+    channels and eventually the rounds.
+
+    The recipe dictionary for one field of view takes the form:
+
+        {
+         "fov": str,
+         "z": List[str],
+         "c": List[str],
+         "r": List[str],
+         "ext": str
+         }
+
+    - A field of view is defined by an ID common to every images belonging to
+    the field of view ("fov").
+    - At least every images are in 2-d with x and y dimensions. So we need to
+    mention the round-dimension, the channel-dimension and the z-dimension to
+    add ("r", "c" and "z"). For these keys, we provide a list of
+    strings to identify the images to stack. By default, we assume the filename
+    fit the pattern fov_z_c_r.tif.
+    - An extra information to identify the files to stack in the input folder
+    can be provided with the file extension "ext" (usually 'tif' or 'tiff').
+
+    # TODO generalize with different filename patterns
+    # TODO allow a recipe without 'ext'
+
+    For example, let us assume 3-d images (zyx dimensions) saved as
+    "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
+    morpheme "r03c03f01" uniquely identifies a 3-d field of view. The second
+    morphemes "405", "488" and "561" identify three different channels we
+    want to stack. There is no round in this experiment. Thus, the recipe is:
+
+        {
+         "fov": "r03c03f01",
+         "c": ["405", "488", "561"],
+         "ext": "tif"
+         }
+
+    The function should return a tensor with shape (1, 3, z, y, x).
+
+    # TODO manage the order of the channel
 
     Parameters
     ----------
-    recipe
-    input_folder
-    input_dimension
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
+    input_folder : str
+        Path of the folder containing the images.
+    input_dimension : str
+        Number of dimensions of the loaded files.
 
     Returns
     -------
+    tensor : np.ndarray, np.uint
+        Tensor with shape (r, c, z, y, x).
 
     """
+    # check recipe
+    check_recipe(recipe)
+
+    # if the initial dimension of the files is unknown, we read one of them
     if input_dimension is None:
         fov_str = recipe["fov"]
         ext_str = "." + recipe["ext"]
@@ -102,18 +162,22 @@ def build_stack(recipe, input_folder, input_dimension=None):
                      for filename in os.listdir(input_folder)
                      if fov_str in filename and ext_str in filename]
         path = os.path.join(input_folder, filenames[0])
-        test = read_tif(path)
-        input_dimension = test.ndim
+        testfile = read_tif(path)
+        input_dimension = testfile.ndim
 
+    # we stack our files according to their initial dimension
     if input_dimension == 2:
         stack = _build_stack_from_2d(recipe, input_folder)
     elif input_dimension == 3:
         stack = _build_stack_from_3d(recipe, input_folder)
     elif input_dimension == 4:
         stack = _build_stack_from_4d(recipe, input_folder)
+    elif input_dimension == 5:
+        stack = _build_stack_from_5d(recipe, input_folder)
     else:
-        # TODO Error message
-        raise ValueError("Blablabla")
+        raise ValueError("Files do not have the right number of dimensions: "
+                         "{0}. The files we stack should be in 2-d, 3-d, 4-d "
+                         "or 5-d.".format(input_dimension))
 
     return stack
 
@@ -131,56 +195,59 @@ def check_recipe(recipe):
     -------
     expected_dimension : int
         The number of dimensions expected in the tensors used with this
-        recipe. A 0 value means the recipe is not valid.
+        recipe.
 
     """
-    expected_dimension = 0
     # check recipe is a dictionary with the "fov" key
-    if not isinstance(recipe, dict) or "fov" not in recipe:
-        return expected_dimension
+    if (not isinstance(recipe, dict)
+            or "fov" not in recipe
+            or "ext" not in recipe):
+        raise Exception("The recipe is not valid.")
 
     # determine the minimum number of dimensions expected for the tensors
-    if ("round" in recipe and isinstance(recipe["round"], list)
-            and len(recipe["round"]) > 0):
-        expected_dimension = 4
-    if ("channel" in recipe and isinstance(recipe["channel"], list)
-            and len(recipe["channel"]) > 0):
-        expected_dimension = 3
+    if ("r" in recipe and isinstance(recipe["r"], list)
+            and len(recipe["r"]) > 0):
+        return 4
+    if ("c" in recipe and isinstance(recipe["c"], list)
+            and len(recipe["c"]) > 0):
+        return 3
     if ("z" in recipe and isinstance(recipe["z"], list)
             and len(recipe["z"]) > 0):
-        expected_dimension = 2
-
-    return expected_dimension
+        return 2
+    raise Exception("The recipe is not valid.")
 
 
 def _extract_recipe(recipe):
-    """
+    """Extract morphemes from the recipe to correctly stack the files.
 
     Parameters
     ----------
-    recipe
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
 
     Returns
     -------
+    l_round : List[str]
+        List of morphemes used to catch the files from the right round.
+    l_channel : List[str]
+        List of morphemes used to catch the files from the right channel.
+    l_z : List[str]
+        List of morphemes used to catch the files from the right z.
 
     """
-    # check recipe
-    expected_dimension = check_recipe(recipe)
-    if expected_dimension == 0:
-        raise Exception("The recipe is not valid")
-
     # we collect the different morphemes we use to identify the images
-    if ("round" in recipe
-            and isinstance(recipe["round"], list)
-            and len(recipe["round"]) > 0):
-        l_round = recipe["round"]
+    if ("r" in recipe
+            and isinstance(recipe["r"], list)
+            and len(recipe["r"]) > 0):
+        l_round = recipe["r"]
     else:
         l_round = [""]
 
-    if ("channel" in recipe
-            and isinstance(recipe["channel"], list)
-            and len(recipe["channel"]) > 0):
-        l_channel = recipe["channel"]
+    if ("c" in recipe
+            and isinstance(recipe["c"], list)
+            and len(recipe["c"]) > 0):
+        l_channel = recipe["c"]
     else:
         l_channel = [""]
 
@@ -191,49 +258,54 @@ def _extract_recipe(recipe):
     else:
         l_z = [""]
 
-    return expected_dimension, l_round, l_channel, l_z
+    return l_round, l_channel, l_z
 
 
 def _build_stack_from_2d(recipe, input_folder):
-    """
+    """Load and stack 2-d tensors.
 
     Parameters
     ----------
-    recipe
-    input_folder
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
+    input_folder : str
+        Path of the folder containing the images.
 
     Returns
     -------
+    tensor_5d : np.ndarray, np.uint
+        Tensor with shape (r, c, z, y, x).
 
     """
     # check we can find the tensors to stack from the recipe
-    expected_dimension, l_round, l_channel, l_z = _extract_recipe(recipe)
+    l_round, l_channel, l_z = _extract_recipe(recipe)
 
-    # stack the images
+    # stack images from the same fov
     fov_str = recipe["fov"]
     ext_str = "." + recipe["ext"]
 
+    # stack 4-d tensors in 5-d
     tensors_4d = []
     for round_str in l_round:
         if round_str != "":
             round_str = "_" + round_str
 
+        # stack 3-d tensors in 4-d
         tensors_3d = []
         for channel_str in l_channel:
             if channel_str != "":
                 channel_str = "_" + channel_str
 
+            # stack 2-d tensors in 3-d
             tensors_2d = []
             for z_str in l_z:
                 if z_str != "":
                     z_str = "_" + z_str
-
                 filename = fov_str + z_str + channel_str + round_str + ext_str
-
                 path = os.path.join(input_folder, filename)
                 tensor_2d = read_tif(path)
                 tensors_2d.append(tensor_2d)
-
             tensor_3d = np.stack(tensors_2d, axis=0)
             tensors_3d.append(tensor_3d)
 
@@ -246,40 +318,44 @@ def _build_stack_from_2d(recipe, input_folder):
 
 
 def _build_stack_from_3d(recipe, input_folder):
-    """
+    """Load and stack 3-d tensors.
 
     Parameters
     ----------
-    recipe
-    input_folder
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
+    input_folder : str
+        Path of the folder containing the images.
 
     Returns
     -------
+    tensor_5d : np.ndarray, np.uint
+        Tensor with shape (r, c, z, y, x).
 
     """
     # check we can find the tensors to stack from the recipe
-    expected_dimension, l_round, l_channel, l_z = _extract_recipe(recipe)
+    l_round, l_channel, l_z = _extract_recipe(recipe)
 
-    # stack the images
+    # stack images from the same fov
     fov_str = recipe["fov"]
     ext_str = "." + recipe["ext"]
 
+    # stack 4-d tensors in 5-d
     tensors_4d = []
     for round_str in l_round:
         if round_str != "":
             round_str = "_" + round_str
 
+        # stack 3-d tensors in 4-d
         tensors_3d = []
         for channel_str in l_channel:
             if channel_str != "":
                 channel_str = "_" + channel_str
-
             filename = fov_str + channel_str + round_str + ext_str
-
             path = os.path.join(input_folder, filename)
             tensor_3d = read_tif(path)
             tensors_3d.append(tensor_3d)
-
         tensor_4d = np.stack(tensors_3d, axis=0)
         tensors_4d.append(tensor_4d)
 
@@ -289,38 +365,100 @@ def _build_stack_from_3d(recipe, input_folder):
 
 
 def _build_stack_from_4d(recipe, input_folder):
-    """
+    """Load and stack 4-d tensors.
 
     Parameters
     ----------
-    recipe
-    input_folder
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
+    input_folder : str
+        Path of the folder containing the images.
 
     Returns
     -------
+    tensor_5d : np.ndarray, np.uint
+        Tensor with shape (r, c, z, y, x).
 
     """
     # check we can find the tensors to stack from the recipe
-    expected_dimension, l_round, l_channel, l_z = _extract_recipe(recipe)
+    l_round, l_channel, l_z = _extract_recipe(recipe)
 
-    # stack the images
+    # stack images from the same fov
     fov_str = recipe["fov"]
     ext_str = "." + recipe["ext"]
 
+    # stack 4-d tensors in 5-d
     tensors_4d = []
     for round_str in l_round:
         if round_str != "":
             round_str = "_" + round_str
-
         filename = fov_str + round_str + ext_str
-
         path = os.path.join(input_folder, filename)
         tensor_4d = read_tif(path)
         tensors_4d.append(tensor_4d)
-
     tensor_5d = np.stack(tensors_4d, axis=0)
 
     return tensor_5d
+
+
+def _build_stack_from_5d(recipe, input_folder):
+    """Load directly a 5-d tensor.
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
+    input_folder : str
+        Path of the folder containing the images.
+
+    Returns
+    -------
+    tensor_5d : np.ndarray, np.uint
+        Tensor with shape (r, c, z, y, x).
+
+    """
+    # stack the images
+    fov_str = recipe["fov"]
+    ext_str = "." + recipe["ext"]
+    filename = fov_str + ext_str
+    path = os.path.join(input_folder, filename)
+    tensor_5d = read_tif(path)
+
+    return tensor_5d
+
+
+# ### Projections 2-d ###
+
+def projection(tensor, method="mip"):
+    """ Project a tensor along the z-dimension.
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.float32
+        A 5-d tensor with shape (r, c, z, y, x).
+    method : str
+        Method used to project ('mip', 'focus').
+
+    Returns
+    -------
+    projected_tensor : np.ndarray, np.float32
+        A 5-d tensor with shape (r, c, 1, y, x).
+
+    """
+    # check tensor dimensions and its dtype
+    check_array(tensor, ndim=5, dtype=np.float32)
+
+    # apply projection along the z-dimension
+    projected_tensor = None
+    if method == "mip":
+        projected_tensor = maximum_projection(tensor)
+    elif method == "focus":
+        # TODO complete focus projection with different strategies
+        raise ValueError("Focus projection is not implemented yet.")
+
+    return projected_tensor
 
 
 def maximum_projection(tensor):
@@ -330,19 +468,14 @@ def maximum_projection(tensor):
     Parameters
     ----------
     tensor : np.ndarray, np.float32
-        A 5-d tensor with shape (round, channel, z, y, x).
+        A 5-d tensor with shape (r, c, z, y, x).
 
     Returns
     -------
     projected_tensor : np.ndarray, np.float32
-        A 5-d tensor with shape (round, channel, 1, y, x).
+        A 5-d tensor with shape (r, c, 1, y, x).
 
     """
-    # check tensor dimensions
-    if tensor.ndim != 5:
-        raise ValueError("Tensor should have 5 dimensions instead of {0}"
-                         .format(tensor.ndim))
-
     # project tensor along the z axis
     projected_tensor = tensor.max(axis=2, keepdims=True)
 
@@ -502,7 +635,8 @@ def one_hot_3d(tensor_2d, depth):
     return one_hot
 
 
-def focus_projection(tensor, channel=0, p=0.75, global_neighborhood_size=30, method="best"):
+def focus_projection(tensor, channel=0, p=0.75, global_neighborhood_size=30,
+                     method="best"):
     """
 
     Parameters
@@ -543,5 +677,61 @@ def focus_projection(tensor, channel=0, p=0.75, global_neighborhood_size=30, met
     return projected_image, ratio, l_focus
 
 
+# ### Normalization ###
 
+def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
+    """Rescale tensor values up to its dtype range.
+
+    Each round and each channel is rescaled independently.
+
+    We can improve the contrast of the image by stretching its range of
+    intensity values. To do that we provide a smaller range of pixel intensity
+    to rescale, spreading out the information contained in the original
+    histogram. Usually, we apply such normalization to smFish channels. Other
+    channels are simply rescale from the minimum and maximum intensity values
+    of the image to those of its dtype.
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint16
+        Tensor to rescale with shape (r, c, z, y, x).
+    channel_to_stretch : int or List[int]
+        Channel to stretch.
+    stretching_percentile : float
+        Percentile to determine the maximum intensity value used to rescale
+        the image.
+
+    Returns
+    -------
+    tensor : np.ndarray, np.uint16
+        Tensor to rescale with shape (r, c, z, y, x).
+
+    """
+    # format 'channel_to_stretch'
+    if channel_to_stretch is None:
+        channel_to_stretch = []
+    elif isinstance(channel_to_stretch, int):
+        channel_to_stretch = [channel_to_stretch]
+
+    # rescale each round independently
+    rounds = []
+    for r in range(tensor.shape[0]):
+
+        # rescale each channel independently
+        channels = []
+        for i in range(tensor.shape[1]):
+            channel = tensor[r, i, :, :, :]
+            if i in channel_to_stretch:
+                pa, pb = np.percentile(channel, (0, stretching_percentile))
+                channel_rescaled = rescale_intensity(channel,
+                                                     in_range=(pa, pb))
+            else:
+                channel_rescaled = rescale_intensity(channel)
+            channels.append(channel_rescaled)
+        tensor_4d = np.stack(channels, axis=0)
+        rounds.append(tensor_4d)
+
+    tensor_5d = np.stack(rounds, axis=0)
+
+    return tensor_5d
 
