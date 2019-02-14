@@ -5,6 +5,7 @@ Functions used to format and clean any input loaded in bigfish.
 """
 
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,8 @@ from skimage import img_as_ubyte, img_as_float32
 from skimage.morphology.selem import square
 from skimage.filters import rank
 from skimage.exposure import rescale_intensity
+
+from scipy.ndimage import gaussian_laplace
 
 
 # ### Simulated data ###
@@ -436,19 +439,19 @@ def projection(tensor, method="mip"):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.float32
+    tensor : np.ndarray, np.uint16
         A 5-d tensor with shape (r, c, z, y, x).
     method : str
         Method used to project ('mip', 'focus').
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.float32
+    projected_tensor : np.ndarray, np.uint16
         A 5-d tensor with shape (r, c, 1, y, x).
 
     """
     # check tensor dimensions and its dtype
-    check_array(tensor, ndim=5, dtype=np.float32)
+    check_array(tensor, ndim=5, dtype=np.uint16)
 
     # apply projection along the z-dimension
     projected_tensor = None
@@ -467,12 +470,12 @@ def maximum_projection(tensor):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.float32
+    tensor : np.ndarray, np.uint16
         A 5-d tensor with shape (r, c, z, y, x).
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.float32
+    projected_tensor : np.ndarray, np.uint16
         A 5-d tensor with shape (r, c, 1, y, x).
 
     """
@@ -735,3 +738,101 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
 
     return tensor_5d
 
+
+def cast_uint8(tensor):
+    """Cast the data in np.uint8.
+
+    Cast data from np.uint16 to np.uint8 reduce the memory needed to process
+    it and accelerate computations.
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint16
+        Tensor to cast with shape (r, c, z, y, x).
+
+    Returns
+    -------
+    tensor : np.ndarray, np.uint8
+        Tensor with shape (r, c, z, y, x).
+
+    """
+    # cast tensor
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        tensor = img_as_ubyte(tensor)
+
+    return tensor
+
+
+def cast_float32(tensor):
+    """Cast the data in np.float32 and scale it between 0 and 1.
+
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Tensor to cast with shape (r, c, z, y, x).
+
+    Returns
+    -------
+    tensor : np.ndarray, np.float32
+        Tensor with shape (r, c, z, y, x).
+
+    """
+    # cast tensor
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        tensor = img_as_float32(tensor)
+
+    return tensor
+
+
+# ### Filters ###
+
+def remove_background(image, filter_size):
+    """
+
+    Parameters
+    ----------
+    image
+    filter_size
+
+    Returns
+    -------
+
+    """
+    # TODO to complete
+    background = rank.mean(image, square(filter_size))
+    mask = image > background
+    image_without_back = np.subtract(image, background,
+                                     out=np.zeros_like(image, dtype=np.uint8),
+                                     where=mask)
+    return image_without_back
+
+
+def log_filter(image, sigma):
+    """Apply a Laplacian of Gaussian filter to a 2-d or 3-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (z, y, x) or (y, x).
+    sigma : float or Tuple(float)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.float32
+        Filtered image
+    """
+    # we cast the data in np.float32 to allow negative values
+    image_float32 = cast_float32(image)
+
+    # we apply LoG filter
+    image_filtered = gaussian_laplace(image_float32, sigma=sigma)
+
+    # as the LoG filter makes the peaks in the original image appear as a
+    # reversed mexican hat, we inverse the result and clip negative values to 0
+    image_filtered = np.clip(-image_filtered, a_min=0, a_max=None)
+
+    return image_filtered
