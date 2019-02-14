@@ -119,9 +119,6 @@ def _check_dim_array(array, ndim):
         ndim = [ndim]
 
     # check the number of dimensions of the array
-    if array.ndim in ndim:
-        return
-    else:
+    if array.ndim not in ndim:
         raise ValueError("Array can't have {0} dimension(s). Expected "
                          "dimensions are: {1}.".format(array.ndim, ndim))
-
