@@ -14,7 +14,7 @@ from .loader import read_tif, read_cell_json, read_rna_json
 from .utils import check_array
 
 from skimage import img_as_ubyte, img_as_float32
-from skimage.morphology.selem import square
+from skimage.morphology.selem import square, diamond, rectangle, disk
 from skimage.filters import rank
 from skimage.exposure import rescale_intensity
 
@@ -434,7 +434,7 @@ def _build_stack_from_5d(recipe, input_folder):
 
 # ### Projections 2-d ###
 
-def projection(tensor, method="mip"):
+def projection(tensor, method="mip", r=0, c=0):
     """ Project a tensor along the z-dimension.
 
     Parameters
@@ -443,20 +443,24 @@ def projection(tensor, method="mip"):
         A 5-d tensor with shape (r, c, z, y, x).
     method : str
         Method used to project ('mip', 'focus').
+    r : int
+        Index of a specific round to project.
+    c : int
+        Index of a specific channel to project.
 
     Returns
     -------
     projected_tensor : np.ndarray, np.uint16
-        A 5-d tensor with shape (r, c, 1, y, x).
+        A 2-d tensor with shape (y, x).
 
     """
     # check tensor dimensions and its dtype
     check_array(tensor, ndim=5, dtype=np.uint16)
 
     # apply projection along the z-dimension
-    projected_tensor = None
+    projected_tensor = tensor[r, c, :, :, :]
     if method == "mip":
-        projected_tensor = maximum_projection(tensor)
+        projected_tensor = maximum_projection(projected_tensor)
     elif method == "focus":
         # TODO complete focus projection with different strategies
         raise ValueError("Focus projection is not implemented yet.")
@@ -471,18 +475,18 @@ def maximum_projection(tensor):
     Parameters
     ----------
     tensor : np.ndarray, np.uint16
-        A 5-d tensor with shape (r, c, z, y, x).
+        A 3-d tensor with shape (z, y, x).
 
     Returns
     -------
     projected_tensor : np.ndarray, np.uint16
-        A 5-d tensor with shape (r, c, 1, y, x).
+        A 2-d tensor with shape (y, x).
 
     """
     # project tensor along the z axis
-    projected_tensor = tensor.max(axis=2, keepdims=True)
+    projected_tensor = tensor.max(axis=0, keepdims=True)
 
-    return projected_tensor
+    return projected_tensor[0]
 
 
 def focus_measurement_2d(image, neighborhood_size):
@@ -807,6 +811,201 @@ def remove_background(image, filter_size):
                                      out=np.zeros_like(image, dtype=np.uint8),
                                      where=mask)
     return image_without_back
+
+
+def _define_kernel(shape, size, dtype):
+    """Build a kernel to apply a filter on images.
+
+    Parameters
+    ----------
+    shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+    dtype : type
+        Dtype used for the kernel (the same as the image).
+
+    Returns
+    -------
+    kernel : skimage.morphology.selem object
+        Kernel to use with a skimage filter.
+
+    """
+    # build the kernel
+    if shape == "diamond":
+        kernel = diamond(size, dtype=dtype)
+    elif shape == "disk":
+        kernel = disk(size, dtype=dtype)
+    elif shape == "rectangle" and isinstance(size, tuple):
+        kernel = rectangle(size[0], size[1], dtype=dtype)
+    elif shape == "square":
+        kernel = square(size, dtype=dtype)
+    else:
+        raise ValueError("Kernel definition is wrong.")
+
+    return kernel
+
+
+def mean_filter(image, kernel_shape, kernel_size):
+    """Apply a mean filter to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (y, x).
+    kernel_shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    kernel_size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.uint16
+        Filtered 2-d image with shape (y, x).
+
+    """
+
+    # get kernel
+    kernel = _define_kernel(shape=kernel_shape,
+                            size=kernel_size,
+                            dtype=image.dtype)
+
+    # apply filter
+    image_filtered = rank.mean(image, kernel)
+
+    return image_filtered
+
+
+def median_filter(image, kernel_shape, kernel_size):
+    """Apply a median filter to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (y, x).
+    kernel_shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    kernel_size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.uint16
+        Filtered 2-d image with shape (y, x).
+
+    """
+
+    # get kernel
+    kernel = _define_kernel(shape=kernel_shape,
+                            size=kernel_size,
+                            dtype=image.dtype)
+
+    # apply filter
+    image_filtered = rank.median(image, kernel)
+
+    return image_filtered
+
+
+def maximum_filter(image, kernel_shape, kernel_size):
+    """Apply a maximum filter to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (y, x).
+    kernel_shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    kernel_size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.uint16
+        Filtered 2-d image with shape (y, x).
+
+    """
+
+    # get kernel
+    kernel = _define_kernel(shape=kernel_shape,
+                            size=kernel_size,
+                            dtype=image.dtype)
+
+    # apply filter
+    image_filtered = rank.maximum(image, kernel)
+
+    return image_filtered
+
+
+def minimum_filter(image, kernel_shape, kernel_size):
+    """Apply a minimum filter to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (y, x).
+    kernel_shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    kernel_size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.uint16
+        Filtered 2-d image with shape (y, x).
+
+    """
+
+    # get kernel
+    kernel = _define_kernel(shape=kernel_shape,
+                            size=kernel_size,
+                            dtype=image.dtype)
+
+    # apply filter
+    image_filtered = rank.minimum(image, kernel)
+
+    return image_filtered
+
+
+def subtract_mean_filter(image, kernel_shape, kernel_size):
+    """Apply a mean filter to a 2-d image and an image subtract from it.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (y, x).
+    kernel_shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    kernel_size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.uint16
+        Filtered 2-d image with shape (y, x).
+
+    """
+
+    # get kernel
+    kernel = _define_kernel(shape=kernel_shape,
+                            size=kernel_size,
+                            dtype=image.dtype)
+
+    # apply filter
+    image_filtered = rank.subtract_mean(image, kernel)
+
+    return image_filtered
 
 
 def log_filter(image, sigma):
