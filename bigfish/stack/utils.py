@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Utility functions.
+Utility functions for bigfish.stack submodule.
 """
 
 import numpy as np
@@ -60,11 +60,11 @@ def check_array(array, ndim=None, dtype=None):
 
     # check the dtype
     if dtype is not None:
-        check_dtype_array(array, dtype)
+        _check_dtype_array(array, dtype)
 
     # check the number of dimension
     if ndim is not None:
-        check_dim_array(array, ndim)
+        _check_dim_array(array, ndim)
 
     # TODO check the order of the dimensions
 
@@ -73,7 +73,7 @@ def check_array(array, ndim=None, dtype=None):
     return
 
 
-def check_dtype_array(array, dtype):
+def _check_dtype_array(array, dtype):
     """Check that a np.ndarray has the right dtype.
 
     Parameters
@@ -99,7 +99,7 @@ def check_dtype_array(array, dtype):
                     "instead {1}.".format(array.dtype, dtype))
 
 
-def check_dim_array(array, ndim):
+def _check_dim_array(array, ndim):
     """Check that the array has the right number of dimensions.
 
     Parameters
