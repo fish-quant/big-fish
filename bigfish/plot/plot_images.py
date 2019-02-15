@@ -42,7 +42,8 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
 
     """
     # check tensor
-    stack.check_array(tensor, ndim=[2, 3, 5], dtype=[np.uint8, np.uint16])
+    stack.check_array(tensor, ndim=[2, 3, 5],
+                      dtype=[np.uint8, np.uint16, np.float32, bool])
 
     # get the 2-d tensor
     xy_tensor = None
@@ -74,6 +75,70 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
                     "{0}.".format(ext))
 
     return
+
+
+def plot_images(images, framesize=(15, 15), path_output=None, ext="png"):
+    """Plot or subplot of 2-d images.
+
+    Parameters
+    ----------
+    images : np.ndarray or List[np.ndarray]
+        Images with shape (y, x).
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+
+    Returns
+    -------
+
+    """
+    # enlist image if necessary
+    if isinstance(images, np.ndarray):
+        images = [images]
+
+    # check images
+    for image in images:
+        stack.check_array(image, ndim=2,
+                          dtype=[np.uint8, np.uint16, np.float32, np.float64,
+                                 bool])
+
+    # we plot 3 images by row maximum
+    nrow = int(np.ceil(len(images)/3))
+    ncol = min(len(images), 3)
+
+    # plot one image
+    if len(images) == 1:
+        plot_yx(images[0], framesize=framesize,
+                path_output=path_output, ext=ext)
+        return
+
+    # plot multiple images
+    fig, ax = plt.subplots(nrow, ncol, figsize=framesize)
+    if len(images) in [2, 3]:
+        for i, image in enumerate(images):
+            ax[i].imshow(image)
+    else:
+        for i, image in enumerate(images):
+            row = i // 3
+            col = i % 3
+            ax[row, col].imshow(image)
+    plt.tight_layout()
+    plt.show()
+
+    # save the plot
+    if path_output is not None:
+        if isinstance(ext, str):
+            plt.savefig(path_output, format=ext)
+        elif isinstance(ext, list):
+            for ext_ in ext:
+                plt.savefig(path_output, format=ext_)
+        else:
+            Warning("Plot is not saved because the extension is not valid: "
+                    "{0}.".format(ext))
 
 
 def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), path_output=None,
