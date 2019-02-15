@@ -15,7 +15,7 @@ from .utils import check_array
 
 from skimage import img_as_ubyte, img_as_float32
 from skimage.morphology.selem import square, diamond, rectangle, disk
-from skimage.filters import rank
+from skimage.filters import rank, gaussian
 from skimage.exposure import rescale_intensity
 
 from scipy.ndimage import gaussian_laplace
@@ -812,12 +812,12 @@ def cast_float32(tensor):
     Parameters
     ----------
     tensor : np.ndarray
-        Tensor to cast with shape (r, c, z, y, x).
+        Tensor to cast.
 
     Returns
     -------
     tensor : np.ndarray, np.float32
-        Tensor with shape (r, c, z, y, x).
+        Tensor cast.
 
     """
     # cast tensor
@@ -1007,7 +1007,7 @@ def log_filter(image, sigma):
     Returns
     -------
     image_filtered : np.ndarray, np.float32
-        Filtered image
+        Filtered image.
     """
     # we cast the data in np.float32 to allow negative values
     image_float32 = cast_float32(image)
@@ -1018,5 +1018,31 @@ def log_filter(image, sigma):
     # as the LoG filter makes the peaks in the original image appear as a
     # reversed mexican hat, we inverse the result and clip negative values to 0
     image_filtered = np.clip(-image_filtered, a_min=0, a_max=None)
+
+    return image_filtered
+
+
+def gaussian_filter(image, sigma):
+    """Apply a Gaussian filter to a 2-d or 3-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint16
+        Image with shape (z, y, x) or (y, x).
+    sigma : float or Tuple(float)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.float32
+        Filtered image.
+
+    """
+    # we cast the data in np.float32 to allow negative values
+    image_float32 = cast_float32(image)
+
+    # we apply gaussian filter
+    image_filtered = gaussian(image_float32, sigma=sigma)
 
     return image_filtered
