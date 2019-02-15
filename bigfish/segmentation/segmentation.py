@@ -12,7 +12,8 @@ from scipy import ndimage as ndi
 import numpy as np
 
 
-def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold"):
+def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold",
+                        return_label=True):
     """Segment nuclei from a 2d projection.
 
     Parameters
@@ -25,12 +26,14 @@ def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold"):
         Channel index of the dapi image.
     method : str
         Method used to segment.
+    return_label : bool
+        Condition to count and label the instances segmented in the image.
 
     Returns
     -------
-    image_segmented : np.ndarray, np.uint8
+    image_segmented : np.ndarray, bool
         Binary 2-d image with shape (y, x).
-    image_labelled : np.ndarray, np.uint8
+    image_labelled : np.ndarray, np.int64
         Image with labelled segmented instances and shape (y, x).
     nb_labels : int
         Number of different instances segmented.
@@ -45,7 +48,7 @@ def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold"):
         image_segmented = filtered_threshold(image_2d)
 
     # labelled and count segmented instances
-    if label:
+    if return_label:
         image_labelled, nb_labels = label_instances(image_segmented)
         return image_segmented, image_labelled, nb_labels
     else:
@@ -80,7 +83,7 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
 
     Returns
     -------
-    image_segmented : np.ndarray, np.uint8
+    image_segmented : np.ndarray, bool
         Binary 2-d image with shape (y, x).
 
     """
@@ -141,12 +144,12 @@ def label_instances(image_segmented):
 
     Parameters
     ----------
-    image_segmented : np.ndarray, np.uint8
+    image_segmented : np.ndarray, bool
         Binary segmented image with shape (y, x).
 
     Returns
     -------
-    image_label : np.ndarray, np.uint8
+    image_label : np.ndarray, np.uint64
         Labelled image. Each object is characterized by the same pixel value.
     nb_labels : int
         Number of different instances counted in the image.
