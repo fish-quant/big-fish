@@ -87,7 +87,45 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
 
 # ### Real data ###
 
-def build_stack(recipe, input_folder, input_dimension=None):
+def build_stack(recipe, input_folder, input_dimension=None,
+                channel_to_stretch=None, stretching_percentile=99.9):
+    """Build 5-d stack and normalize it.
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions.
+    input_folder : str
+        Path of the folder containing the images.
+    input_dimension : str
+        Number of dimensions of the loaded files.
+    channel_to_stretch : int or List[int]
+        Channel to stretch.
+    stretching_percentile : float
+        Percentile to determine the maximum intensity value used to rescale
+        the image.
+
+    Returns
+    -------
+    tensor : np.ndarray, np.uint8
+        Tensor with shape (r, c, z, y, x).
+
+    """
+    # build stack from recipe and tif files
+    tensor = load_stack(recipe, input_folder, input_dimension)
+
+    # rescale data and improve contrast
+    tensor = rescale(tensor, channel_to_stretch, stretching_percentile)
+
+    # cast in np.uint8 if necessary, in order to reduce memory allocation
+    if tensor.dtype == np.uint16:
+        tensor = cast_uint8(tensor)
+
+    return tensor
+
+
+def load_stack(recipe, input_folder, input_dimension=None):
     """Build a 5-d tensor from the same field of view (fov).
 
     The function stacks a set of images using a recipe mapping the
@@ -439,7 +477,7 @@ def projection(tensor, method="mip", r=0, c=0):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint16
+    tensor : np.ndarray, np.uint8
         A 5-d tensor with shape (r, c, z, y, x).
     method : str
         Method used to project ('mip', 'focus').
@@ -450,12 +488,12 @@ def projection(tensor, method="mip", r=0, c=0):
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint16
+    projected_tensor : np.ndarray, np.uint8
         A 2-d tensor with shape (y, x).
 
     """
     # check tensor dimensions and its dtype
-    check_array(tensor, ndim=5, dtype=np.uint16)
+    check_array(tensor, ndim=5, dtype=np.uint8)
 
     # apply projection along the z-dimension
     projected_tensor = tensor[r, c, :, :, :]
@@ -474,12 +512,12 @@ def maximum_projection(tensor):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint16
+    tensor : np.ndarray, np.uint8
         A 3-d tensor with shape (z, y, x).
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint16
+    projected_tensor : np.ndarray, np.uint8
         A 2-d tensor with shape (y, x).
 
     """
@@ -700,7 +738,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint16
+    tensor : np.ndarray, np.uint
         Tensor to rescale with shape (r, c, z, y, x).
     channel_to_stretch : int or List[int]
         Channel to stretch.
@@ -710,7 +748,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
 
     Returns
     -------
-    tensor : np.ndarray, np.uint16
+    tensor : np.ndarray, np.uint
         Tensor to rescale with shape (r, c, z, y, x).
 
     """
@@ -791,27 +829,6 @@ def cast_float32(tensor):
 
 
 # ### Filters ###
-
-def remove_background(image, filter_size):
-    """
-
-    Parameters
-    ----------
-    image
-    filter_size
-
-    Returns
-    -------
-
-    """
-    # TODO to complete
-    background = rank.mean(image, square(filter_size))
-    mask = image > background
-    image_without_back = np.subtract(image, background,
-                                     out=np.zeros_like(image, dtype=np.uint8),
-                                     where=mask)
-    return image_without_back
-
 
 def _define_kernel(shape, size, dtype):
     """Build a kernel to apply a filter on images.
@@ -972,38 +989,6 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     # apply filter
     image_filtered = rank.minimum(image, kernel)
-
-    return image_filtered
-
-
-def subtract_mean_filter(image, kernel_shape, kernel_size):
-    """Apply a mean filter to a 2-d image and an image subtract from it.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.uint16
-        Image with shape (y, x).
-    kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
-        The size of the kernel. For the rectangle we expect two integers
-        (width, height).
-
-    Returns
-    -------
-    image_filtered : np.ndarray, np.uint16
-        Filtered 2-d image with shape (y, x).
-
-    """
-
-    # get kernel
-    kernel = _define_kernel(shape=kernel_shape,
-                            size=kernel_size,
-                            dtype=image.dtype)
-
-    # apply filter
-    image_filtered = rank.subtract_mean(image, kernel)
 
     return image_filtered
 
