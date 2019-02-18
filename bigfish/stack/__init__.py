@@ -10,7 +10,7 @@ from .preprocess import (build_stack, check_recipe, build_simulated_dataset,
                          projection, rescale, cast_uint8, cast_float32,
                          log_filter, mean_filter, median_filter,
                          maximum_filter, minimum_filter, load_stack,
-                         gaussian_filter)
+                         gaussian_filter, build_stacks)
 from .utils import check_array, check_features_df
 
 
@@ -19,6 +19,7 @@ __all__ = ["read_tif",
            "build_simulated_dataset",
            "load_stack",
            "build_stack",
+           "build_stacks",
            "check_recipe",
            "projection",
            "rescale",
