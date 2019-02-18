@@ -87,9 +87,127 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
 
 # ### Real data ###
 
-def build_stack(recipe, input_folder, input_dimension=None,
+def build_stacks(data_map, input_dimension=None, normalize=True,
+                 channel_to_stretch=None, stretching_percentile=99.9):
+    """Generator to build several stacks.
+
+    To build a stack, a recipe should be linked to a directory including all
+    the files needed to build the stack. The content of the recipe allows to
+    reorganize the different files stored in the directory in order to build
+    a 5-d tensor.
+
+    The dictionary 'data_map' takes the form:
+
+        {
+         "path_input_directory_1": List[recipe_1, recipe_2, ...],
+         "path_input_directory_2": List[recipe_1, recipe_2, ...],
+         ...
+        }
+
+    The recipe dictionary for one field of view takes the form:
+
+        {
+         "fov": str,
+         "z": List[str], (optional)
+         "c": List[str], (optional)
+         "r": List[str], (optional)
+         "ext": str
+         }
+
+    - A field of view is defined by an ID common to every images belonging to
+    the field of view ("fov").
+    - At least every images are in 2-d with x and y dimensions. So we need to
+    mention the round-dimension, the channel-dimension and the z-dimension to
+    add ("r", "c" and "z"). For these keys, we provide a list of
+    strings to identify the images to stack. By default, we assume the filename
+    fit the pattern fov_z_c_r.tif.
+    - An extra information to identify the files to stack in the input folder
+    can be provided with the file extension "ext" (usually 'tif' or 'tiff').
+
+    For example, let us assume 3-d images (zyx dimensions) saved as
+    "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
+    morpheme "r03c03f01" uniquely identifies a 3-d field of view. The second
+    morphemes "405", "488" and "561" identify three different channels we
+    want to stack. There is no round in this experiment. Thus, the recipe is:
+
+        {
+         "fov": "r03c03f01",
+         "c": ["405", "488", "561"],
+         "ext": "tif"
+         }
+
+    The function should return a tensor with shape (1, 3, z, y, x).
+
+    Parameters
+    ----------
+    data_map : dict
+        Map between input directories and recipes.
+    input_dimension : str
+        Number of dimensions of the loaded files.
+    normalize : bool
+        Normalize the different channels of the loaded stack (rescaling).
+    channel_to_stretch : int or List[int]
+        Channel to stretch.
+    stretching_percentile : float
+        Percentile to determine the maximum intensity value used to rescale
+        the image.
+
+    Returns
+    -------
+    tensor : np.ndarray, np.uint8
+        Tensor with shape (r, c, z, y, x).
+    input_directory : str
+        Path of the input directory from where the tensor is built.
+    recipe : dict
+        Recipe used to build the tensor.
+
+    """
+    # load and generate tensors
+    for input_folder, recipes in data_map.items():
+        for recipe in recipes:
+            tensor = build_stack(recipe, input_folder, input_dimension,
+                                 normalize, channel_to_stretch,
+                                 stretching_percentile)
+            yield tensor, input_folder, recipe
+
+
+def build_stack(recipe, input_folder, input_dimension=None, normalize=True,
                 channel_to_stretch=None, stretching_percentile=99.9):
     """Build 5-d stack and normalize it.
+
+    The recipe dictionary for one field of view takes the form:
+
+        {
+         "fov": str,
+         "z": List[str], (optional)
+         "c": List[str], (optional)
+         "r": List[str], (optional)
+         "ext": str
+         }
+
+    - A field of view is defined by an ID common to every images belonging to
+    the field of view ("fov").
+    - At least every images are in 2-d with x and y dimensions. So we need to
+    mention the round-dimension, the channel-dimension and the z-dimension to
+    add ("r", "c" and "z"). For these keys, we provide a list of
+    strings to identify the images to stack. By default, we assume the filename
+    fit the pattern fov_z_c_r.tif.
+    - An extra information to identify the files to stack in the input folder
+    can be provided with the file extension "ext" (usually 'tif' or 'tiff').
+
+    For example, let us assume 3-d images (zyx dimensions) saved as
+    "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
+    morpheme "r03c03f01" uniquely identifies a 3-d field of view. The second
+    morphemes "405", "488" and "561" identify three different channels we
+    want to stack. There is no round in this experiment. Thus, the recipe is:
+
+        {
+         "fov": "r03c03f01",
+         "c": ["405", "488", "561"],
+         "ext": "tif"
+         }
+
+    The function should return a tensor with shape (1, 3, z, y, x).
 
     Parameters
     ----------
@@ -100,6 +218,8 @@ def build_stack(recipe, input_folder, input_dimension=None,
         Path of the folder containing the images.
     input_dimension : str
         Number of dimensions of the loaded files.
+    normalize : bool
+        Normalize the different channels of the loaded stack (rescaling).
     channel_to_stretch : int or List[int]
         Channel to stretch.
     stretching_percentile : float
@@ -112,11 +232,13 @@ def build_stack(recipe, input_folder, input_dimension=None,
         Tensor with shape (r, c, z, y, x).
 
     """
+    # TODO add sanity checks for the parameters
     # build stack from recipe and tif files
     tensor = load_stack(recipe, input_folder, input_dimension)
 
     # rescale data and improve contrast
-    tensor = rescale(tensor, channel_to_stretch, stretching_percentile)
+    if normalize:
+        tensor = rescale(tensor, channel_to_stretch, stretching_percentile)
 
     # cast in np.uint8 if necessary, in order to reduce memory allocation
     if tensor.dtype == np.uint16:
@@ -141,9 +263,9 @@ def load_stack(recipe, input_folder, input_dimension=None):
 
         {
          "fov": str,
-         "z": List[str],
-         "c": List[str],
-         "r": List[str],
+         "z": List[str], (optional)
+         "c": List[str], (optional)
+         "r": List[str], (optional)
          "ext": str
          }
 
@@ -870,7 +992,7 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint16
+    image : np.ndarray, np.uint8
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -881,7 +1003,7 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint16
+    image_filtered : np.ndarray, np.uint8
         Filtered 2-d image with shape (y, x).
 
     """
@@ -902,7 +1024,7 @@ def median_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint16
+    image : np.ndarray, np.uint8
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -913,7 +1035,7 @@ def median_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint16
+    image_filtered : np.ndarray, np.uint8
         Filtered 2-d image with shape (y, x).
 
     """
@@ -934,7 +1056,7 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint16
+    image : np.ndarray, np.uint8
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -945,7 +1067,7 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint16
+    image_filtered : np.ndarray, np.uint8
         Filtered 2-d image with shape (y, x).
 
     """
@@ -966,7 +1088,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint16
+    image : np.ndarray, np.uint8
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -977,7 +1099,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint16
+    image_filtered : np.ndarray, np.uint8
         Filtered 2-d image with shape (y, x).
 
     """
@@ -998,7 +1120,7 @@ def log_filter(image, sigma):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint16
+    image : np.ndarray, np.uint8
         Image with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
@@ -1011,6 +1133,12 @@ def log_filter(image, sigma):
     """
     # we cast the data in np.float32 to allow negative values
     image_float32 = cast_float32(image)
+
+    # check sigma
+    if isinstance(sigma, (tuple, list)):
+        if len(sigma) != image.ndim:
+            raise ValueError("'Sigma' must be a scalar or a sequence with the "
+                             "same length as 'image.ndim'.")
 
     # we apply LoG filter
     image_filtered = gaussian_laplace(image_float32, sigma=sigma)
@@ -1027,7 +1155,7 @@ def gaussian_filter(image, sigma):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint16
+    image : np.ndarray, np.uint8
         Image with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
