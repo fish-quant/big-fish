@@ -13,7 +13,7 @@ import numpy as np
 
 
 def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold",
-                        return_label=True):
+                        return_label=False):
     """Segment nuclei from a 2d projection.
 
     Parameters
