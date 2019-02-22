@@ -17,7 +17,8 @@ REQUIRES = [
       'scikit-image',
       'scipy',
       'tensorflow',
-      'matplotlib'
+      'matplotlib',
+      'joblib'
 ]
 
 # Long description of the package
