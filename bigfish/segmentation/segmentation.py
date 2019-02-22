@@ -12,20 +12,22 @@ from scipy import ndimage as ndi
 import numpy as np
 
 
-def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold",
-                        return_label=False):
-    """Segment nuclei from a 2d projection.
+def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
+                        return_label=False, **kargs):
+    """Segment nuclei from a 2-d projection.
 
     Parameters
     ----------
-    tensor : nd.ndarray, np.uint8
+    tensor : nd.ndarray, np.uint
         Tensor with shape (r, c, z, y, x).
+    projection_method : str
+        Method used to project the image in 2-d.
     r : int
-        Round index to segment.
-    nuc_channel : int
+        Round index to process.
+    c : int
         Channel index of the dapi image.
-    method : str
-        Method used to segment.
+    segmentation_method : str
+        Method used to segment the nuclei.
     return_label : bool
         Condition to count and label the instances segmented in the image.
 
@@ -38,14 +40,18 @@ def nuc_segmentation_2d(tensor, r=0, nuc_channel=0, method="threshold",
     nb_labels : int
         Number of different instances segmented.
     """
-    # get 2D dapi image
-    image_2d = stack.projection(tensor, method="mip", r=r, c=nuc_channel)
+    # get a 2-d dapi image
+    image_2d = stack.projection(tensor,
+                                method=projection_method,
+                                r=r,
+                                c=c)
 
     # apply segmentation
-    image_segmented = None
-    if method == "threshold":
-        # TODO be able to change the parameters of 'filtered_threshold'
-        image_segmented = filtered_threshold(image_2d)
+    image_segmented = stack.cast_uint8(image_2d)
+    if segmentation_method == "threshold":
+        image_segmented = filtered_threshold(image_segmented, **kargs)
+    else:
+        pass
 
     # labelled and count segmented instances
     if return_label:
@@ -68,7 +74,7 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         A 2-d image to segment with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -109,7 +115,7 @@ def _remove_background(image, kernel_shape="disk", kernel_size=200):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image to process. Casting in np.uint8 makes the computation faster.
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -120,7 +126,7 @@ def _remove_background(image, kernel_shape="disk", kernel_size=200):
 
     Returns
     -------
-    image_without_back : np.ndarray, np.uint8
+    image_without_back : np.ndarray, np.uint
         Image processed.
 
     """
