@@ -64,15 +64,7 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
     plt.show()
 
     # save the plot
-    if path_output is not None:
-        if isinstance(ext, str):
-            plt.savefig(path_output, format=ext)
-        elif isinstance(ext, list):
-            for ext_ in ext:
-                plt.savefig(path_output, format=ext_)
-        else:
-            Warning("Plot is not saved because the extension is not valid: "
-                    "{0}.".format(ext))
+    _save_plot(path_output, ext)
 
     return
 
@@ -130,15 +122,7 @@ def plot_images(images, framesize=(15, 15), path_output=None, ext="png"):
     plt.show()
 
     # save the plot
-    if path_output is not None:
-        if isinstance(ext, str):
-            plt.savefig(path_output, format=ext)
-        elif isinstance(ext, list):
-            for ext_ in ext:
-                plt.savefig(path_output, format=ext_)
-        else:
-            Warning("Plot is not saved because the extension is not valid: "
-                    "{0}.".format(ext))
+    _save_plot(path_output, ext)
 
 
 def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), path_output=None,
@@ -179,15 +163,7 @@ def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), path_output=None,
     plt.show()
 
     # save the plot
-    if path_output is not None:
-        if isinstance(ext, str):
-            plt.savefig(path_output, format=ext)
-        elif isinstance(ext, list):
-            for ext_ in ext:
-                plt.savefig(path_output, format=ext_)
-        else:
-            Warning("Plot is not saved because the extension is not valid: "
-                    "{0}.".format(ext))
+    _save_plot(path_output, ext)
 
     return
 
@@ -198,7 +174,7 @@ def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint8
+    tensor : np.ndarray, np.uint
         A 5-d tensor with shape (r, c, z, y, x).
     projection : np.ndarray, np.uint8
         A 2-d image with shape (y, x).
@@ -221,8 +197,8 @@ def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
 
     """
     # check tensor
-    stack.check_array(tensor, ndim=5, dtype=np.uint8)
-    stack.check_array(projection, ndim=2, dtype=np.uint8)
+    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+    stack.check_array(projection, ndim=2, dtype=[np.uint8, np.uint16])
 
     # plot
     fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
@@ -232,15 +208,7 @@ def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
     plt.show()
 
     # save the plot
-    if path_output is not None:
-        if isinstance(ext, str):
-            plt.savefig(path_output, format=ext)
-        elif isinstance(ext, list):
-            for ext_ in ext:
-                plt.savefig(path_output, format=ext_)
-        else:
-            Warning("Plot is not saved because the extension is not valid: "
-                    "{0}.".format(ext))
+    _save_plot(path_output, ext)
 
 
 def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
@@ -249,7 +217,7 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint8
+    tensor : np.ndarray, np.uint
         A 5-d tensor with shape (r, c, z, y, x).
     segmentation : np.ndarray, bool
         A 2-d image with shape (y, x).
@@ -274,7 +242,7 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
 
     """
     # check tensor
-    stack.check_array(tensor, ndim=5, dtype=np.uint8)
+    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
     stack.check_array(segmentation, ndim=2, dtype=bool)
     if label is not None:
         stack.check_array(label, ndim=2, dtype=np.int64)
@@ -292,6 +260,112 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
     plt.tight_layout()
     plt.show()
 
+    # save the plot
+    _save_plot(path_output, ext)
+
+
+def plot_spot_detection(tensor, coordinates, radius, r=0, c=0, z=0,
+                        framesize=(15, 15), projection_2d=False,
+                        path_output=None, ext="png"):
+    """
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint
+        A 5-d tensor with shape (r, c, z, y, x).
+    coordinates : np.ndarray, np.int64
+        Coordinate of the spots with shape (nb_spots, 3) or
+        (nb_spots, 2) for 3-d or 2-d images respectively.
+    radius : float
+        Radius of the detected spots.
+    r : int
+        Index of the round to keep.
+    c : int
+        Index of the channel to keep.
+    z : int
+        Index of the z-slice to keep.
+    framesize : tuple
+        Size of the frame used to plot (plt.figure(figsize=framesize).
+    projection_2d : bool
+        Project the image in 2-d and plot the spot detected on the projection.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+
+    Returns
+    -------
+
+    """
+    # TODO check coordinates shape
+    # check tensor
+    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+    stack.check_array(coordinates, ndim=2, dtype=np.int64)
+
+    # projection 2d
+    if projection_2d:
+        image_2d = stack.projection(tensor,
+                                    method="mip",
+                                    r=r,
+                                    c=c)
+
+        # plot
+        fig, ax = plt.subplots(1, 2, figsize=framesize)
+        ax[0].imshow(image_2d)
+        ax[1].imshow(image_2d)
+        for spot_coordinate in coordinates:
+            _, y, x = spot_coordinate
+            c = plt.Circle((x, y), radius,
+                           color="red",
+                           linewidth=1,
+                           fill=False)
+            ax[1].add_patch(c)
+        plt.tight_layout()
+        plt.show()
+
+    # a specific z-slice
+    else:
+        # keep spot detected for a specific height
+        if coordinates.shape[1] == 3:
+            coordinates = coordinates[coordinates[:, 0] == z]
+            coordinates = coordinates[:, 1:]
+
+        image_2d = tensor[r, c, z, :, :]
+
+        # plot
+        fig, ax = plt.subplots(1, 2, figsize=framesize)
+        ax[0].imshow(image_2d)
+        ax[1].imshow(image_2d)
+        for spot_coordinate in coordinates:
+            y, x = spot_coordinate
+            c = plt.Circle((x, y), radius,
+                           color="red",
+                           linewidth=1,
+                           fill=False)
+            ax[1].add_patch(c)
+        plt.tight_layout()
+        plt.show()
+
+    # save the plot
+    _save_plot(path_output, ext)
+
+
+def _save_plot(path_output, ext):
+    """Save the plot.
+
+    Parameters
+    ----------
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+
+    Returns
+    -------
+
+    """
     # save the plot
     if path_output is not None:
         if isinstance(ext, str):
