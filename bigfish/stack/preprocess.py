@@ -13,7 +13,7 @@ import pandas as pd
 from .loader import read_tif, read_cell_json, read_rna_json
 from .utils import check_array
 
-from skimage import img_as_ubyte, img_as_float32
+from skimage import img_as_ubyte, img_as_float32, img_as_float
 from skimage.morphology.selem import square, diamond, rectangle, disk
 from skimage.filters import rank, gaussian
 from skimage.exposure import rescale_intensity
@@ -88,7 +88,8 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
 # ### Real data ###
 
 def build_stacks(data_map, input_dimension=None, normalize=True,
-                 channel_to_stretch=None, stretching_percentile=99.9):
+                 channel_to_stretch=None, stretching_percentile=99.9,
+                 cast_8bit=False, return_origin=False):
     """Generator to build several stacks.
 
     To build a stack, a recipe should be linked to a directory including all
@@ -96,13 +97,15 @@ def build_stacks(data_map, input_dimension=None, normalize=True,
     reorganize the different files stored in the directory in order to build
     a 5-d tensor.
 
-    The dictionary 'data_map' takes the form:
+    The list 'data_map' takes the form:
 
-        {
-         "path_input_directory_1": List[recipe_1, recipe_2, ...],
-         "path_input_directory_2": List[recipe_1, recipe_2, ...],
+        [
+         (recipe_1, path_input_directory_1),
+         (recipe_2, path_input_directory_1),
+         (recipe_3, path_input_directory_1),
+         (recipe_4, path_input_directory_2),
          ...
-        }
+        ]
 
     The recipe dictionary for one field of view takes the form:
 
@@ -140,7 +143,7 @@ def build_stacks(data_map, input_dimension=None, normalize=True,
 
     Parameters
     ----------
-    data_map : dict
+    data_map : List[tuple]
         Map between input directories and recipes.
     input_dimension : str
         Number of dimensions of the loaded files.
@@ -151,10 +154,14 @@ def build_stacks(data_map, input_dimension=None, normalize=True,
     stretching_percentile : float
         Percentile to determine the maximum intensity value used to rescale
         the image.
+    return_origin : bool
+        Return the input directory and the recipe used to build the stack.
+    cast_8bit : bool
+        Cast tensor in np.uint8.
 
     Returns
     -------
-    tensor : np.ndarray, np.uint8
+    tensor : np.ndarray, np.uint
         Tensor with shape (r, c, z, y, x).
     input_directory : str
         Path of the input directory from where the tensor is built.
@@ -163,16 +170,19 @@ def build_stacks(data_map, input_dimension=None, normalize=True,
 
     """
     # load and generate tensors
-    for input_folder, recipes in data_map.items():
-        for recipe in recipes:
-            tensor = build_stack(recipe, input_folder, input_dimension,
-                                 normalize, channel_to_stretch,
-                                 stretching_percentile)
+    for recipe, input_folder in data_map:
+        tensor = build_stack(recipe, input_folder, input_dimension, normalize,
+                             channel_to_stretch, stretching_percentile,
+                             cast_8bit)
+        if return_origin:
             yield tensor, input_folder, recipe
+        else:
+            yield tensor
 
 
-def build_stack(recipe, input_folder, input_dimension=None, normalize=True,
-                channel_to_stretch=None, stretching_percentile=99.9):
+def build_stack(recipe, input_folder, input_dimension=None, normalize=False,
+                channel_to_stretch=None, stretching_percentile=99.9,
+                cast_8bit=False):
     """Build 5-d stack and normalize it.
 
     The recipe dictionary for one field of view takes the form:
@@ -225,10 +235,12 @@ def build_stack(recipe, input_folder, input_dimension=None, normalize=True,
     stretching_percentile : float
         Percentile to determine the maximum intensity value used to rescale
         the image.
+    cast_8bit : bool
+        Cast the tensor in np.uint8.
 
     Returns
     -------
-    tensor : np.ndarray, np.uint8
+    tensor : np.ndarray, np.uint
         Tensor with shape (r, c, z, y, x).
 
     """
@@ -241,7 +253,7 @@ def build_stack(recipe, input_folder, input_dimension=None, normalize=True,
         tensor = rescale(tensor, channel_to_stretch, stretching_percentile)
 
     # cast in np.uint8 if necessary, in order to reduce memory allocation
-    if tensor.dtype == np.uint16:
+    if tensor.dtype == np.uint16 and cast_8bit:
         tensor = cast_uint8(tensor)
 
     return tensor
@@ -599,7 +611,7 @@ def projection(tensor, method="mip", r=0, c=0):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint8
+    tensor : np.ndarray, np.uint
         A 5-d tensor with shape (r, c, z, y, x).
     method : str
         Method used to project ('mip', 'focus').
@@ -610,12 +622,12 @@ def projection(tensor, method="mip", r=0, c=0):
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint8
+    projected_tensor : np.ndarray, np.uint
         A 2-d tensor with shape (y, x).
 
     """
     # check tensor dimensions and its dtype
-    check_array(tensor, ndim=5, dtype=np.uint8)
+    check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
 
     # apply projection along the z-dimension
     projected_tensor = tensor[r, c, :, :, :]
@@ -634,12 +646,12 @@ def maximum_projection(tensor):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint8
+    tensor : np.ndarray, np.uint
         A 3-d tensor with shape (z, y, x).
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint8
+    projected_tensor : np.ndarray, np.uint
         A 2-d tensor with shape (y, x).
 
     """
@@ -950,6 +962,28 @@ def cast_float32(tensor):
     return tensor
 
 
+def cast_float64(tensor):
+    """Cast the data in np.float64 and scale it between 0 and 1.
+
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Tensor to cast.
+
+    Returns
+    -------
+    tensor : np.ndarray, np.float64
+        Tensor cast.
+
+    """
+    # cast tensor
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        tensor = img_as_float(tensor)
+
+    return tensor
+
+
 # ### Filters ###
 
 def _define_kernel(shape, size, dtype):
@@ -992,7 +1026,7 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -1003,7 +1037,7 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint8
+    image_filtered : np.ndarray, np.uint
         Filtered 2-d image with shape (y, x).
 
     """
@@ -1024,7 +1058,7 @@ def median_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -1035,7 +1069,7 @@ def median_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint8
+    image_filtered : np.ndarray, np.uint
         Filtered 2-d image with shape (y, x).
 
     """
@@ -1056,7 +1090,7 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -1067,7 +1101,7 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint8
+    image_filtered : np.ndarray, np.uint
         Filtered 2-d image with shape (y, x).
 
     """
@@ -1088,7 +1122,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
@@ -1099,7 +1133,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint8
+    image_filtered : np.ndarray, np.uint
         Filtered 2-d image with shape (y, x).
 
     """
@@ -1120,7 +1154,7 @@ def log_filter(image, sigma):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
@@ -1128,11 +1162,15 @@ def log_filter(image, sigma):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.float32
+    image_filtered : np.ndarray, np.float
         Filtered image.
     """
-    # we cast the data in np.float32 to allow negative values
-    image_float32 = cast_float32(image)
+    # we cast the data in np.float to allow negative values
+    image_float = None
+    if image.dtype == np.uint8:
+        image_float = cast_float32(image)
+    elif image.dtype == np.uint16:
+        image_float = cast_float64(image)
 
     # check sigma
     if isinstance(sigma, (tuple, list)):
@@ -1141,7 +1179,7 @@ def log_filter(image, sigma):
                              "same length as 'image.ndim'.")
 
     # we apply LoG filter
-    image_filtered = gaussian_laplace(image_float32, sigma=sigma)
+    image_filtered = gaussian_laplace(image_float, sigma=sigma)
 
     # as the LoG filter makes the peaks in the original image appear as a
     # reversed mexican hat, we inverse the result and clip negative values to 0
@@ -1155,7 +1193,7 @@ def gaussian_filter(image, sigma):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         Image with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
@@ -1163,14 +1201,18 @@ def gaussian_filter(image, sigma):
 
     Returns
     -------
-    image_filtered : np.ndarray, np.float32
+    image_filtered : np.ndarray, np.float
         Filtered image.
 
     """
-    # we cast the data in np.float32 to allow negative values
-    image_float32 = cast_float32(image)
+    # we cast the data in np.float to allow negative values
+    image_float = None
+    if image.dtype == np.uint8:
+        image_float = cast_float32(image)
+    elif image.dtype == np.uint16:
+        image_float = cast_float64(image)
 
     # we apply gaussian filter
-    image_filtered = gaussian(image_float32, sigma=sigma)
+    image_filtered = gaussian(image_float, sigma=sigma)
 
     return image_filtered
