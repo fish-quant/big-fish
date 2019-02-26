@@ -87,7 +87,7 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
 
 # ### Real data ###
 
-def build_stacks(data_map, input_dimension=None, normalize=True,
+def build_stacks(data_map, input_dimension=None, normalize=False,
                  channel_to_stretch=None, stretching_percentile=99.9,
                  cast_8bit=False, return_origin=False):
     """Generator to build several stacks.
