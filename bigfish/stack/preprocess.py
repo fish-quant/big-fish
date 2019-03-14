@@ -13,12 +13,14 @@ import pandas as pd
 from .loader import read_tif, read_cell_json, read_rna_json
 from .utils import check_array
 
-from skimage import img_as_ubyte, img_as_float32, img_as_float
+from skimage import img_as_ubyte, img_as_float32, img_as_float64, img_as_uint
 from skimage.morphology.selem import square, diamond, rectangle, disk
 from skimage.filters import rank, gaussian
 from skimage.exposure import rescale_intensity
 
 from scipy.ndimage import gaussian_laplace
+
+# TODO add safety checks
 
 
 # ### Simulated data ###
@@ -622,7 +624,7 @@ def projection(tensor, method="mip", r=0, c=0):
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint
+    projected_tensor : np.ndarray
         A 2-d tensor with shape (y, x).
 
     """
@@ -633,6 +635,10 @@ def projection(tensor, method="mip", r=0, c=0):
     projected_tensor = tensor[r, c, :, :, :]
     if method == "mip":
         projected_tensor = maximum_projection(projected_tensor)
+    elif method == "mean":
+        projected_tensor = mean_projection(projected_tensor)
+    elif method == "median":
+        projected_tensor = median_projection(projected_tensor)
     elif method == "focus":
         # TODO complete focus projection with different strategies
         raise ValueError("Focus projection is not implemented yet.")
@@ -659,6 +665,91 @@ def maximum_projection(tensor):
     projected_tensor = tensor.max(axis=0, keepdims=True)
 
     return projected_tensor[0]
+
+
+def mean_projection(tensor):
+    """Project the z-dimension of a tensor, computing the mean intensity of
+    each yx pixel.
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint
+        A 3-d tensor with shape (z, y, x).
+
+    Returns
+    -------
+    projected_tensor : np.ndarray, np.float
+        A 2-d tensor with shape (y, x).
+
+    """
+    # project tensor along the z axis
+    projected_tensor = tensor.mean(axis=0, keepdims=True)
+
+    return projected_tensor[0]
+
+
+def median_projection(tensor):
+    """Project the z-dimension of a tensor, computing the median intensity of
+    each yx pixel.
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint
+        A 3-d tensor with shape (z, y, x).
+
+    Returns
+    -------
+    projected_tensor : np.ndarray, np.uint
+        A 2-d tensor with shape (y, x).
+
+    """
+    # project tensor along the z axis
+    projected_tensor = tensor.median(axis=0, keepdims=True)
+
+    return projected_tensor[0]
+
+
+def focus_projection(tensor, channel=0, p=0.75, global_neighborhood_size=30,
+                     method="best"):
+    """
+
+    Parameters
+    ----------
+    tensor
+    channel
+    p
+    global_neighborhood_size
+    method
+
+    Returns
+    -------
+
+    """
+
+    # get 3-d image
+    image = tensor[0, channel, :, :, :]
+
+    # measure global focus level for each z-slices
+    ratio, l_focus = focus_measurement_3d(image, global_neighborhood_size)
+
+    # remove out-of-focus slices
+    indices_to_keep = get_in_focus(l_focus, p)
+    in_focus_image = image[indices_to_keep]
+
+    projected_image = None
+    if method == "bast":
+        # for each pixel, we project the z-slice value with the highest focus
+        ratio_2d = np.argmax(ratio[indices_to_keep], axis=0)
+        one_hot = one_hot_3d(ratio_2d, depth=len(indices_to_keep))
+        projected_image = np.multiply(in_focus_image, one_hot).max(axis=0)
+    elif method == "median":
+        # for each pixel, we compute the median value of the in-focus z-slices
+        projected_image = np.median(in_focus_image, axis=0)
+    elif method == "mean":
+        # for each pixel, we compute the mean value of the in-focus z-slices
+        projected_image = np.median(in_focus_image, axis=0)
+
+    return projected_image, ratio, l_focus
 
 
 def focus_measurement_2d(image, neighborhood_size):
@@ -814,48 +905,6 @@ def one_hot_3d(tensor_2d, depth):
     return one_hot
 
 
-def focus_projection(tensor, channel=0, p=0.75, global_neighborhood_size=30,
-                     method="best"):
-    """
-
-    Parameters
-    ----------
-    tensor
-    channel
-    p
-    global_neighborhood_size
-
-    Returns
-    -------
-
-    """
-
-    # get 3-d image
-    image = tensor[0, channel, :, :, :]
-
-    # measure global focus level for each z-slices
-    ratio, l_focus = focus_measurement_3d(image, global_neighborhood_size)
-
-    # remove out-of-focus slices
-    indices_to_keep = get_in_focus(l_focus, p)
-    in_focus_image = image[indices_to_keep]
-
-    projected_image = None
-    if method == "bast":
-        # for each pixel, we project the z-slice value with the highest focus
-        ratio_2d = np.argmax(ratio[indices_to_keep], axis=0)
-        one_hot = one_hot_3d(ratio_2d, depth=len(indices_to_keep))
-        projected_image = np.multiply(in_focus_image, one_hot).max(axis=0)
-    elif method == "median":
-        # for each pixel, we compute the median value of the in-focus z-slices
-        projected_image = np.median(in_focus_image, axis=0)
-    elif method == "mean":
-        # for each pixel, we compute the mean value of the in-focus z-slices
-        projected_image = np.median(in_focus_image, axis=0)
-
-    return projected_image, ratio, l_focus
-
-
 # ### Normalization ###
 
 def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
@@ -886,6 +935,9 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
         Tensor to rescale with shape (r, c, z, y, x).
 
     """
+    # check tensor dtype
+    check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+
     # format 'channel_to_stretch'
     if channel_to_stretch is None:
         channel_to_stretch = []
@@ -915,23 +967,26 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     return tensor_5d
 
 
-def cast_uint8(tensor):
-    """Cast the data in np.uint8.
+def cast_img_uint8(tensor):
+    """Cast the image in np.uint8.
 
-    Cast data from np.uint16 to np.uint8 reduce the memory needed to process
-    it and accelerate computations.
+    Casting image to np.uint8 reduce the memory needed to process it and
+    accelerate computations.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint16
-        Tensor to cast with shape (r, c, z, y, x).
+    tensor : np.ndarray
+        Image to cast.
 
     Returns
     -------
     tensor : np.ndarray, np.uint8
-        Tensor with shape (r, c, z, y, x).
+        Image cast.
 
     """
+    # check tensor dtype
+    check_array(tensor, dtype=[np.uint16, np.float32, np.float64])
+
     # cast tensor
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -940,20 +995,53 @@ def cast_uint8(tensor):
     return tensor
 
 
-def cast_float32(tensor):
-    """Cast the data in np.float32 and scale it between 0 and 1.
+def cast_img_uint16(tensor):
+    """Cast the data in np.uint16.
 
     Parameters
     ----------
     tensor : np.ndarray
-        Tensor to cast.
+        Image to cast.
+
+    Returns
+    -------
+    tensor : np.ndarray, np.uint16
+        Image cast.
+
+    """
+    # check tensor dtype
+    check_array(tensor, dtype=[np.uint8, np.float32, np.float64])
+
+    # cast tensor
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        tensor = img_as_uint(tensor)
+
+    return tensor
+
+
+def cast_img_float32(tensor):
+    """Cast the data in np.float32 and scale it between 0 and 1.
+
+    If the input data is already in np.float, the values are not rescaled.
+
+    Casting image to np.float32 reduce the memory needed to process it and
+    accelerate computations.
+
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Image to cast.
 
     Returns
     -------
     tensor : np.ndarray, np.float32
-        Tensor cast.
+        image cast.
 
     """
+    # check tensor dtype
+    check_array(tensor, dtype=[np.uint8, np.uint16, np.float64])
+
     # cast tensor
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -962,8 +1050,10 @@ def cast_float32(tensor):
     return tensor
 
 
-def cast_float64(tensor):
+def cast_img_float64(tensor):
     """Cast the data in np.float64 and scale it between 0 and 1.
+
+    If the input data is already in np.float, the values are not rescaled.
 
     Parameters
     ----------
@@ -976,10 +1066,13 @@ def cast_float64(tensor):
         Tensor cast.
 
     """
+    # check tensor dtype
+    check_array(tensor, dtype=[np.uint8, np.uint16, np.float32])
+
     # cast tensor
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        tensor = img_as_float(tensor)
+        tensor = img_as_float64(tensor)
 
     return tensor
 
@@ -1041,6 +1134,8 @@ def mean_filter(image, kernel_shape, kernel_size):
         Filtered 2-d image with shape (y, x).
 
     """
+    # check image dtype and ndim
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get kernel
     kernel = _define_kernel(shape=kernel_shape,
@@ -1073,6 +1168,8 @@ def median_filter(image, kernel_shape, kernel_size):
         Filtered 2-d image with shape (y, x).
 
     """
+    # check image dtype and ndim
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get kernel
     kernel = _define_kernel(shape=kernel_shape,
@@ -1105,6 +1202,8 @@ def maximum_filter(image, kernel_shape, kernel_size):
         Filtered 2-d image with shape (y, x).
 
     """
+    # check image dtype and ndim
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get kernel
     kernel = _define_kernel(shape=kernel_shape,
@@ -1137,6 +1236,8 @@ def minimum_filter(image, kernel_shape, kernel_size):
         Filtered 2-d image with shape (y, x).
 
     """
+    # check image dtype and ndim
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get kernel
     kernel = _define_kernel(shape=kernel_shape,
@@ -1152,9 +1253,14 @@ def minimum_filter(image, kernel_shape, kernel_size):
 def log_filter(image, sigma):
     """Apply a Laplacian of Gaussian filter to a 2-d or 3-d image.
 
+    The function returns the inverse of the filtered image such that the pixels
+    with the highest intensity from the original (smoothed) image have
+    positive values. Those with a low intensity returning a negative value are
+    clipped to zero.
+
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
@@ -1165,12 +1271,16 @@ def log_filter(image, sigma):
     image_filtered : np.ndarray, np.float
         Filtered image.
     """
+    # check image dtype and ndim
+    check_array(image, ndim=[2, 3], dtype=[np.uint8, np.uint16,
+                                           np.float32, np.float64])
+
     # we cast the data in np.float to allow negative values
     image_float = None
     if image.dtype == np.uint8:
-        image_float = cast_float32(image)
+        image_float = cast_img_float32(image)
     elif image.dtype == np.uint16:
-        image_float = cast_float64(image)
+        image_float = cast_img_float64(image)
 
     # check sigma
     if isinstance(sigma, (tuple, list)):
@@ -1205,14 +1315,103 @@ def gaussian_filter(image, sigma):
         Filtered image.
 
     """
+    # TODO check for negative values
+    # check image dtype and ndim
+    check_array(image, ndim=[2, 3], dtype=[np.uint8, np.uint16,
+                                           np.float32, np.float64])
+
     # we cast the data in np.float to allow negative values
     image_float = None
     if image.dtype == np.uint8:
-        image_float = cast_float32(image)
+        image_float = cast_img_float32(image)
     elif image.dtype == np.uint16:
-        image_float = cast_float64(image)
+        image_float = cast_img_float64(image)
 
     # we apply gaussian filter
     image_filtered = gaussian(image_float, sigma=sigma)
 
     return image_filtered
+
+
+# ### Illumination surface ###
+
+def compute_illumination_surface(stacks, sigma=None):
+    """Compute the illumination surface of a specific experiment.
+
+    Parameters
+    ----------
+    stacks : np.ndarray, np.uint
+        Concatenated 5-d tensors along the z-dimension with shape
+        (r, c, z, y, x). They represent different images acquired during a
+        same experiment.
+    sigma : int
+        Sigma of the gaussian filtering used to smooth the illumination
+        surface.
+
+    Returns
+    -------
+    illumination_surfaces : np.ndarray, np.float
+        A 4-d tensor with shape (r, c, y, x) approximating the average
+        differential of illumination in our stack of images, for each channel
+        and each round.
+
+    """
+    # check stacks dtype and ndim
+    check_array(stacks, ndim=5, dtype=[np.uint8, np.uint16])
+
+    # initialize illumination surfaces
+    r, c, z, y, x = stacks.shape
+    illumination_surfaces = np.zeros((r, c, y, x))
+
+    # compute mean over the z-dimension
+    mean_stacks = np.mean(stacks, axis=2)
+
+    # separate the channels and the rounds
+    for i_round in range(r):
+        for i_channel in range(c):
+            illumination_surface = mean_stacks[i_round, i_channel, :, :]
+
+            # smooth the surface
+            if sigma is not None:
+                illumination_surface = gaussian(illumination_surface, sigma)
+
+            illumination_surfaces[i_round, i_channel] = illumination_surface
+
+    return illumination_surfaces
+
+
+def correct_illumination_surface(tensor, illumination_surfaces):
+    """Correct a tensor with uneven illumination.
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint
+        A 5-d tensor with shape (r, c, z, y, x).
+    illumination_surfaces : np.ndarray, np.float
+        A 4-d tensor with shape (r, c, y, x) approximating the average
+        differential of illumination in our stack of images, for each channel
+        and each round.
+
+    Returns
+    -------
+    tensor_corrected : np.ndarray, np.float
+        A 5-d tensor with shape (r, c, z, y, x).
+
+    """
+    # check dtype and ndim
+    check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+    check_array(illumination_surfaces, ndim=4, dtype=[np.float32, np.float64])
+
+    # initialize corrected tensor
+    tensor_corrected = np.zeros_like(tensor)
+
+    # TODO control the multiplication and the division
+    # correct each round/channel independently
+    r, c, _, _, _ = tensor.shape
+    for i_round in range(r):
+        for i_channel in range(c):
+            image_3d = tensor[i_round, i_channel, ...]
+            s = illumination_surfaces[i_round, i_channel]
+            tensor_corrected[i_round, i_channel] = image_3d * np.mean(s) / s
+
+    return tensor_corrected
