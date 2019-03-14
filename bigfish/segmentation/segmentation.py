@@ -12,6 +12,7 @@ from scipy import ndimage as ndi
 import numpy as np
 
 # TODO rename functions
+# TODO complete documentation methods
 
 
 def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
