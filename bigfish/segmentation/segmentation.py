@@ -43,6 +43,9 @@ def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
     nb_labels : int
         Number of different instances segmented.
     """
+    # check tensor dimensions and its dtype
+    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+
     # get a 2-d dapi image
     image_2d = stack.projection(tensor,
                                 method=projection_method,
