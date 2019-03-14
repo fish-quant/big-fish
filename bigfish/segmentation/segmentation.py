@@ -11,6 +11,8 @@ from skimage.measure import label
 from scipy import ndimage as ndi
 import numpy as np
 
+# TODO rename functions
+
 
 def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
                         return_label=False, **kargs):
@@ -47,7 +49,7 @@ def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
                                 c=c)
 
     # apply segmentation
-    image_segmented = stack.cast_uint8(image_2d)
+    image_segmented = stack.cast_img_uint8(image_2d)
     if segmentation_method == "threshold":
         image_segmented = filtered_threshold(image_segmented, **kargs)
     else:
@@ -163,6 +165,3 @@ def label_instances(image_segmented):
     """
     image_label, nb_labels = label(image_segmented, return_num=True)
     return image_label, nb_labels
-
-
-
