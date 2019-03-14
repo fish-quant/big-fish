@@ -4,18 +4,18 @@
 Class and functions to detect RNA spots in 2-d and 3-d.
 """
 
+from bigfish import stack
+
 import scipy.ndimage as ndi
 import numpy as np
 
-from bigfish import stack
 
-
-# TODO complete documentation
+# TODO complete documentation methods
 
 # ### Spot detection ###
 
 def detection(tensor, r, c, detection_method, **kargs):
-    """
+    """Apply spot detection.
 
     Parameters
     ----------
@@ -37,6 +37,9 @@ def detection(tensor, r, c, detection_method, **kargs):
         Radius of the detected peaks.
 
     """
+    # check tensor dimensions and its dtype
+    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+
     # get the smfish image
     image = tensor[r, c, :, :, :]
 
@@ -81,16 +84,16 @@ def detection_log_lm(image, sigma, minimum_distance=1, threshold=None):
 
     """
     # cast image in np.float, apply LoG filter and find local maximum
-    mask = log_lm(image, sigma, minimum_distance)
+    mask = _log_lm(image, sigma, minimum_distance)
 
     # remove peak with a low intensity and return coordinates and radius
-    peak_coordinates, radius = from_threshold_to_spots(image, sigma, mask,
-                                                       threshold)
+    peak_coordinates, radius = _from_threshold_to_spots(image, sigma, mask,
+                                                        threshold)
 
     return peak_coordinates, radius
 
 
-def log_lm(image, sigma, minimum_distance=1):
+def _log_lm(image, sigma, minimum_distance=1):
     """Find local maximum in a 2-d or 3-d image.
 
     1) We smooth the image with a LoG filter.
@@ -100,7 +103,7 @@ def log_lm(image, sigma, minimum_distance=1):
 
     Parameters
     ----------
-    image : np.ndarray, np.float
+    image : np.ndarray, np.uint
         Image to process with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
@@ -156,18 +159,30 @@ def _non_maximum_suppression_mask(image, minimum_distance):
     return mask
 
 
-def from_threshold_to_spots(image, sigma, mask, threshold):
-    """
+def _from_threshold_to_spots(image, sigma, mask, threshold):
+    """Filter detected local maximum and get coordinates of the remaining
+    spots.
 
     Parameters
     ----------
-    image
-    sigma
-    mask
-    threshold
+    image : np.ndarray, np.uint
+        Image with shape (z, y, x) or (y, x).
+    sigma : float or Tuple(float)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+    mask : np.ndarray, bool
+        Mask with shape (z, y, x) or (y, x) indicating the local peaks.
+    threshold : float or int
+        A threshold to detect peaks. Considered as a relative threshold if
+        float.
 
     Returns
     -------
+    peak_coordinates : np.ndarray, np.int64
+        Coordinate of the local peaks with shape (nb_peaks, 3) or
+        (nb_peaks, 2) for 3-d or 2-d images respectively.
+    radius : float
+        Radius of the detected peaks.
 
     """
     # remove peak with a low intensity
@@ -191,38 +206,54 @@ def compute_snr(image, sigma, minimum_distance=1,
 
     Parameters
     ----------
-    image
-    sigma
-    minimum_distance
-    threshold_signal_detection
-    neighbor_factor
+    image : np.ndarray, np.uint
+        Image with shape (z, y, x) or (y, x).
+    sigma : float or Tuple(float)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+    minimum_distance : int
+        Minimum distance (in number of pixels) between two local peaks.
+    threshold_signal_detection : float or int
+        A threshold to detect peaks. Considered as a relative threshold if
+        float.
+    neighbor_factor : int or float
+        The ratio between the radius of the neighborhood defining the noise
+        and the radius of the signal.
 
     Returns
     -------
 
     """
     # cast image in np.float, apply LoG filter and find local maximum
-    mask = log_lm(image, sigma, minimum_distance)
+    mask = _log_lm(image, sigma, minimum_distance)
 
     # apply a specific threshold to filter the detected spots and compute snr
-    l_snr = from_threshold_to_snr(image, sigma, mask,
-                                  threshold_signal_detection,
-                                  neighbor_factor)
+    l_snr = _from_threshold_to_snr(image, sigma, mask,
+                                   threshold_signal_detection,
+                                   neighbor_factor)
 
     return l_snr
 
 
-def from_threshold_to_snr(image, sigma, mask, threshold=2000,
-                          neighbor_factor=3):
+def _from_threshold_to_snr(image, sigma, mask, threshold=2000,
+                           neighbor_factor=3):
     """
 
     Parameters
     ----------
-    image
-    sigma
-    mask
-    threshold
-    neighbor_factor
+    image : np.ndarray, np.uint
+        Image with shape (z, y, x) or (y, x).
+    sigma : float or Tuple(float)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+    mask : np.ndarray, bool
+        Mask with shape (z, y, x) or (y, x) indicating the local peaks.
+    threshold : float or int
+        A threshold to detect peaks. Considered as a relative threshold if
+        float.
+    neighbor_factor : int or float
+        The ratio between the radius of the neighborhood defining the noise
+        and the radius of the signal.
 
     Returns
     -------
@@ -294,65 +325,34 @@ def from_threshold_to_snr(image, sigma, mask, threshold=2000,
     return l_snr
 
 
-# ### Signal-to-Noise ratio ###
+# ### Utils ###
 
-def optimize_threshold_log_lm(tensor, sigma, thresholds,
-                              r=0, c=2, minimum_distance=1, verbose=False):
-    """
-
-    Parameters
-    ----------
-    tensor
-    sigma
-    thresholds
-    r
-    c
-    minimum_distance
-    verbose
-
-    Returns
-    -------
-
-    """
-    # get the smfish image
-    image = tensor[r, c, :, :, :]
-
-    # cast image in np.float, apply LoG filter and find local maximum
-    mask = log_lm(image, sigma, minimum_distance)
-    if verbose:
-        print("{0} local peaks detected.".format(mask.sum()))
-
-    # test different thresholds
-    radius = None
-    peak_coordinates = []
-    for threshold in thresholds:
-
-        # get peak coordinates
-        peak_coordinates_, radius = from_threshold_to_spots(image, sigma, mask,
-                                                            threshold)
-        peak_coordinates.append(peak_coordinates_)
-        if verbose:
-            print("Threshold {0}: {1} RNA detected."
-                  .format(threshold, peak_coordinates_.shape[0]))
-
-    return peak_coordinates, thresholds, radius
-
-
-def get_sigma(resolution_xy=103, resolution_z=300):
+def get_sigma(resolution_xy=103, resolution_z=300, psf_xy=200, psf_z=400):
     """Compute the optimal sigma to use gaussian models with spots.
 
     Parameters
     ----------
-    resolution_xy
-    resolution_z
+    resolution_xy : int
+        Distance, in nanometer, between two pixels along the XY dimension.
+    resolution_z : int
+        Distance, in nanometer, between two pixels along the Z dimension.
+
+    psf_xy : int
+        Theoretical size (in nanometer) of the signal emitted by a spot in
+        the XY plan.
+    psf_z : int
+        Theoretical size (in nanometer) of the signal emitted by a spot in
+        the Z plan.
 
     Returns
     -------
+    sigma : Tuple
+        A Tuple with 3 items corresponding to the sigma used by a gaussian
+        filter in each direction of the image (approximately the same size of
+        the spot in the image).
 
     """
     # compute sigma
-    psf_xy = 200
-    psf_z = 400
     sigma_xy = psf_xy / resolution_xy
     sigma_z = psf_z / resolution_z
     sigma = (sigma_z, sigma_xy, sigma_xy)
