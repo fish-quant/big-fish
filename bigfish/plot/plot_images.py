@@ -9,6 +9,8 @@ import bigfish.stack as stack
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .utils import save_plot
+
 
 # TODO add title in the plot and remove axes
 
@@ -63,7 +65,7 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
         plt.title(title, fontweight="bold", fontsize=25)
     plt.axis('off')
     plt.tight_layout()
-    _save_plot(path_output, ext)
+    save_plot(path_output, ext)
     plt.show()
 
     return
@@ -127,7 +129,7 @@ def plot_images(images, framesize=(15, 15), titles=None,
                 ax[row, col].set_title(titles[i],
                                        fontweight="bold", fontsize=15)
     plt.tight_layout()
-    _save_plot(path_output, ext)
+    save_plot(path_output, ext)
     plt.show()
 
     return
@@ -173,7 +175,7 @@ def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), titles=None,
         if titles is not None:
             ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
     plt.tight_layout()
-    _save_plot(path_output, ext)
+    save_plot(path_output, ext)
     plt.show()
 
     return
@@ -220,7 +222,7 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
         if titles is not None:
             ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
     plt.tight_layout()
-    _save_plot(path_output, ext)
+    save_plot(path_output, ext)
     plt.show()
 
     return
@@ -266,7 +268,7 @@ def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
     ax[1].imshow(projection)
     ax[1].set_title("Projected image", fontweight="bold", fontsize=15)
     plt.tight_layout()
-    _save_plot(path_output, ext)
+    save_plot(path_output, ext)
     plt.show()
 
     return
@@ -328,7 +330,7 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
         ax[1].set_title("Segmentation", fontweight="bold", fontsize=15)
 
     plt.tight_layout()
-    _save_plot(path_output, ext)
+    save_plot(path_output, ext)
     plt.show()
 
     return
@@ -394,7 +396,7 @@ def plot_spot_detection(tensor, coordinates, radius, r=0, c=0, z=0,
                            fill=False)
             ax[1].add_patch(c)
         plt.tight_layout()
-        _save_plot(path_output, ext)
+        save_plot(path_output, ext)
         plt.show()
 
     # a specific z-slice
@@ -421,36 +423,7 @@ def plot_spot_detection(tensor, coordinates, radius, r=0, c=0, z=0,
                            fill=False)
             ax[1].add_patch(c)
         plt.tight_layout()
-        _save_plot(path_output, ext)
+        save_plot(path_output, ext)
         plt.show()
-
-    return
-
-
-def _save_plot(path_output, ext):
-    """Save the plot.
-
-    Parameters
-    ----------
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-
-    Returns
-    -------
-
-    """
-    # save the plot
-    if path_output is not None:
-        if isinstance(ext, str):
-            plt.savefig(path_output, format=ext)
-        elif isinstance(ext, list):
-            for ext_ in ext:
-                plt.savefig(path_output, format=ext_)
-        else:
-            Warning("Plot is not saved because the extension is not valid: "
-                    "{0}.".format(ext))
 
     return
