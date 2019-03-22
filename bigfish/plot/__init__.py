@@ -7,7 +7,8 @@ The bigfish.plot module includes function to plot images and simulated data.
 from .plot_images import (plot_yx, plot_channels_2d, plot_segmentation,
                           plot_projection, plot_images, plot_spot_detection,
                           plot_illumination_surface)
-from .plot_coordinates import plot_volume, plot_rna
+from .plot_coordinates import (plot_volume, plot_rna, plot_distribution_rna,
+                               plot_cell_coordinates, plot_layers_coordinates)
 
 
 __all__ = ["plot_yx",
@@ -18,4 +19,7 @@ __all__ = ["plot_yx",
            "plot_spot_detection",
            "plot_illumination_surface",
            "plot_volume",
-           "plot_rna"]
+           "plot_rna",
+           "plot_distribution_rna",
+           "plot_cell_coordinates",
+           "plot_layers_coordinates"]
