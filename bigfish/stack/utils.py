@@ -28,8 +28,8 @@ def check_features_df(df, features):
     col_names = df.columns
 
     # sort the two lists
-    col_names.sort()
-    features.sort()
+    col_names = sorted(col_names)
+    features = sorted(features)
 
     if col_names == features:
         return
@@ -49,6 +49,7 @@ def check_array(array, ndim=None, dtype=None):
         Number of dimensions expected.
     dtype : type or List[type]
         Types expected.
+
     Returns
     -------
 
@@ -122,3 +123,27 @@ def _check_dim_array(array, ndim):
     if array.ndim not in ndim:
         raise ValueError("Array can't have {0} dimension(s). Expected "
                          "dimensions are: {1}.".format(array.ndim, ndim))
+
+
+def check_range_value(array, min_, max_):
+    """
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to check.
+    min_ : int
+        Minimum value allowed.
+    max_ : int
+        Maximum value allowed.
+
+    Returns
+    -------
+    _ : bool
+        Assert if the array is within the requested bound.
+
+    """
+    if array.min() < min_ or array.max() > max_:
+        return False
+    else:
+        return True
