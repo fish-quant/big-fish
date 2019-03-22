@@ -82,7 +82,7 @@ def read_rna_json(path):
     df = pd.read_json(path)
 
     # check the output has the right number of features
-    if df.ndim != 9:
+    if df.shape[1] != 9:
         raise ValueError("The file does not seem to have the right number of "
                          "features. It returns {0} dimensions instead of 9."
                          .format(df.ndim))
