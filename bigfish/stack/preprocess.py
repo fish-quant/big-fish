@@ -11,7 +11,9 @@ import numpy as np
 import pandas as pd
 
 from .loader import read_tif, read_cell_json, read_rna_json
-from .utils import check_array
+from .utils import check_array, check_range_value
+
+from sklearn.preprocessing import LabelEncoder
 
 from skimage import img_as_ubyte, img_as_float32, img_as_float64, img_as_uint
 from skimage.morphology.selem import square, diamond, rectangle, disk
@@ -19,6 +21,10 @@ from skimage.filters import rank, gaussian
 from skimage.exposure import rescale_intensity
 
 from scipy.ndimage import gaussian_laplace
+from scipy.sparse import coo_matrix
+
+from scipy import ndimage as ndi
+
 
 # TODO add safety checks
 
@@ -57,7 +63,6 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
     """
     # read the cell data (nucleus + cytoplasm)
     df_cell = read_cell_json(path_cell)
-    print("data cell: {0}".format(df_cell.shape))
 
     # read the RNA data
     if os.path.isdir(path_rna):
@@ -74,11 +79,9 @@ def build_simulated_dataset(path_cell, path_rna, path_output=None):
     else:
         # we directly read the json file
         df_rna = read_rna_json(path_rna)
-    print("data rna: {0}".format(df_rna.shape))
 
     # merge the dataframe
     df = pd.merge(df_rna, df_cell, on="name_img_BGD")
-    print("data: {0}".format(df.shape))
 
     # save output
     if path_output is not None:
@@ -256,7 +259,7 @@ def build_stack(recipe, input_folder, input_dimension=None, normalize=False,
 
     # cast in np.uint8 if necessary, in order to reduce memory allocation
     if tensor.dtype == np.uint16 and cast_8bit:
-        tensor = cast_uint8(tensor)
+        tensor = cast_img_uint8(tensor)
 
     return tensor
 
@@ -985,7 +988,25 @@ def cast_img_uint8(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint16, np.float32, np.float64])
+    check_array(tensor, dtype=[np.uint16,
+                               np.float32, np.float64,
+                               np.bool])
+
+    # check the range value for float tensors
+    if tensor.dtype in [np.float32, np.float64]:
+        if not check_range_value(tensor, 0, 1):
+            raise ValueError("To cast a tensor from {0} to np.uint8, its "
+                             "values must be between 0 and 1, and not {1} "
+                             "and {2}."
+                             .format(tensor.dtype, tensor.min(), tensor.max()))
+
+    # check the range value for integer tensors
+    elif tensor.dtype == np.uint16:
+        if not check_range_value(tensor, 0, 255):
+            raise ValueError("To cast a tensor from np.uint16 to np.uint8, "
+                             "its values must be between 0 and 255, and not "
+                             "{0} and {1}.Otherwise, the values are clipped."
+                             .format(tensor.min(), tensor.max()))
 
     # cast tensor
     with warnings.catch_warnings():
@@ -1010,7 +1031,17 @@ def cast_img_uint16(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.float32, np.float64])
+    check_array(tensor, dtype=[np.uint8,
+                               np.float32, np.float64,
+                               np.bool])
+
+    # check the range value for float tensors
+    if tensor.dtype in [np.float32, np.float64]:
+        if not check_range_value(tensor, 0, 1):
+            raise ValueError("To cast a tensor from {0} to np.uint16, its "
+                             "values must be between 0 and 1, and not {1} "
+                             "and {2}."
+                             .format(tensor.dtype, tensor.min(), tensor.max()))
 
     # cast tensor
     with warnings.catch_warnings():
@@ -1040,7 +1071,8 @@ def cast_img_float32(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.uint16, np.float64])
+    check_array(tensor, dtype=[np.uint8, np.uint16,
+                               np.float64, np.bool])
 
     # cast tensor
     with warnings.catch_warnings():
@@ -1067,7 +1099,9 @@ def cast_img_float64(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.uint16, np.float32])
+    check_array(tensor, dtype=[np.uint8, np.uint16,
+                               np.float32,
+                               np.bool])
 
     # cast tensor
     with warnings.catch_warnings():
@@ -1415,3 +1449,236 @@ def correct_illumination_surface(tensor, illumination_surfaces):
             tensor_corrected[i_round, i_channel] = image_3d * np.mean(s) / s
 
     return tensor_corrected
+
+
+# ### Coordinates data cleaning ###
+
+def clean_simulated_data(data, data_cell, path_output=None):
+    """Clean simulated dataset.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Dataframe with all the simulated cells, the coordinates of their
+        different elements and the localization pattern used to simulate them.
+    data_cell : pandas.DataFrame
+        Dataframe with the 2D coordinates of the nucleus and the cytoplasm of
+        actual cells used to simulate data.
+    path_output : str
+        Path to save the cleaned dataset.
+
+    Returns
+    -------
+    data_final : pandas.DataFrame
+        Cleaned dataset.
+    background_to_remove : List[str]
+        Invalid background.
+    id_volume : List[int]
+        Background id from 'data_cell' to remove.
+    id_rna : List[int]
+        Cell id to remove from data.
+
+    """
+    # filter invalid simulated cell backgrounds
+    data_clean, background_to_remove, id_volume = clean_volume(data, data_cell)
+
+    # filter invalid simulated rna spots
+    data_clean, id_rna = clean_rna(data_clean)
+
+    # make the feature 'n_rna' consistent
+    data_clean["nb_rna"] = data_clean.apply(
+        lambda row: len(row["RNA_pos"]),
+        axis=1)
+
+    # remove useless features
+    data_final = data_clean[
+        ['RNA_pos', 'cell_ID', 'pattern_level', 'pattern_name', 'pos_cell',
+         'pos_nuc', "nb_rna"]]
+
+    # encode the label
+    le = LabelEncoder()
+    data_final["label"] = le.fit_transform(data_final["pattern_name"])
+
+    # reset index
+    data_final.reset_index(drop=True, inplace=True)
+
+    # save cleaned dataset
+    if path_output is not None:
+        data_final.to_pickle(path_output)
+
+    return data_final, background_to_remove, id_volume, id_rna
+
+
+def clean_volume(data, data_cell):
+    """Remove misaligned simulated cells from the dataset.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Dataframe with all the simulated cells, the coordinates of their
+        different elements and the localization pattern used to simulate them.
+    data_cell : pandas.DataFrame
+        Dataframe with the 2D coordinates of the nucleus and the cytoplasm of
+        actual cells used to simulate data.
+
+    Returns
+    -------
+    data_clean : pandas.DataFrame
+        Cleaned dataframe.
+    background_to_remove : List[str]
+        Invalid background.
+    id_to_remove : List[int]
+        Background id from 'data_cell' to remove.
+
+    """
+    # for each cell, check if the volume is valid or not
+    data_cell["valid_volume"] = data_cell.apply(
+        lambda row: _check_volume(row["pos_cell"], row["pos_nuc"]),
+        axis=1)
+
+    # get the invalid backgrounds
+    background_to_remove = []
+    id_to_remove = []
+    for i in data_cell.index:
+        if np.logical_not(data_cell.loc[i, "valid_volume"]):
+            background_to_remove.append(data_cell.loc[i, "name_img_BGD"])
+            id_to_remove.append(i)
+
+    # remove invalid simulated cells
+    data_clean = data[~data["name_img_BGD"].isin(background_to_remove)]
+
+    return data_clean, background_to_remove, id_to_remove
+
+
+def _check_volume(cyto_coord, nuc_coord):
+    """Check nucleus coordinates are not outside the boundary of the cytoplasm.
+
+    Parameters
+    ----------
+    cyto_coord : pandas.Series
+        Coordinates of the cytoplasm membrane.
+    nuc_coord : pandas.Series
+        Coordinates of the nucleus border.
+
+    Returns
+    -------
+    _ : bool
+        Tell if the cell volume is valid or not.
+
+    """
+    # get coordinates
+    cyto = np.array(cyto_coord)
+    nuc = np.array(nuc_coord)
+
+    max_x = max(cyto[:, 0].max() + 5, nuc[:, 0].max() + 5)
+    max_y = max(cyto[:, 1].max() + 5, nuc[:, 1].max() + 5)
+
+    # build the dense representation for the cytoplasm
+    values = [1] * cyto.shape[0]
+    cyto = coo_matrix((values, (cyto[:, 0], cyto[:, 1])),
+                      shape=(max_x, max_y)).todense()
+
+    # build the dense representation for the nucleus
+    values = [1] * nuc.shape[0]
+    nuc = coo_matrix((values, (nuc[:, 0], nuc[:, 1])),
+                     shape=(max_x, max_y)).todense()
+
+    # check if the volume is valid
+    mask_cyto = ndi.binary_fill_holes(cyto)
+    mask_nuc = ndi.binary_fill_holes(nuc)
+    frame = np.zeros((max_x, max_y))
+    diff = frame - mask_cyto + mask_nuc
+    diff = (diff > 0).sum()
+
+    if diff > 0:
+        return False
+    else:
+        return True
+
+
+def clean_rna(data):
+    """Remove cells with misaligned simulated rna spots from the dataset.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Dataframe with all the simulated cells, the coordinates of their
+        different elements and the localization pattern used to simulate them.
+
+    Returns
+    -------
+    data_clean : pandas.DataFrame
+        Cleaned dataframe.
+    id_to_remove : List[int]
+        Cell id to remove from data.
+
+    """
+    # for each cell we check if the rna spots are valid or not
+    data["valid_rna"] = data.apply(
+        lambda row: _check_rna(row["pos_cell"], row["RNA_pos"]),
+        axis=1)
+
+    # get id of the invalid cells
+    id_to_remove = []
+    for i in data.index:
+        if np.logical_not(data.loc[i, "valid_rna"]):
+            id_to_remove.append(i)
+
+    # remove invalid simulated cells
+    data_clean = data[data["valid_rna"]]
+
+    return data_clean, id_to_remove
+
+
+def _check_rna(cyto_coord, rna_coord):
+    """Check rna spots coordinates are not outside the boundary of the
+    cytoplasm.
+
+    Parameters
+    ----------
+    cyto_coord : pandas.Series
+        Coordinates of the cytoplasm membrane.
+    rna_coord : pandas.Series
+        Coordinates of the rna spots.
+
+    Returns
+    -------
+    _ : bool
+        Tell if the rna spots are valid or not.
+
+    """
+    # get coordinates
+    cyto = np.array(cyto_coord)
+    if not isinstance(rna_coord[0], list):
+        # it means we have only one spot
+        return False
+    rna = np.array(rna_coord)
+
+    # check if the coordinates are positive
+    if rna.min() < 0:
+        return False
+
+    max_x = int(max(cyto[:, 0].max() + 5, rna[:, 0].max() + 5))
+    max_y = int(max(cyto[:, 1].max() + 5, rna[:, 1].max() + 5))
+
+    # build the dense representation for the cytoplasm
+    values = [1] * cyto.shape[0]
+    cyto = coo_matrix((values, (cyto[:, 0], cyto[:, 1])),
+                      shape=(max_x, max_y)).todense()
+
+    # build the dense representation for the rna
+    values = [1] * rna.shape[0]
+    rna = coo_matrix((values, (rna[:, 0], rna[:, 1])),
+                     shape=(max_x, max_y)).todense()
+    rna = (rna > 0)
+
+    # check if the coordinates are valid
+    mask_cyto = ndi.binary_fill_holes(cyto)
+    frame = np.zeros((max_x, max_y))
+    diff = frame - mask_cyto + rna
+    diff = (diff > 0).sum()
+
+    if diff > 0:
+        return False
+    else:
+        return True
