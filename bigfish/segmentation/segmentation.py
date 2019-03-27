@@ -16,7 +16,7 @@ import numpy as np
 
 
 def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
-                        return_label=False, **kargs):
+                        return_label=False, **kwargs):
     """Segment nuclei from a 2-d projection.
 
     Parameters
@@ -55,7 +55,7 @@ def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
     # apply segmentation
     image_segmented = stack.cast_img_uint8(image_2d)
     if segmentation_method == "threshold":
-        image_segmented = filtered_threshold(image_segmented, **kargs)
+        image_segmented = filtered_threshold(image_segmented, **kwargs)
     else:
         pass
 
