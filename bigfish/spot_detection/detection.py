@@ -14,7 +14,7 @@ import numpy as np
 
 # ### Spot detection ###
 
-def detection(tensor, r, c, detection_method, **kargs):
+def detection(tensor, r, c, detection_method, **kwargs):
     """Apply spot detection.
 
     Parameters
@@ -46,7 +46,7 @@ def detection(tensor, r, c, detection_method, **kargs):
     # apply spot detection
     peak_coordinates, radius = None, None
     if detection_method == "log_lm":
-        peak_coordinates, radius = detection_log_lm(image, **kargs)
+        peak_coordinates, radius = detection_log_lm(image, **kwargs)
 
     return peak_coordinates, radius
 
