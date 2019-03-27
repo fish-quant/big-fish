@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Function to prepare the data before feeding a model.
+Functions to prepare the data before feeding a model.
 """
 
 import numpy as np
@@ -389,6 +389,192 @@ def get_label(data, id_cell):
 
 # ### Generator ###
 
+class Generator:
+
+    # TODO add documentation
+    # TODO check threading.Lock()
+    def __init__(self, data, method, batch_size, input_shape, augmentation,
+                 with_label, nb_classes, nb_epoch_max=10):
+        # get attributes
+        self.data = data
+        self.method = method
+        self.batch_size = batch_size
+        self.input_shape = input_shape
+        self.augmentation = augmentation
+        self.with_label = with_label
+        self.nb_classes = nb_classes
+        self.nb_epoch_max = nb_epoch_max
+
+        # initialize generator
+        self.nb_samples = self.data.shape[0]
+        self.indices = self._get_shuffled_indices()
+        self.nb_batch_per_epoch = self._get_batch_per_epoch()
+        self.i_batch = 0
+        self.i_epoch = 0
+
+    def __len__(self):
+        if self.nb_epoch_max is None:
+            raise ValueError("This generator loops over the data "
+                             "indefinitely. The 'len' function can't be "
+                             "applied.")
+        else:
+            return self.nb_samples * self.nb_epoch_max
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # we reach the end of an epoch
+        if self.i_batch == self.nb_batch_per_epoch:
+
+            # the generator loop over the data indefinitely
+            if self.nb_epoch_max is None:
+                if self.i_epoch == 500:
+                    raise StopIteration
+                self.i_epoch += 1
+                self.i_batch = 0
+                self.indices = self._get_shuffled_indices()
+                return self.__next__()
+
+            # we start a new epoch
+            elif (self.nb_epoch_max is not None
+                  and self.i_epoch < self.nb_epoch_max):
+                self.i_epoch += 1
+                self.i_batch = 0
+                self.indices = self._get_shuffled_indices()
+                return self.__next__()
+
+            # we reach the maximum number of epochs
+            elif (self.nb_epoch_max is not None
+                  and self.i_epoch == self.nb_epoch_max):
+                raise StopIteration
+
+        # we build a new batch
+        else:
+            if self.with_label:
+                batch_data, batch_label = self._build_batch(self.i_batch)
+                self.i_batch += 1
+                return batch_data, batch_label
+            else:
+                batch_data = self._build_batch(self.i_batch)
+                self.i_batch += 1
+                return batch_data
+
+    def _get_shuffled_indices(self):
+        # shuffle input data and get their indices
+        input_indices_ordered = list(self.data.index)
+        np.random.shuffle(input_indices_ordered)
+        return input_indices_ordered
+
+    def _get_batch_per_epoch(self):
+        # compute the number of batches to generate for the entire epoch
+        if self.nb_samples % self.batch_size == 0:
+            nb_batch = len(self.indices) // self.batch_size
+        else:
+            # the last batch can be smaller
+            nb_batch = (len(self.indices) // self.batch_size) + 1
+        return nb_batch
+
+    def _build_batch(self, i_batch):
+        # build a batch
+        start_index = i_batch * self.batch_size
+        end_index = min((i_batch + 1) * self.batch_size, self.nb_samples)
+        indices_batch = self.indices[start_index:end_index]
+
+        # return batch with label
+        if self.with_label:
+            batch_data, batch_label = build_batch(
+                data=self.data,
+                indices=indices_batch,
+                method=self.method,
+                input_shape=self.input_shape,
+                augmentation=self.augmentation,
+                with_label=self.with_label,
+                nb_classes=self.nb_classes)
+
+            return batch_data, batch_label
+
+        # return batch without label
+        else:
+            batch_data = build_batch(
+                data=self.data,
+                indices=indices_batch,
+                method=self.method,
+                input_shape=self.input_shape,
+                augmentation=self.augmentation,
+                with_label=self.with_label,
+                nb_classes=self.nb_classes)
+
+            return batch_data
+
+
+def generate_images(data, method, batch_size, input_shape, augmentation,
+                    with_label, nb_classes):
+    """Generate batches of images.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Dataframe with the data.
+    method : str
+        Channels used in the input image.
+            - 'normal' for (rna, cyt, nuc)
+            - 'distance' for (rna, distance_cyt, distance_nuc)
+            - 'surface' for (rna, surface_cyt, surface_nuc)
+    batch_size : int
+        Size of the batch.
+    input_shape : Tuple[int]
+        Shape of the input image.
+    augmentation : bool
+        Apply a random operator on the image.
+    with_label : bool
+        Return label of the image as well.
+    nb_classes : int
+        Number of different classes available.
+
+    Returns
+    -------
+    batch_data: np.ndarray, np.float32
+        Tensor with shape (batch_size, x, y, 3).
+    batch_label : np.ndarray, np.int64
+        Tensor of the encoded label, with shape (batch_size,)
+
+    """
+    # TODO make it loop indefinitely
+    # shuffle input data and get their indices
+    input_indices_ordered = list(data.index)
+    np.random.shuffle(input_indices_ordered)
+    nb_samples = len(input_indices_ordered)
+
+    # compute the number of batches to generate for the entire epoch
+    if nb_samples % batch_size == 0:
+        nb_batch = len(input_indices_ordered) // batch_size
+    else:
+        # the last batch can be smaller
+        nb_batch = (len(input_indices_ordered) // batch_size) + 1
+
+    # build batches
+    for i_batch in range(nb_batch):
+        start_index = i_batch * batch_size
+        end_index = min((i_batch + 1) * batch_size, nb_samples)
+        indices_batch = input_indices_ordered[start_index:end_index]
+
+        # return batch with label
+        if with_label:
+            batch_data, batch_label = build_batch(data, indices_batch, method,
+                                                  input_shape, augmentation,
+                                                  with_label, nb_classes)
+
+            yield batch_data, batch_label
+
+        # return batch without label
+        else:
+            batch_data = build_batch(data, indices_batch, method, input_shape,
+                                     augmentation, with_label, nb_classes)
+
+            yield batch_data
+
+
 def build_batch(data, indices, method="normal", input_shape=(224, 244),
                 augmentation=True, with_label=False, nb_classes=9):
     """Build a batch of data.
@@ -467,70 +653,3 @@ def one_hot_label(labels, nb_classes):
     label_one_hot = np.eye(nb_classes, dtype=np.float32)[labels]
 
     return label_one_hot
-
-
-def generate_images(data, method, batch_size, input_shape, augmentation,
-                    with_label, nb_classes):
-    """Generate batches of images.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Dataframe with the data.
-    method : str
-        Channels used in the input image.
-            - 'normal' for (rna, cyt, nuc)
-            - 'distance' for (rna, distance_cyt, distance_nuc)
-            - 'surface' for (rna, surface_cyt, surface_nuc)
-    batch_size : int
-        Size of the batch.
-    input_shape : Tuple[int]
-        Shape of the input image.
-    augmentation : bool
-        Apply a random operator on the image.
-    with_label : bool
-        Return label of the image as well.
-    nb_classes : int
-        Number of different classes available.
-
-    Returns
-    -------
-    batch_data: np.ndarray, np.float32
-        Tensor with shape (batch_size, x, y, 3).
-    batch_label : np.ndarray, np.int64
-        Tensor of the encoded label, with shape (batch_size,)
-
-    """
-    # TODO make it loop indefinitely
-    # shuffle input data and get their indices
-    input_indices_ordered = list(data.index)
-    np.random.shuffle(input_indices_ordered)
-    nb_samples = len(input_indices_ordered)
-
-    # compute the number of batches to generate for the entire epoch
-    if nb_samples % batch_size == 0:
-        nb_batch = len(input_indices_ordered) // batch_size
-    else:
-        # the last batch can be smaller
-        nb_batch = (len(input_indices_ordered) // batch_size) + 1
-
-    # build batches
-    for i_batch in range(nb_batch):
-        start_index = i_batch * batch_size
-        end_index = min((i_batch + 1) * batch_size, nb_samples)
-        indices_batch = input_indices_ordered[start_index:end_index]
-
-        # return batch with label
-        if with_label:
-            batch_data, batch_label = build_batch(data, indices_batch, method,
-                                                  input_shape, augmentation,
-                                                  with_label, nb_classes)
-
-            yield batch_data, batch_label
-
-        # return batch without label
-        else:
-            batch_data = build_batch(data, indices_batch, method, input_shape,
-                                     augmentation, with_label, nb_classes)
-
-            yield batch_data
