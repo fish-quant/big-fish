@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-General classes and methods to use the models. to classify the localization patterns of an cell image.
+General classes and methods to use the models.
 """
 
 from abc import ABCMeta, abstractmethod
 
+from tensorflow.python.keras.optimizers import (Adam, Adadelta, Adagrad,
+                                                Adamax, SGD)
 
-# ### Load models ###
 
 # ### General models ###
 
-class BaseModel(metaclass=ABCMeta):
+class BaseModel(object, metaclass=ABCMeta):
 
     def __init__(self):
         pass
 
     @abstractmethod
-    def fit(self):
+    def fit(self, train_data, train_label, validation_data, validation_label,
+            batch_size, nb_epochs):
+        pass
+
+    @abstractmethod
+    def fit_generator(self, train_generator, validation_generator, nb_epochs):
         pass
 
     @abstractmethod
@@ -25,23 +31,51 @@ class BaseModel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def evaluate(self):
+    def evaluate(self, data, label):
         pass
 
 
-# ### 2D models ###
+# ### optimizer ###
 
-class SqueezeNet(BaseModel):
+def get_optimizer(optimizer_name="adam", **kwargs):
+    """Instantiate the optimizer.
 
-    def __init__(self):
-        super().__init__()
-        pass
+    Parameters
+    ----------
+    optimizer_name : str
+        Name of the optimizer to use.
 
-    def fit(self):
-        pass
+    Returns
+    -------
+    optimizer : tf.keras.optimizers
+        Optimizer instance used in the model.
 
-    def predict(self):
-        pass
+    """
+    # TODO use tensorflow optimizer
+    if optimizer_name == "adam":
+        optimizer = Adam(**kwargs)
+    elif optimizer_name == "adadelta":
+        optimizer = Adadelta(**kwargs)
+    elif optimizer_name == "adagrad":
+        optimizer = Adagrad(**kwargs)
+    elif optimizer_name == "adamax":
+        optimizer = Adamax(**kwargs)
+    elif optimizer_name == "sgd":
+        optimizer = SGD(**kwargs)
+    else:
+        raise ValueError("Instead of {0}, optimizer must be chosen among "
+                         "['adam', 'adadelta', 'adagrad', adamax', sgd']."
+                         .format(optimizer_name))
 
-    def evaluate(self):
-        pass
+    return optimizer
+
+
+
+
+#print(globals())
+#print()
+#print(globals()["BaseModel"])
+#print()
+#print(locals())
+#print()
+#print(BaseModel.__subclasses__())
