@@ -15,6 +15,7 @@ import bigfish.classification as classification
 # Your CPU supports instructions that this TensorFlow binary was not compiled
 # to use: AVX2 FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = 0
 
 if __name__ == '__main__':
     print()
