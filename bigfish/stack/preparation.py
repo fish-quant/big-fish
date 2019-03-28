@@ -13,13 +13,14 @@ from .utils import check_array
 
 from skimage.transform import resize
 from scipy.sparse import coo_matrix
+from sklearn.preprocessing import LabelEncoder
 
 from scipy import ndimage as ndi
 
 
 # TODO define the requirements for 'data'
 
-# ### Split data ###
+# ### Split and subset data ###
 
 def split_from_background(data, p_validation=0.2, p_test=0.2):
     """Split dataset between train, validation and test, based on the
@@ -56,18 +57,33 @@ def split_from_background(data, p_validation=0.2, p_test=0.2):
     train_cell = background_id[nb_validation+nb_test:]
 
     # split data between train, validation and test
-    data_train = data.query("cell_ID in {}".format(str(train_cell)))
+    data_train = data.query("cell_ID in {0}".format(str(train_cell)))
     data_train.reset_index(drop=True, inplace=True)
-    data_validation = data.query("cell_ID in {}".format(str(validation_cell)))
+    data_validation = data.query("cell_ID in {0}".format(str(validation_cell)))
     data_validation.reset_index(drop=True, inplace=True)
-    data_test = data.query("cell_ID in {}".format(str(test_cell)))
+    data_test = data.query("cell_ID in {0}".format(str(test_cell)))
     data_test.reset_index(drop=True, inplace=True)
 
     return data_train, data_validation, data_test
 
 
-# ### Build images ###
+def subset_data(data, classes_name=None):
+    # choose classes to keep
+    if classes_name is None:
+        classes_name = list(set(data["pattern_name"]))
 
+    # keep specific classes
+    query = "pattern_name in {0}".format(str(classes_name))
+    data = data.query(query)
+
+    # encode the label
+    le = LabelEncoder()
+    data = data.assign(label=le.fit_transform(data["pattern_name"]))
+
+    return data
+
+
+# ### Build images ###
 
 def build_input_image(data, id_cell, channels="normal", input_shape=None,
                       augmentation=False):
@@ -393,8 +409,9 @@ class Generator:
 
     # TODO add documentation
     # TODO check threading.Lock()
+    # TODO add classes
     def __init__(self, data, method, batch_size, input_shape, augmentation,
-                 with_label, nb_classes, nb_epoch_max=10):
+                 with_label, nb_classes, nb_epoch_max=10, shuffle=True):
         # get attributes
         self.data = data
         self.method = method
@@ -404,6 +421,7 @@ class Generator:
         self.with_label = with_label
         self.nb_classes = nb_classes
         self.nb_epoch_max = nb_epoch_max
+        self.shuffle = shuffle
 
         # initialize generator
         self.nb_samples = self.data.shape[0]
@@ -414,11 +432,16 @@ class Generator:
 
     def __len__(self):
         if self.nb_epoch_max is None:
-            raise ValueError("This generator loops over the data "
-                             "indefinitely. The 'len' function can't be "
-                             "applied.")
+            raise ValueError("This generator loops indefinitely over the "
+                             "data. The 'len' method can't be used.")
         else:
             return self.nb_samples * self.nb_epoch_max
+
+    def __bool__(self):
+        if self.nb_epoch_max is None or self.nb_epoch_max > 0:
+            return True
+        else:
+            return False
 
     def __iter__(self):
         return self
@@ -463,7 +486,8 @@ class Generator:
     def _get_shuffled_indices(self):
         # shuffle input data and get their indices
         input_indices_ordered = list(self.data.index)
-        np.random.shuffle(input_indices_ordered)
+        if self.shuffle:
+            np.random.shuffle(input_indices_ordered)
         return input_indices_ordered
 
     def _get_batch_per_epoch(self):
@@ -506,6 +530,13 @@ class Generator:
                 nb_classes=self.nb_classes)
 
             return batch_data
+
+    def reset(self):
+        # initialize generator
+        self.indices = self._get_shuffled_indices()
+        self.nb_batch_per_epoch = self._get_batch_per_epoch()
+        self.i_batch = 0
+        self.i_epoch = 0
 
 
 def generate_images(data, method, batch_size, input_shape, augmentation,
