@@ -32,29 +32,30 @@ if __name__ == '__main__':
                         help="Size of a batch.",
                         type=int,
                         default=16)
-    parser.add_argument("--input_shape",
-                        help="Shape of the input data.",
-                        type=tuple,
-                        default=(224, 224))
-    parser.add_argument("--nb_classes",
-                        help=" Final number of classes.",
-                        type=int,
-                        default=9)
     parser.add_argument("--nb_epochs",
                         help="Number of epochs to train the model.",
                         type=int,
                         default=10)
     args = parser.parse_args()
 
+    # parameters
+    classes = ["inNUC", "cell2D", "nuc2D", "foci", "polarized", "cellext",
+               "random"]
+    nb_classes = len(classes)
+    input_shape = (224, 224)
+
     print("------------------------")
     print("Input data: {0}".format(args.path_input))
     print("Output logs: {0}".format(args.log_directory), "\n")
 
     print("------------------------")
-    print("Input shape: {0}".format(args.input_shape))
+    print("Number of classes: {0}".format(nb_classes))
+    print("Input shape: {0}".format(input_shape))
     print("Batch size: {0}".format(args.batch_size))
-    print("Number of classes: {0}".format(args.nb_classes))
     print("Number of epochs: {0}".format(args.nb_epochs), "\n")
+
+    print("------------------------")
+    print("Classes: {0}".format(classes), "\n")
 
     print("--- PREPROCESSING ---", "\n")
 
@@ -65,10 +66,7 @@ if __name__ == '__main__':
     print("Shape input dataframe (before preparation): {0}".format(df.shape))
 
     # prepare data
-    classes = ["inNUC", "cell2D", "nuc2D", "foci", "polarized", "cellext",
-               "random"]
-    query = "pattern_name in {0}".format(str(classes))
-    df = df.query(query)
+    df = stack.subset_data(df, classes_name=classes)
     print("Shape input dataframe (after preparation): {0}".format(df.shape))
     df_train, df_validation, df_test = stack.split_from_background(
         data=df,
@@ -82,10 +80,10 @@ if __name__ == '__main__':
         data=df_train,
         method="normal",
         batch_size=args.batch_size,
-        input_shape=args.input_shape,
+        input_shape=input_shape,
         augmentation=True,
         with_label=True,
-        nb_classes=args.nb_classes,
+        nb_classes=nb_classes,
         nb_epoch_max=None)
     print("Number of train batches per epoch: {0}"
           .format(train_generator.nb_batch_per_epoch))
@@ -95,21 +93,35 @@ if __name__ == '__main__':
         data=df_validation,
         method="normal",
         batch_size=args.batch_size,
-        input_shape=args.input_shape,
+        input_shape=input_shape,
         augmentation=False,
         with_label=True,
-        nb_classes=args.nb_classes,
-        nb_epoch_max=1)
+        nb_classes=nb_classes,
+        nb_epoch_max=None)
     print("Number of validation batches per epoch: {0}"
           .format(validation_generator.nb_batch_per_epoch))
+
+    # build test generator
+    test_generator = stack.Generator(
+        data=df_test,
+        method="normal",
+        batch_size=args.batch_size,
+        input_shape=input_shape,
+        augmentation=False,
+        with_label=True,
+        nb_classes=nb_classes,
+        nb_epoch_max=None,
+        shuffle=False)
+    print("Number of test batches per epoch: {0}"
+          .format(test_generator.nb_batch_per_epoch))
     print()
 
     print("--- TRAINING ---", "\n")
 
     # build and fit model
     model = classification.SqueezeNet0(
-        nb_classes=args.nb_classes,
-        bypass=False,
+        nb_classes=nb_classes,
+        bypass=True,
         optimizer="adam",
         logdir=args.log_directory)
     print("Model trained: {0}".format(model.trained))
@@ -121,5 +133,10 @@ if __name__ == '__main__':
 
     # evaluate model
     print("Model trained: {0}".format(model.trained))
+    validation_generator.reset()
     loss, accuracy = model.evaluate_generator(validation_generator)
-    print("Loss: {0} | Accuracy: {1}".format(loss, 100 * accuracy))
+    print("Loss validation: {0} | Accuracy validation: {1}"
+          .format(loss, 100 * accuracy))
+    loss, accuracy = model.evaluate_generator(test_generator)
+    print("Loss test: {0} | Accuracy test: {1}"
+          .format(loss, 100 * accuracy))
