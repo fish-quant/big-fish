@@ -18,6 +18,7 @@ Version: 1.1 (see github https://github.com/DeepScale/SqueezeNet)
 import os
 
 import tensorflow as tf
+import numpy as np
 
 from .base import BaseModel, get_optimizer
 
@@ -27,7 +28,7 @@ from tensorflow.python.keras.callbacks import ModelCheckpoint
 from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
                                             Dropout, GlobalAveragePooling2D,
                                             Add, Input, Activation,
-                                            ZeroPadding2D)
+                                            ZeroPadding2D, BatchNormalization)
 
 
 # TODO add logging routines
@@ -43,7 +44,6 @@ class SqueezeNet0(BaseModel):
         # get model's attributes
         super().__init__()
         self.nb_classes = nb_classes
-        self.bypass = bypass
         self.logdir = logdir
 
         # initialize model
@@ -52,21 +52,8 @@ class SqueezeNet0(BaseModel):
         self.model = None
         self.trained = False
 
-        # build model architecture
-        input_ = Input(shape=(224, 224, 3),
-                       name="input",
-                       dtype="float32")
-        logit_ = squeezenet_network_v0(input_tensor=input_,
-                                       nb_classes=self.nb_classes,
-                                       bypass=self.bypass)
-        output_ = squeezenet_classifier(logit=logit_)
-
-        self.model = Model(inputs=input_,
-                           outputs=output_,
-                           name="SqueezeNet_v0")
-
-        # get optimizer
-        self.optimizer = get_optimizer(optimizer_name=optimizer)
+        # build model
+        self._build_model(bypass, optimizer)
 
     def fit(self, train_data, train_label, validation_data, validation_label,
             batch_size, nb_epochs):
@@ -74,8 +61,6 @@ class SqueezeNet0(BaseModel):
         # TODO implement resumed training with 'initial_epoch'
         # TODO add documentation
         # TODO add callbacks
-        # compile model
-        self.compile_model()
 
         # fit model
         self.model.fit(
@@ -107,13 +92,10 @@ class SqueezeNet0(BaseModel):
             Warning("Train generator must loop indefinitely over the data. "
                     "The parameter 'nb_epoch_max' is set to None.")
             train_generator.nb_epoch_max = None
-        if validation_generator.nb_epoch_max != 1:
-            Warning("Validation generator should check all the validation "
-                    "data once. The parameter 'nb_epoch_max' is set to 1.")
-            validation_generator.nb_epoch_max = 1
-
-        # compile model
-        self.compile_model()
+        if validation_generator.nb_epoch_max is not None:
+            Warning("Validation generator must loop indefinitely over the "
+                    "data. The parameter 'nb_epoch_max' is set to None.")
+            validation_generator.nb_epoch_max = None
 
         # define callbacks
         if self.logdir is not None:
@@ -147,42 +129,91 @@ class SqueezeNet0(BaseModel):
 
         return
 
-    def predict(self):
-        pass
+    def predict(self, data, return_probability=False):
+        # compute probabilities
+        probability = self.predict_probability(data=data)
+
+        # make prediction
+        prediction = np.argmax(probability, axis=-1)
+
+        if return_probability:
+            return prediction, probability
+        else:
+            return prediction
+
+    def predict_probability(self, data):
+        # compute probabilities
+        probability = self.model.predict(x=data)
+
+        return probability
+
+    def predict_generator(self, generator, return_probability=False):
+        # compute probabilities
+        probability = self.predict_probability_generator(generator=generator)
+
+        # make prediction
+        prediction = np.argmax(probability, axis=-1)
+
+        if return_probability:
+            return prediction, probability
+        else:
+            return prediction
+
+    def predict_probability_generator(self, generator):
+        # TODO add multiprocessing
+        # compute probabilities
+        probability = self.model.predict_generator(
+            generator=generator,
+            steps=generator.nb_batch_per_epoch,
+            workers=1,
+            max_queue_size=1,
+            use_multiprocessing=False)
+
+        return probability
 
     def evaluate(self, data, label):
-        # If the model is not trained yet, we load it
-        if not self.trained:
-            loading = self.get_weight()
-            if not loading:
-                raise ValueError("Model is not trained yet and pre-trained "
-                                 "weights are not available.")
-
         # evaluate model
-        loss, accuracy = self.model.evaluate(data, label)
-        print("Loss: {0} | Accuracy: {1}".format(loss, 100 * accuracy))
+        loss, accuracy = self.model.evaluate(x=data, y=label)
+        print("Loss: {0:.3f} | Accuracy: {1:.3f}".format(loss, 100 * accuracy))
 
         return loss, accuracy
 
     def evaluate_generator(self, generator):
         # TODO check the outcome 'loss' and 'accuracy'
-        # If the model is not trained yet, we load it
-        if not self.trained:
-            # loading = self.get_weight()
-            loading = True
-            if not loading:
-                raise ValueError("Model is not trained yet and pre-trained "
-                                 "weights are not available.")
-
         # evaluate model
         loss, accuracy = self.model.evaluate_generator(
             generator=generator,
             steps=generator.nb_batch_per_epoch,
             workers=1,
+            max_queue_size=1,
             use_multiprocessing=False,
             verbose=1)
+        print("Loss: {0:.3f} | Accuracy: {1:.3f}".format(loss, 100 * accuracy))
 
         return loss, accuracy
+
+    def _build_model(self, bypass, optimizer):
+        # build model architecture
+        input_ = Input(shape=(224, 224, 3),
+                       name="input",
+                       dtype="float32")
+        logit_ = squeezenet_network_v0(input_tensor=input_,
+                                       nb_classes=self.nb_classes,
+                                       bypass=bypass)
+        output_ = squeezenet_classifier(logit=logit_)
+
+        self.model = Model(inputs=input_,
+                           outputs=output_,
+                           name="SqueezeNet_v0")
+
+        # get optimizer
+        self.optimizer = get_optimizer(optimizer_name=optimizer)
+
+        # compile model
+        self.model.compile(
+            optimizer=self.optimizer,
+            loss="categorical_crossentropy",
+            metrics=["categorical_accuracy"])
 
     def print_model(self):
         print(self.model.summary(), "\n")
@@ -190,34 +221,21 @@ class SqueezeNet0(BaseModel):
     def get_weight(self, latest=True, checkpoint_name="cp.ckpt"):
         # TODO fix the loose of the optimizer state
         # load weights from a training checkpoint if it exists
-        if self.logdir is not None:
-
-            # the last one
+        if self.logdir is not None and os.path.isdir(self.logdir):
+            # the last one...
             if latest:
                 checkpoint_path = tf.train.latest_checkpoint(self.logdir)
-
-            # or a specific one
+            # ...or a specific one
             else:
                 checkpoint_path = os.path.join(self.logdir, checkpoint_name)
 
-            # load weights and compile model
+            # load weights
             self.model.load_weights(checkpoint_path)
-            self.compile_model()
             self.trained = True
 
-            return True
-
         else:
-
-            return False
-
-    def compile_model(self):
-        # compile model
-        self.model.compile(
-            optimizer=self.optimizer,
-            loss="categorical_crossentropy",
-            metrics=["categorical_accuracy"])
-        return
+            raise ValueError("Impossible to load pre-trained weights. The log "
+                             "directory is not specified or does not exist.")
 
 
 # ### Architecture functions ###
@@ -291,7 +309,7 @@ def squeezenet_network_v0(input_tensor, nb_classes, bypass=False):
         nb_filters_e3x3=128,
         name="fire5")  # (batch_size, 27, 27, 256)
     if bypass:
-        fire5 = Add()([fire4, fire5])
+        fire5 = Add()([maxpool4, fire5])
     fire6 = fire_module(
         input_tensor=fire5,
         nb_filters_s1x1=48,
@@ -324,7 +342,7 @@ def squeezenet_network_v0(input_tensor, nb_classes, bypass=False):
         nb_filters_e3x3=256,
         name="fire9")  # (batch_size, 13, 13, 512)
     if bypass:
-        fire9 = Add()([fire8, fire9])
+        fire9 = Add()([maxpool8, fire9])
 
     # last convolution block
     dropout10 = Dropout(
@@ -337,9 +355,12 @@ def squeezenet_network_v0(input_tensor, nb_classes, bypass=False):
         activation='relu',
         name='conv10')(
         dropout10)  # (batch_size, 13, 13, nb_classes)
+    norm10 = BatchNormalization(
+        name="batchnorm10")(
+        conv10)  # (batch_size, 13, 13, nb_classes)
     avgpool10 = GlobalAveragePooling2D(
         name="avgpool10")(
-        conv10)  # (batch_size, nb_classes)
+        norm10)  # (batch_size, nb_classes)
 
     return avgpool10
 
@@ -543,10 +564,6 @@ def squeezenet_classifier(logit):
     normalized_logit = Activation(activation="softmax", name="softmax")(logit)
 
     return normalized_logit
-
-# ### Utils functions ###
-
-
 
 
 #from keras import backend as K

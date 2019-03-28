@@ -27,11 +27,27 @@ class BaseModel(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def predict(self):
+    def predict(self, data, return_probability=False):
+        pass
+
+    @abstractmethod
+    def predict_generator(self, generator, return_probability=False):
+        pass
+
+    @abstractmethod
+    def predict_probability(self, data):
+        pass
+
+    @abstractmethod
+    def predict_probability_generator(self, generator):
         pass
 
     @abstractmethod
     def evaluate(self, data, label):
+        pass
+
+    @abstractmethod
+    def evaluate_generator(self, generator):
         pass
 
 
