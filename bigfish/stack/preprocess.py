@@ -1479,6 +1479,7 @@ def clean_simulated_data(data, data_cell, path_output=None):
         Cell id to remove from data.
 
     """
+    # TODO remove the 'SettingWithCopyWarning'
     # filter invalid simulated cell backgrounds
     data_clean, background_to_remove, id_volume = clean_volume(data, data_cell)
 
