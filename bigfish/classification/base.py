@@ -23,7 +23,8 @@ class BaseModel(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def fit_generator(self, train_generator, validation_generator, nb_epochs):
+    def fit_generator(self, train_generator, validation_generator, nb_epochs,
+                      nb_workers=1, multiprocessing=False):
         pass
 
     @abstractmethod
@@ -31,7 +32,8 @@ class BaseModel(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def predict_generator(self, generator, return_probability=False):
+    def predict_generator(self, generator, return_probability=False,
+                          nb_workers=1, multiprocessing=False):
         pass
 
     @abstractmethod
@@ -39,7 +41,8 @@ class BaseModel(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def predict_probability_generator(self, generator):
+    def predict_probability_generator(self, generator,
+                                      nb_workers=1, multiprocessing=False):
         pass
 
     @abstractmethod
@@ -47,7 +50,8 @@ class BaseModel(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def evaluate_generator(self, generator):
+    def evaluate_generator(self, generator, nb_workers=1,
+                           multiprocessing=False):
         pass
 
 
