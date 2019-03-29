@@ -80,7 +80,8 @@ class SqueezeNet0(BaseModel):
 
         return
 
-    def fit_generator(self, train_generator, validation_generator, nb_epochs):
+    def fit_generator(self, train_generator, validation_generator, nb_epochs,
+                      nb_workers=1, multiprocessing=False):
         # TODO implement multiprocessing
         # TODO exploit an equivalent of 'sample_weight'
         # TODO implement resumed training with 'initial_epoch'
@@ -120,8 +121,8 @@ class SqueezeNet0(BaseModel):
             validation_data=validation_generator,
             validation_steps=validation_generator.nb_batch_per_epoch,
             max_queue_size=10,
-            workers=1,
-            use_multiprocessing=False,
+            workers=nb_workers,
+            use_multiprocessing=multiprocessing,
             initial_epoch=0)
 
         # update model attribute
@@ -147,9 +148,13 @@ class SqueezeNet0(BaseModel):
 
         return probability
 
-    def predict_generator(self, generator, return_probability=False):
+    def predict_generator(self, generator, return_probability=False,
+                          nb_workers=1, multiprocessing=False):
         # compute probabilities
-        probability = self.predict_probability_generator(generator=generator)
+        probability = self.predict_probability_generator(
+            generator=generator,
+            nb_workers=nb_workers,
+            multiprocessing=multiprocessing)
 
         # make prediction
         prediction = np.argmax(probability, axis=-1)
@@ -159,15 +164,16 @@ class SqueezeNet0(BaseModel):
         else:
             return prediction
 
-    def predict_probability_generator(self, generator):
+    def predict_probability_generator(self, generator, nb_workers=1,
+                                      multiprocessing=False):
         # TODO add multiprocessing
         # compute probabilities
         probability = self.model.predict_generator(
             generator=generator,
             steps=generator.nb_batch_per_epoch,
-            workers=1,
+            workers=nb_workers,
             max_queue_size=1,
-            use_multiprocessing=False)
+            use_multiprocessing=multiprocessing)
 
         return probability
 
@@ -178,15 +184,16 @@ class SqueezeNet0(BaseModel):
 
         return loss, accuracy
 
-    def evaluate_generator(self, generator):
+    def evaluate_generator(self, generator, nb_workers=1,
+                           multiprocessing=False):
         # TODO check the outcome 'loss' and 'accuracy'
         # evaluate model
         loss, accuracy = self.model.evaluate_generator(
             generator=generator,
             steps=generator.nb_batch_per_epoch,
-            workers=1,
+            workers=nb_workers,
             max_queue_size=1,
-            use_multiprocessing=False,
+            use_multiprocessing=multiprocessing,
             verbose=1)
         print("Loss: {0:.3f} | Accuracy: {1:.3f}".format(loss, 100 * accuracy))
 
