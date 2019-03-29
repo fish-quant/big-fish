@@ -29,6 +29,11 @@ if __name__ == '__main__':
     parser.add_argument("log_directory",
                         help="Path of the log directory.",
                         type=str)
+    parser.add_argument("--features",
+                        help="Features used ('normal', 'distance' or "
+                             "'surface')",
+                        type=str,
+                        default="normal")
     parser.add_argument("--batch_size",
                         help="Size of a batch.",
                         type=int,
@@ -60,6 +65,7 @@ if __name__ == '__main__':
     print("------------------------")
     print("Number of classes: {0}".format(nb_classes))
     print("Input shape: {0}".format(input_shape))
+    print("Features: {0}".format(args.features))
     print("Batch size: {0}".format(args.batch_size))
     print("Number of epochs: {0}".format(args.nb_epochs), "\n")
     print("Number of workers: {0}".format(args.nb_workers), "\n")
@@ -89,7 +95,7 @@ if __name__ == '__main__':
     # build train generator
     train_generator = stack.Generator(
         data=df_train,
-        method="normal",
+        method=args.features,
         batch_size=args.batch_size,
         input_shape=input_shape,
         augmentation=True,
@@ -102,7 +108,7 @@ if __name__ == '__main__':
     # build validation generator
     validation_generator = stack.Generator(
         data=df_validation,
-        method="normal",
+        method=args.features,
         batch_size=args.batch_size,
         input_shape=input_shape,
         augmentation=False,
@@ -115,7 +121,7 @@ if __name__ == '__main__':
     # build test generator
     test_generator = stack.Generator(
         data=df_test,
-        method="normal",
+        method=args.features,
         batch_size=args.batch_size,
         input_shape=input_shape,
         augmentation=False,
