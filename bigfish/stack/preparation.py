@@ -432,7 +432,6 @@ def threadsafe_generator(f):
     return g
 
 
-@threadsafe_generator
 class Generator:
 
     # TODO add documentation
