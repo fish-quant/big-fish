@@ -15,7 +15,7 @@ import bigfish.classification as classification
 # Your CPU supports instructions that this TensorFlow binary was not compiled
 # to use: AVX2 FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = "2"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
 if __name__ == '__main__':
     print()
@@ -37,6 +37,14 @@ if __name__ == '__main__':
                         help="Number of epochs to train the model.",
                         type=int,
                         default=10)
+    parser.add_argument("--nb_workers",
+                        help="Number of workers to use.",
+                        type=int,
+                        default=1)
+    parser.add_argument("--multiprocessing",
+                        help="Use multiprocessing.",
+                        type=bool,
+                        default=False)
     args = parser.parse_args()
 
     # parameters
@@ -54,6 +62,8 @@ if __name__ == '__main__':
     print("Input shape: {0}".format(input_shape))
     print("Batch size: {0}".format(args.batch_size))
     print("Number of epochs: {0}".format(args.nb_epochs), "\n")
+    print("Number of workers: {0}".format(args.nb_workers), "\n")
+    print("Multiprocessing: {0}".format(args.multiprocessing), "\n")
 
     print("------------------------")
     print("Classes: {0}".format(classes), "\n")
@@ -127,17 +137,33 @@ if __name__ == '__main__':
         logdir=args.log_directory)
     print("Model trained: {0}".format(model.trained))
     model.print_model()
-    model.fit_generator(train_generator, validation_generator, args.nb_epochs)
+    model.fit_generator(train_generator, validation_generator, args.nb_epochs,
+                        args.nb_workers, args.multiprocessing)
     print()
 
     print("--- EVALUATION ---", "\n")
 
-    # evaluate model
+    # evaluate model with train data
+    print("Model trained: {0}".format(model.trained))
+    train_generator.reset()
+    loss, accuracy = model.evaluate_generator(train_generator,
+                                              args.nb_workers,
+                                              args.multiprocessing)
+    print("Loss train: {0} | Accuracy train: {1}"
+          .format(loss, 100 * accuracy))
+
+    # evaluate model with validation data
     print("Model trained: {0}".format(model.trained))
     validation_generator.reset()
-    loss, accuracy = model.evaluate_generator(validation_generator)
+    loss, accuracy = model.evaluate_generator(validation_generator,
+                                              args.nb_workers,
+                                              args.multiprocessing)
     print("Loss validation: {0} | Accuracy validation: {1}"
           .format(loss, 100 * accuracy))
-    loss, accuracy = model.evaluate_generator(test_generator)
+
+    # evaluate model with test data
+    loss, accuracy = model.evaluate_generator(test_generator,
+                                              args.nb_workers,
+                                              args.multiprocessing)
     print("Loss test: {0} | Accuracy test: {1}"
           .format(loss, 100 * accuracy))
