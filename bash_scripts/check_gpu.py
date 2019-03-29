@@ -22,8 +22,9 @@ if __name__ == '__main__':
 
     # run a session with 'log_device_placement'
     config = tf.ConfigProto(log_device_placement=True)
-    with tf.Session(config=config) as sess:
-        print(sess.run(c))
+    session = tf.Session(config=config)
+    print(session.run(c))
+    session.close()
     print()
     time.sleep(2)
 
@@ -38,8 +39,9 @@ if __name__ == '__main__':
 
     # run a session with 'log_device_placement'
     config = tf.ConfigProto(log_device_placement=True)
-    with tf.Session(config=config) as sess:
-        print(sess.run(c))
+    session = tf.Session(config=config)
+    print(session.run(c))
+    session.close()
     print()
     time.sleep(2)
 
@@ -56,8 +58,9 @@ if __name__ == '__main__':
     config = tf.ConfigProto(log_device_placement=True)
     config.gpu_options.allow_growth = True
     # config.gpu_options.per_process_gpu_memory_fraction = 0.4
-    with tf.Session(config=config) as sess:
-        print(sess.run(c))
+    session = tf.Session(config=config)
+    print(session.run(c))
+    session.close()
     print()
     time.sleep(2)
 
@@ -73,8 +76,9 @@ if __name__ == '__main__':
     # run a session with 'log_device_placement'
     config = tf.ConfigProto(log_device_placement=True,
                             allow_soft_placement=True)
-    with tf.Session(config=config) as sess:
-        print(sess.run(c))
+    session = tf.Session(config=config)
+    print(session.run(c))
+    session.close()
     print()
     time.sleep(2)
 
@@ -92,6 +96,7 @@ if __name__ == '__main__':
 
     # run a session with 'log_device_placement'
     config = tf.ConfigProto(log_device_placement=True)
-    with tf.Session(config=config) as sess:
-        print(sess.run(s))
+    session = tf.Session(config=config)
+    print(session.run(s))
+    session.close()
     print()
