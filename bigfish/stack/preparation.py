@@ -4,6 +4,7 @@
 Functions to prepare the data before feeding a model.
 """
 
+import threading
 import numpy as np
 
 from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
@@ -405,6 +406,33 @@ def get_label(data, id_cell):
 
 # ### Generator ###
 
+class ThreadSafeIter:
+    """Takes an iterator/generator and makes it thread-safe by
+    serializing call to the `next` method of given iterator/generator.
+    https://gist.github.com/platdrag/e755f3947552804c42633a99ffd325d4
+    """
+    def __init__(self, it):
+        self.it = it
+        self.lock = threading.Lock()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        with self.lock:
+            return self.it.__next__()
+
+
+def threadsafe_generator(f):
+    """A decorator that takes a generator function and makes it thread-safe.
+    """
+    def g(*a, **kw):
+        return ThreadSafeIter(f(*a, **kw))
+
+    return g
+
+
+@threadsafe_generator
 class Generator:
 
     # TODO add documentation
