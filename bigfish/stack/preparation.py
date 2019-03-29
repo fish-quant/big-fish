@@ -440,6 +440,9 @@ class Generator:
     # TODO add classes
     def __init__(self, data, method, batch_size, input_shape, augmentation,
                  with_label, nb_classes, nb_epoch_max=10, shuffle=True):
+        # make generator threadsafe
+        self.lock = threading.Lock()
+
         # get attributes
         self.data = data
         self.method = method
@@ -475,6 +478,10 @@ class Generator:
         return self
 
     def __next__(self):
+        with self.lock:
+            return self._next()
+
+    def _next(self):
         # we reach the end of an epoch
         if self.i_batch == self.nb_batch_per_epoch:
 
@@ -485,7 +492,7 @@ class Generator:
                 self.i_epoch += 1
                 self.i_batch = 0
                 self.indices = self._get_shuffled_indices()
-                return self.__next__()
+                return self._next()
 
             # we start a new epoch
             elif (self.nb_epoch_max is not None
@@ -493,7 +500,7 @@ class Generator:
                 self.i_epoch += 1
                 self.i_batch = 0
                 self.indices = self._get_shuffled_indices()
-                return self.__next__()
+                return self._next()
 
             # we reach the maximum number of epochs
             elif (self.nb_epoch_max is not None
