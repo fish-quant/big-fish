@@ -4,9 +4,10 @@
 Test if the code use GPU device"""
 
 import os
+import time
 import tensorflow as tf
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 if __name__ == '__main__':
     print()
@@ -24,6 +25,7 @@ if __name__ == '__main__':
     with tf.Session(config=config) as sess:
         print(sess.run(c))
     print()
+    time.sleep(2)
 
     print("--- GPU ACCESS ---", "\n")
 
@@ -39,6 +41,7 @@ if __name__ == '__main__':
     with tf.Session(config=config) as sess:
         print(sess.run(c))
     print()
+    time.sleep(2)
 
     print("--- GPU GROWTH ---", "\n")
 
@@ -56,6 +59,7 @@ if __name__ == '__main__':
     with tf.Session(config=config) as sess:
         print(sess.run(c))
     print()
+    time.sleep(2)
 
     print("--- SOFT PLACEMENT ---", "\n")
 
@@ -72,6 +76,7 @@ if __name__ == '__main__':
     with tf.Session(config=config) as sess:
         print(sess.run(c))
     print()
+    time.sleep(2)
 
     print("--- MULTI-GPU ACCESS ---", "\n")
 
