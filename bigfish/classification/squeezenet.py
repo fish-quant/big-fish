@@ -177,15 +177,17 @@ class SqueezeNet0(BaseModel):
 
         return probability
 
-    def evaluate(self, data, label):
+    def evaluate(self, data, label, verbose=0):
         # evaluate model
         loss, accuracy = self.model.evaluate(x=data, y=label)
-        print("Loss: {0:.3f} | Accuracy: {1:.3f}".format(loss, 100 * accuracy))
+        if verbose > 0:
+            print("Loss: {0:.3f} | Accuracy: {1:.3f}"
+                  .format(loss, 100 * accuracy))
 
         return loss, accuracy
 
     def evaluate_generator(self, generator, nb_workers=1,
-                           multiprocessing=False):
+                           multiprocessing=False, verbose=0):
         # TODO check the outcome 'loss' and 'accuracy'
         # evaluate model
         loss, accuracy = self.model.evaluate_generator(
@@ -194,8 +196,10 @@ class SqueezeNet0(BaseModel):
             workers=nb_workers,
             max_queue_size=1,
             use_multiprocessing=multiprocessing,
-            verbose=1)
-        print("Loss: {0:.3f} | Accuracy: {1:.3f}".format(loss, 100 * accuracy))
+            verbose=verbose)
+        if verbose > 0:
+            print("Loss: {0:.3f} | Accuracy: {1:.3f}"
+                  .format(loss, 100 * accuracy))
 
         return loss, accuracy
 

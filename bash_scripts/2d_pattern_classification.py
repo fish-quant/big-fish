@@ -154,8 +154,9 @@ if __name__ == '__main__':
     train_generator.reset()
     loss, accuracy = model.evaluate_generator(train_generator,
                                               args.nb_workers,
-                                              args.multiprocessing)
-    print("Loss train: {0} | Accuracy train: {1}"
+                                              args.multiprocessing,
+                                              verbose=0)
+    print("Loss train: {0:.3f} | Accuracy train: {1:.3f}"
           .format(loss, 100 * accuracy))
 
     # evaluate model with validation data
@@ -163,13 +164,15 @@ if __name__ == '__main__':
     validation_generator.reset()
     loss, accuracy = model.evaluate_generator(validation_generator,
                                               args.nb_workers,
-                                              args.multiprocessing)
-    print("Loss validation: {0} | Accuracy validation: {1}"
+                                              args.multiprocessing,
+                                              verbose=0)
+    print("Loss validation: {0:.3f} | Accuracy validation: {1:.3f}"
           .format(loss, 100 * accuracy))
 
     # evaluate model with test data
     loss, accuracy = model.evaluate_generator(test_generator,
                                               args.nb_workers,
-                                              args.multiprocessing)
-    print("Loss test: {0} | Accuracy test: {1}"
+                                              args.multiprocessing,
+                                              verbose=0)
+    print("Loss test: {0:.3f} | Accuracy test: {1:.3f}"
           .format(loss, 100 * accuracy))
