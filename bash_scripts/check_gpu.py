@@ -6,6 +6,8 @@ Test if the code use GPU device"""
 import os
 import tensorflow as tf
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 if __name__ == '__main__':
     print()
     print("Running {0} file...". format(os.path.basename(__file__)), "\n")
