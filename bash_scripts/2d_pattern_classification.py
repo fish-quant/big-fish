@@ -7,6 +7,7 @@ Localization pattern classification of RNA molecules in 2-d.
 import os
 import argparse
 import pickle
+import time
 
 import bigfish.stack as stack
 import bigfish.classification as classification
@@ -20,6 +21,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 if __name__ == '__main__':
     print()
     print("Running {0} file...". format(os.path.basename(__file__)), "\n")
+    start_time = time.time()
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -67,8 +69,8 @@ if __name__ == '__main__':
     print("Input shape: {0}".format(input_shape))
     print("Features: {0}".format(args.features))
     print("Batch size: {0}".format(args.batch_size))
-    print("Number of epochs: {0}".format(args.nb_epochs), "\n")
-    print("Number of workers: {0}".format(args.nb_workers), "\n")
+    print("Number of epochs: {0}".format(args.nb_epochs))
+    print("Number of workers: {0}".format(args.nb_workers))
     print("Multiprocessing: {0}".format(args.multiprocessing), "\n")
 
     print("------------------------")
@@ -176,3 +178,7 @@ if __name__ == '__main__':
                                               verbose=0)
     print("Loss test: {0:.3f} | Accuracy test: {1:.3f}"
           .format(loss, 100 * accuracy))
+
+    end_time = time.time()
+    duration = int(round((end_time - start_time) / 60))
+    print("Duration: {0} minutes.".format(duration))
