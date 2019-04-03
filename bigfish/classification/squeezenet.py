@@ -12,7 +12,7 @@ Authors: Iandola, Forrest N
          Dally, William J
          Keutzer, Kurt
 Year: 2016
-Version: 1.1 (see github https://github.com/DeepScale/SqueezeNet)
+Version: 1.0 and 1.1 (see github https://github.com/DeepScale/SqueezeNet)
 """
 
 import os
@@ -24,7 +24,7 @@ from .base import BaseModel, get_optimizer
 
 from tensorflow.python.keras.backend import function
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.callbacks import ModelCheckpoint
+from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
 from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
                                             Dropout, GlobalAveragePooling2D,
                                             Add, Input, Activation,
@@ -51,6 +51,7 @@ class SqueezeNet0(BaseModel):
             os.mkdir(self.logdir)
         self.model = None
         self.trained = False
+        self.history = None
 
         # build model
         self._build_model(bypass, optimizer)
@@ -60,16 +61,35 @@ class SqueezeNet0(BaseModel):
         # TODO exploit 'sample_weight'
         # TODO implement resumed training with 'initial_epoch'
         # TODO add documentation
-        # TODO add callbacks
+
+        callbacks = []
+
+        # define checkpoints
+        if self.logdir is not None:
+            # create checkpoint callback
+            checkpoint_path = os.path.join(self.logdir, "cp-{epoch}.ckpt")
+            cp_callback = ModelCheckpoint(
+                filepath=checkpoint_path,
+                verbose=1)
+            callbacks.append(cp_callback)
+
+        # define early stopping
+        early_stop = EarlyStopping(
+            monitor='val_categorical_accuracy',
+            min_delta=0,
+            patience=3,
+            verbose=1,
+            baseline=0.9)
+        callbacks.append(early_stop)
 
         # fit model
-        self.model.fit(
+        self.history = self.model.fit(
             x=train_data,
             y=train_label,
             batch_size=batch_size,
             epochs=nb_epochs,
             verbose=2,
-            callbacks=None,
+            callbacks=callbacks,
             validation_data=(validation_data, validation_label),
             shuffle=True,
             sample_weight=None,
@@ -98,21 +118,29 @@ class SqueezeNet0(BaseModel):
                     "data. The parameter 'nb_epoch_max' is set to None.")
             validation_generator.nb_epoch_max = None
 
-        # define callbacks
+        callbacks = []
+
+        # define checkpoints
         if self.logdir is not None:
             # create checkpoint callback
             checkpoint_path = os.path.join(self.logdir, "cp-{epoch}.ckpt")
-            # checkpoint_path = os.path.join(self.logdir, "cp.ckpt")
             cp_callback = ModelCheckpoint(
                 filepath=checkpoint_path,
                 verbose=1)
-            callbacks = [cp_callback]
-        else:
-            callbacks = None
+            callbacks.append(cp_callback)
+
+        # define early stopping
+        early_stop = EarlyStopping(
+            monitor='val_categorical_accuracy',
+            min_delta=0,
+            patience=3,
+            verbose=1,
+            baseline=0.9)
+        callbacks.append(early_stop)
 
         # fit model from generator
         steps_per_epoch = train_generator.nb_batch_per_epoch
-        self.model.fit_generator(
+        self.history = self.model.fit_generator(
             generator=train_generator,
             steps_per_epoch=steps_per_epoch,
             epochs=nb_epochs,
@@ -247,6 +275,24 @@ class SqueezeNet0(BaseModel):
         else:
             raise ValueError("Impossible to load pre-trained weights. The log "
                              "directory is not specified or does not exist.")
+
+    def save_training_history(self):
+        """Save the loss and accuracy of the train and validation data over
+        the different epochs.
+
+        Returns
+        -------
+
+        """
+        if self.logdir is not None:
+            path = os.path.join(self.logdir, "history.npz")
+            np.savez(path,
+                     loss=self.history.history["loss"],
+                     categorical_accuracy=self.history.history["loss"],
+                     val_loss=self.history.history["loss"],
+                     val_categorical_accuracy=self.history.history["loss"])
+
+        return
 
 
 # ### Architecture functions ###
