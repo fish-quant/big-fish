@@ -4,26 +4,26 @@
 Functions to prepare the data before feeding a model.
 """
 
+import os
 import threading
-import numpy as np
 
-from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
-                         cast_img_float64)
+import numpy as np
+from scipy import ndimage as ndi
+
 from .augmentation import augment
 from .utils import check_array
+from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
+                         cast_img_float64)
 
 from skimage.transform import resize
 from scipy.sparse import coo_matrix
-from sklearn.preprocessing import LabelEncoder
-
-from scipy import ndimage as ndi
 
 
 # TODO define the requirements for 'data'
 
 # ### Split and subset data ###
 
-def split_from_background(data, p_validation=0.2, p_test=0.2):
+def split_from_background(data, p_validation=0.2, p_test=0.2, logdir=None):
     """Split dataset between train, validation and test, based on the
     background volume used to simulate the cell.
 
@@ -35,6 +35,8 @@ def split_from_background(data, p_validation=0.2, p_test=0.2):
         Proportion of the validation dataset.
     p_test : float
         Proportion of the test dataset.
+    logdir : str
+        Path of the log directory used to save the split indices.
 
     Returns
     -------
@@ -59,29 +61,23 @@ def split_from_background(data, p_validation=0.2, p_test=0.2):
 
     # split data between train, validation and test
     data_train = data.query("cell_ID in {0}".format(str(train_cell)))
-    data_train.reset_index(drop=True, inplace=True)
     data_validation = data.query("cell_ID in {0}".format(str(validation_cell)))
-    data_validation.reset_index(drop=True, inplace=True)
     data_test = data.query("cell_ID in {0}".format(str(test_cell)))
+
+    # save indices
+    if logdir is not None:
+        path = os.path.join(logdir, "indices_split.npz")
+        np.savez(path,
+                 indices_train=np.array(data_train.index),
+                 indices_validation=np.array(data_validation.index),
+                 indices_test=np.array(data_test.index))
+
+    # reset index
+    data_train.reset_index(drop=True, inplace=True)
+    data_validation.reset_index(drop=True, inplace=True)
     data_test.reset_index(drop=True, inplace=True)
 
     return data_train, data_validation, data_test
-
-
-def subset_data(data, classes_name=None):
-    # choose classes to keep
-    if classes_name is None:
-        classes_name = list(set(data["pattern_name"]))
-
-    # keep specific classes
-    query = "pattern_name in {0}".format(str(classes_name))
-    data = data.query(query)
-
-    # encode the label
-    le = LabelEncoder()
-    data = data.assign(label=le.fit_transform(data["pattern_name"]))
-
-    return data
 
 
 # ### Build images ###
