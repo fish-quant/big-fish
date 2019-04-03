@@ -6,11 +6,12 @@ Localization pattern classification of RNA molecules in 2-d.
 
 import os
 import argparse
-import pickle
 import time
 
 import bigfish.stack as stack
 import bigfish.classification as classification
+
+from .utils import encode_labels
 
 # TODO build tensorflow from source to avoid the next line
 # Your CPU supports instructions that this TensorFlow binary was not compiled
@@ -33,9 +34,13 @@ if __name__ == '__main__':
                         type=str)
     parser.add_argument("--features",
                         help="Features used ('normal', 'distance' or "
-                             "'surface')",
+                             "'surface').",
                         type=str,
                         default="normal")
+    parser.add_argument("--classes",
+                        help="Set of classes to predict.",
+                        type=str,
+                        default="all")
     parser.add_argument("--batch_size",
                         help="Size of a batch.",
                         type=int,
@@ -55,9 +60,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # parameters
-    classes = ["inNUC", "cell2D", "nuc2D", "foci", "polarized", "cellext",
-               "random"]
-    nb_classes = len(classes)
     input_shape = (224, 224)
 
     print("------------------------")
@@ -65,7 +67,6 @@ if __name__ == '__main__':
     print("Output logs: {0}".format(args.log_directory), "\n")
 
     print("------------------------")
-    print("Number of classes: {0}".format(nb_classes))
     print("Input shape: {0}".format(input_shape))
     print("Features: {0}".format(args.features))
     print("Batch size: {0}".format(args.batch_size))
@@ -73,24 +74,28 @@ if __name__ == '__main__':
     print("Number of workers: {0}".format(args.nb_workers))
     print("Multiprocessing: {0}".format(args.multiprocessing), "\n")
 
-    print("------------------------")
-    print("Classes: {0}".format(classes), "\n")
-
     print("--- PREPROCESSING ---", "\n")
 
     # load data
-    # path_output = os.path.join(main_directory, "data_cleaned_small")
-    with open(args.path_input, mode='rb') as f:
-        df = pickle.load(f)
+    df = stack.read_pickle(args.path_input)
     print("Shape input dataframe (before preparation): {0}".format(df.shape))
 
     # prepare data
-    df = stack.subset_data(df, classes_name=classes)
+    df, encoder, classes = encode_labels(df,
+                                         column_name="pattern_name",
+                                         classes_to_analyse="all")
+    nb_classes = len(classes)
+    print("Number of classes: {0}".format(nb_classes))
+    print("Classes: {0}".format(classes))
     print("Shape input dataframe (after preparation): {0}".format(df.shape))
+    print()
+
+    # split data
     df_train, df_validation, df_test = stack.split_from_background(
         data=df,
         p_validation=0.2,
-        p_test=0.2)
+        p_test=0.2,
+        logdir=args.log_directory)
     print("Split train|validation|test: {0}|{1}|{2}"
           .format(df_train.shape[0], df_validation.shape[0], df_test.shape[0]))
 
@@ -147,12 +152,13 @@ if __name__ == '__main__':
     model.print_model()
     model.fit_generator(train_generator, validation_generator, args.nb_epochs,
                         args.nb_workers, args.multiprocessing)
+    model.save_training_history()
+    print("Model trained: {0}".format(model.trained))
     print()
 
     print("--- EVALUATION ---", "\n")
 
     # evaluate model with train data
-    print("Model trained: {0}".format(model.trained))
     train_generator.reset()
     loss, accuracy = model.evaluate_generator(train_generator,
                                               args.nb_workers,
@@ -162,7 +168,6 @@ if __name__ == '__main__':
           .format(loss, 100 * accuracy))
 
     # evaluate model with validation data
-    print("Model trained: {0}".format(model.trained))
     validation_generator.reset()
     loss, accuracy = model.evaluate_generator(validation_generator,
                                               args.nb_workers,
