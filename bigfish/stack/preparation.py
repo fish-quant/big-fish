@@ -16,6 +16,8 @@ from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
                          cast_img_float64)
 
 from skimage.transform import resize
+from skimage.morphology.selem import square
+from skimage.morphology import binary_dilation
 from scipy.sparse import coo_matrix
 from sklearn.preprocessing import LabelEncoder
 
@@ -267,6 +269,17 @@ def _encode_label_all(data, column_name):
     return data, encoder, classes
 
 
+def get_map_label(data, column_num="label", columns_str="pattern_name"):
+    label_num = list(set(data.loc[:, column_num]))
+    label_str = list(set(data.loc[:, columns_str]))
+    d = {}
+    for i, label_num_ in enumerate(label_num):
+        label_str_ = label_str[i]
+        d[label_str_] = label_num
+
+    return d
+
+
 # ### Build images ###
 
 def build_input_image(data, id_cell, channels="normal", input_shape=None,
@@ -459,10 +472,17 @@ def get_distance_layers(cyt, nuc):
         A 2-d tensor with shape (x, y) showing distance to the nucleus border.
 
     """
+    # compute surfaces from cytoplasm and nucleus
+    mask_cyt, mask_nuc = get_surface_layers(cyt, nuc)
+    mask_cyt = mask_cyt.astype(np.bool)
+    mask_nuc = mask_nuc.astype(np.bool)
+
+    # case where the initial boundary is too fragmented to return a volume
+    if mask_cyt.sum() * mask_nuc.sum() == 0:
+        return np.zeros_like(cyt), np.zeros_like(nuc)
+
     # compute distances from cytoplasm and nucleus
-    mask_cyt = ndi.binary_fill_holes(cyt)
-    mask_nuc = ndi.binary_fill_holes(nuc)
-    distance_cyt = ndi.distance_transform_edt(ndi.binary_fill_holes(cyt))
+    distance_cyt = ndi.distance_transform_edt(mask_cyt)
     distance_nuc_ = ndi.distance_transform_edt(~mask_nuc)
     distance_nuc = mask_cyt * distance_nuc_
 
@@ -475,6 +495,10 @@ def get_distance_layers(cyt, nuc):
 
 def get_surface_layers(cyt, nuc):
     """Compute plain surface layers as input for the model.
+
+    Sometimes the border is too fragmented to compute the surface. In this
+    case, we iteratively apply a dilatation filter (with an increasing kernel
+    size) until the boundary is properly connected the boundaries.
 
     Parameters
     ----------
@@ -495,6 +519,28 @@ def get_surface_layers(cyt, nuc):
     # compute surface from cytoplasm and nucleus
     surface_cyt = ndi.binary_fill_holes(cyt)
     surface_nuc = ndi.binary_fill_holes(nuc)
+
+    # check if we need to dilate the border
+    if np.array_equal(surface_cyt, cyt) or np.array_equal(surface_nuc, nuc):
+        # we dilate the surface until the boundaries are fully connected and
+        # we can return a plain surface (we apply at most three rounds of
+        # dilatation, each time with a larger kernel size)
+        for kernel_size in [2, 3, 4]:
+            kernel = square(kernel_size, dtype=np.float32)
+            cyt = binary_dilation(cyt, selem=kernel).astype(np.float32)
+            nuc = binary_dilation(nuc, selem=kernel).astype(np.float32)
+            surface_cyt = ndi.binary_fill_holes(cyt)
+            surface_nuc = ndi.binary_fill_holes(nuc)
+
+            if (not np.array_equal(surface_cyt, cyt)
+                    and not np.array_equal(surface_nuc, nuc)):
+                # cast to np.float32
+                surface_cyt = cast_img_float32(surface_cyt)
+                surface_nuc = cast_img_float32(surface_nuc)
+
+                return surface_cyt, surface_nuc
+
+        return np.zeros_like(cyt), np.zeros_like(nuc)
 
     # cast to np.float32
     surface_cyt = cast_img_float32(surface_cyt)
@@ -666,12 +712,13 @@ class Generator:
     def _next(self):
         # we reach the end of an epoch
         if self.i_batch == self.nb_batch_per_epoch:
+            self.i_epoch += 1
 
             # the generator loop over the data indefinitely
             if self.nb_epoch_max is None:
+                # TODO find something better
                 if self.i_epoch == 500:
                     raise StopIteration
-                self.i_epoch += 1
                 self.i_batch = 0
                 self.indices = self._get_shuffled_indices()
                 return self._next()
@@ -679,7 +726,6 @@ class Generator:
             # we start a new epoch
             elif (self.nb_epoch_max is not None
                   and self.i_epoch < self.nb_epoch_max):
-                self.i_epoch += 1
                 self.i_batch = 0
                 self.indices = self._get_shuffled_indices()
                 return self._next()
@@ -823,7 +869,7 @@ def generate_images(data, method, batch_size, input_shape, augmentation,
             yield batch_data
 
 
-def build_batch(data, indices, method="normal", input_shape=(224, 244),
+def build_batch(data, indices, method="normal", input_shape=(224, 224),
                 augmentation=True, with_label=False, nb_classes=9):
     """Build a batch of data.
 
