@@ -11,8 +11,6 @@ import time
 import bigfish.stack as stack
 import bigfish.classification as classification
 
-from .utils import encode_labels
-
 # TODO build tensorflow from source to avoid the next line
 # Your CPU supports instructions that this TensorFlow binary was not compiled
 # to use: AVX2 FMA
@@ -81,9 +79,9 @@ if __name__ == '__main__':
     print("Shape input dataframe (before preparation): {0}".format(df.shape))
 
     # prepare data
-    df, encoder, classes = encode_labels(df,
-                                         column_name="pattern_name",
-                                         classes_to_analyse="all")
+    df, encoder, classes = stack.encode_labels(df,
+                                               column_name="pattern_name",
+                                               classes_to_analyse="all")
     nb_classes = len(classes)
     print("Number of classes: {0}".format(nb_classes))
     print("Classes: {0}".format(classes))
