@@ -81,7 +81,7 @@ if __name__ == '__main__':
     # prepare data
     df, encoder, classes = stack.encode_labels(df,
                                                column_name="pattern_name",
-                                               classes_to_analyse="all")
+                                               classes_to_analyse=args.classes)
     nb_classes = len(classes)
     print("Number of classes: {0}".format(nb_classes))
     print("Classes: {0}".format(classes))
