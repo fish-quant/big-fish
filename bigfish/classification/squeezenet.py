@@ -33,6 +33,7 @@ from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
 # TODO add logging routines
 # TODO add cache routines
 # TODO manage multiprocessing
+# TODO improve logging
 # ### 2D models ###
 
 class SqueezeNet0(BaseModel):
@@ -72,11 +73,12 @@ class SqueezeNet0(BaseModel):
                 verbose=1)
             callbacks.append(cp_callback)
 
+        # TODO debug early stopping
         # define early stopping
         early_stop = EarlyStopping(
-            monitor='val_categorical_accuracy',
+            monitor="val_acc",
             min_delta=0,
-            patience=3,
+            patience=5,
             verbose=1,
             baseline=0.9)
         callbacks.append(early_stop)
@@ -176,12 +178,13 @@ class SqueezeNet0(BaseModel):
         return probability
 
     def predict_generator(self, generator, return_probability=False,
-                          nb_workers=1, multiprocessing=False):
+                          nb_workers=1, multiprocessing=False, verbose=0):
         # compute probabilities
         probability = self.predict_probability_generator(
             generator=generator,
             nb_workers=nb_workers,
-            multiprocessing=multiprocessing)
+            multiprocessing=multiprocessing,
+            verbose=verbose)
 
         # make prediction
         prediction = np.argmax(probability, axis=-1)
@@ -192,7 +195,7 @@ class SqueezeNet0(BaseModel):
             return prediction
 
     def predict_probability_generator(self, generator, nb_workers=1,
-                                      multiprocessing=False):
+                                      multiprocessing=False, verbose=0):
         # TODO add multiprocessing
         # compute probabilities
         probability = self.model.predict_generator(
@@ -200,7 +203,8 @@ class SqueezeNet0(BaseModel):
             steps=generator.nb_batch_per_epoch,
             workers=nb_workers,
             max_queue_size=1,
-            use_multiprocessing=multiprocessing)
+            use_multiprocessing=multiprocessing,
+            verbose=verbose)
 
         return probability
 
