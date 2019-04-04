@@ -18,7 +18,7 @@ from .preparation import (split_from_background, build_cell_2d,
                           get_distance_layers, get_surface_layers,
                           build_input_image, resize_image, build_batch,
                           generate_images, get_label, one_hot_label, Generator,
-                          encode_labels)
+                          encode_labels, get_map_label)
 from .augmentation import augment
 from .utils import check_array, check_features_df, check_range_value
 
@@ -62,4 +62,5 @@ __all__ = ["read_tif",
            "get_label",
            "one_hot_label",
            "Generator",
-           "encode_labels"]
+           "encode_labels",
+           "get_map_label"]
