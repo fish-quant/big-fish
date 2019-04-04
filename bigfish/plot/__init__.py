@@ -9,7 +9,7 @@ from .plot_images import (plot_yx, plot_channels_2d, plot_segmentation,
                           plot_illumination_surface)
 from .plot_coordinates import (plot_volume, plot_rna, plot_distribution_rna,
                                plot_cell_coordinates, plot_layers_coordinates)
-
+from .plot_classification import plot_confusion_matrix, plot_2d_projection
 
 __all__ = ["plot_yx",
            "plot_images",
@@ -22,4 +22,6 @@ __all__ = ["plot_yx",
            "plot_rna",
            "plot_distribution_rna",
            "plot_cell_coordinates",
-           "plot_layers_coordinates"]
+           "plot_layers_coordinates",
+           "plot_confusion_matrix",
+           "plot_2d_projection"]
