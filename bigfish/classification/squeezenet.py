@@ -22,9 +22,8 @@ import numpy as np
 
 from .base import BaseModel, get_optimizer
 
-from tensorflow.python.keras.backend import function
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
+from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
                                             Dropout, GlobalAveragePooling2D,
                                             Add, Input, Activation,
