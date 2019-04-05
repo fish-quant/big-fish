@@ -635,32 +635,6 @@ def get_label(data, id_cell):
 
 # ### Generator ###
 
-class ThreadSafeIter:
-    """Takes an iterator/generator and makes it thread-safe by
-    serializing call to the `next` method of given iterator/generator.
-    https://gist.github.com/platdrag/e755f3947552804c42633a99ffd325d4
-    """
-    def __init__(self, it):
-        self.it = it
-        self.lock = threading.Lock()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        with self.lock:
-            return self.it.__next__()
-
-
-def threadsafe_generator(f):
-    """A decorator that takes a generator function and makes it thread-safe.
-    """
-    def g(*a, **kw):
-        return ThreadSafeIter(f(*a, **kw))
-
-    return g
-
-
 class Generator:
 
     # TODO add documentation
@@ -800,73 +774,6 @@ class Generator:
         self.nb_batch_per_epoch = self._get_batch_per_epoch()
         self.i_batch = 0
         self.i_epoch = 0
-
-
-def generate_images(data, method, batch_size, input_shape, augmentation,
-                    with_label, nb_classes):
-    """Generate batches of images.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Dataframe with the data.
-    method : str
-        Channels used in the input image.
-            - 'normal' for (rna, cyt, nuc)
-            - 'distance' for (rna, distance_cyt, distance_nuc)
-            - 'surface' for (rna, surface_cyt, surface_nuc)
-    batch_size : int
-        Size of the batch.
-    input_shape : Tuple[int]
-        Shape of the input image.
-    augmentation : bool
-        Apply a random operator on the image.
-    with_label : bool
-        Return label of the image as well.
-    nb_classes : int
-        Number of different classes available.
-
-    Returns
-    -------
-    batch_data: np.ndarray, np.float32
-        Tensor with shape (batch_size, x, y, 3).
-    batch_label : np.ndarray, np.int64
-        Tensor of the encoded label, with shape (batch_size,)
-
-    """
-    # TODO make it loop indefinitely
-    # shuffle input data and get their indices
-    input_indices_ordered = list(data.index)
-    np.random.shuffle(input_indices_ordered)
-    nb_samples = len(input_indices_ordered)
-
-    # compute the number of batches to generate for the entire epoch
-    if nb_samples % batch_size == 0:
-        nb_batch = len(input_indices_ordered) // batch_size
-    else:
-        # the last batch can be smaller
-        nb_batch = (len(input_indices_ordered) // batch_size) + 1
-
-    # build batches
-    for i_batch in range(nb_batch):
-        start_index = i_batch * batch_size
-        end_index = min((i_batch + 1) * batch_size, nb_samples)
-        indices_batch = input_indices_ordered[start_index:end_index]
-
-        # return batch with label
-        if with_label:
-            batch_data, batch_label = build_batch(data, indices_batch, method,
-                                                  input_shape, augmentation,
-                                                  with_label, nb_classes)
-
-            yield batch_data, batch_label
-
-        # return batch without label
-        else:
-            batch_data = build_batch(data, indices_batch, method, input_shape,
-                                     augmentation, with_label, nb_classes)
-
-            yield batch_data
 
 
 def build_batch(data, indices, method="normal", input_shape=(224, 224),
