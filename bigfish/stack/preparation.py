@@ -16,8 +16,6 @@ from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
                          cast_img_float64)
 
 from skimage.transform import resize
-from skimage.morphology.selem import square
-from skimage.morphology import binary_dilation
 from skimage.draw import polygon_perimeter
 from scipy.sparse import coo_matrix
 from sklearn.preprocessing import LabelEncoder
@@ -313,22 +311,28 @@ def build_input_image(data, id_cell, channels="normal", input_shape=None,
     """
     # TODO improve the resizing of different channels
     # build image from coordinates data
-    cyt, nuc, rna = build_cell_2d(data, id_cell)
+    cyt_coord, nuc_coord, rna_coord = get_coordinates(data, id_cell)
+    cyt, nuc, _ = from_coord_to_image(cyt_coord, nuc_coord)
+
+    # build rna directly with the right shape
+    rna = _build_resize_rna(rna_coord, cyt.shape, input_shape)
 
     # build the required input image
     if channels == "normal":
+        # TODO improve resizing using 'polynom_delimeter'
+        cyt = resize_image(cyt, new_shape=input_shape, binary=True)
+        nuc = resize_image(nuc, new_shape=input_shape, binary=True)
         image = np.stack((rna, cyt, nuc), axis=-1)
-        image = resize_image(image, new_shape=input_shape, binary=True)
-    elif channels == "distance":
-        distance_cyt, distance_nuc = get_distance_layers(cyt, nuc)
-        rna = resize_image(rna, new_shape=input_shape, binary=True)
-        distance_cyt = resize_image(distance_cyt, new_shape=input_shape)
-        distance_nuc = resize_image(distance_nuc, new_shape=input_shape)
-        image = np.stack((rna, distance_cyt, distance_nuc), axis=-1)
     elif channels == "surface":
-        surface_cyt, surface_nuc = get_surface_layers(cyt, nuc)
-        image = np.stack((rna, surface_cyt, surface_nuc), axis=-1)
-        image = resize_image(image, new_shape=input_shape, binary=True)
+        cyt, nuc = get_surface_layers(cyt, nuc)
+        cyt = resize_image(cyt, new_shape=input_shape, binary=True)
+        nuc = resize_image(nuc, new_shape=input_shape, binary=True)
+        image = np.stack((rna, cyt, nuc), axis=-1)
+    elif channels == "distance":
+        cyt, nuc = get_distance_layers(cyt, nuc)
+        cyt = resize_image(cyt, new_shape=input_shape, binary=False)
+        nuc = resize_image(nuc, new_shape=input_shape, binary=False)
+        image = np.stack((rna, cyt, nuc), axis=-1)
     else:
         raise ValueError("{0} is an invalid value for parameter 'channels': "
                          "must be 'normal', 'distance' or 'surface'."
@@ -347,8 +351,11 @@ def build_input_image_precomputed(data, id_cell, channels="normal",
     # TODO improve the resizing of different channels
     # TODO add documentation
     # build rna image from coordinates data
-    rna = build_rna_2d(data, id_cell)
-    rna = resize_image(rna, new_shape=input_shape, binary=True)
+    cyt_coord, nuc_coord, rna_coord = get_coordinates(data, id_cell)
+    cyt, nuc, _ = from_coord_to_image(cyt_coord, nuc_coord)
+    rna = _build_resize_rna(rna_coord, cyt.shape, input_shape)
+    if channels == "distance":
+        rna = cast_img_float32(rna)
 
     # get precomputed features
     id_cell = data.loc[id_cell, "cell_ID"]
@@ -368,19 +375,32 @@ def build_input_image_precomputed(data, id_cell, channels="normal",
     return image
 
 
-def build_rna_2d(data, id_cell):
-    # TODO add documentation
-    # get coordinates
-    cyt_coord, _, rna_coord = get_coordinates(data, id_cell)
+def _build_resize_rna(rna_coord, current_shape, resized_shape):
+    """
 
-    # TODO manage the case where different spots meet at different heights,
-    #  but same xy localization
-    # build the dense representation for the rna if available
-    max_x = cyt_coord[:, 0].max() + 5
-    max_y = cyt_coord[:, 1].max() + 5
+    Parameters
+    ----------
+    rna_coord
+    current_shape
+    resized_shape
+
+    Returns
+    -------
+
+    """
+    # TODO add documentation
+    # compute resizing factor
+    delta_x = resized_shape[0] / current_shape[0]
+    delta_y = resized_shape[1] / current_shape[1]
+    factor = np.array([delta_x, delta_y, 1])[np.newaxis, :]
+
+    # resize coordinates directly
+    rna_coord = np.round(rna_coord * factor)
+
+    # build rna image
     values = [1] * rna_coord.shape[0]
     rna = coo_matrix((values, (rna_coord[:, 0], rna_coord[:, 1])),
-                     shape=(max_x, max_y))
+                     shape=resized_shape)
     rna = (rna > 0)
     rna = cast_img_float32(rna.todense())
 
@@ -388,7 +408,7 @@ def build_rna_2d(data, id_cell):
 
 
 def build_cell_2d(data, id_cell):
-    """Build 2-d images from data coordinates.
+    """Build 2-d images from data coordinates, without resizing.
 
     Parameters
     ----------
@@ -496,7 +516,7 @@ def from_coord_to_image(cyt_coord, nuc_coord, rna_coord=None):
     nuc = cast_img_float32(nuc.todense())
 
     if rna_coord is None:
-        return cyt, nuc
+        return cyt, nuc, None
 
     else:
         # TODO manage the case where different spots meet at different heights,
@@ -615,18 +635,17 @@ def resize_image(image, new_shape=None, binary=False):
     # resize
     image_dtype = image.dtype
     if binary:
-        # TODO use 'order=1' then binarize the image and reduce connected
-        #  component.
         image_output = resize(image, new_shape,
-                              anti_aliasing=False,
                               mode="constant",
-                              cval=0)
-        image_output = (image_output > 0)
+                              cval=0,
+                              order=0,
+                              anti_aliasing=False)
     else:
         image_output = resize(image, new_shape,
-                              anti_aliasing=True,
                               mode="constant",
-                              cval=0)
+                              cval=0,
+                              order=1,
+                              anti_aliasing=False)
 
     # cast the image in the original dtype
     if image_dtype == np.bool:

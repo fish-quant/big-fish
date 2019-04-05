@@ -5,7 +5,7 @@ The bigfish.stack module includes function to read data, preprocess them and
 build stack of images.
 """
 
-from .loader import read_tif, read_pickle
+from .loader import read_tif, read_pickle, read_cell_json, read_rna_json
 from .preprocess import (build_stack, check_recipe, build_simulated_dataset,
                          projection, rescale, cast_img_uint8, cast_img_uint16,
                          log_filter, mean_filter, median_filter,
@@ -25,6 +25,8 @@ from .utils import check_array, check_features_df, check_range_value
 
 __all__ = ["read_tif",
            "read_pickle",
+           "read_cell_json",
+           "read_rna_json",
            "build_simulated_dataset",
            "load_stack",
            "build_stack",
