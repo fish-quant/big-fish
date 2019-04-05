@@ -333,10 +333,57 @@ def build_input_image(data, id_cell, channels="normal", input_shape=None,
                          "must be 'normal', 'distance' or 'surface'."
                          .format(channels))
 
+    # apply augmentation
     if augmentation:
         image = augment(image)
 
     return image
+
+
+def build_input_image_precomputed(data, id_cell, channels="normal",
+                                  input_shape=None, augmentation=False,
+                                  precomputed_features=None):
+    # TODO improve the resizing of different channels
+    # TODO add documentation
+    # build rna image from coordinates data
+    rna = build_rna_2d(data, id_cell)
+    rna = resize_image(rna, new_shape=input_shape, binary=True)
+
+    # get precomputed features
+    id_cell = data.loc[id_cell, "cell_ID"]
+    cyt, nuc = precomputed_features[id_cell]
+
+    # build the required input image
+    image = np.stack((rna, cyt, nuc), axis=-1)
+    if channels not in ["normal", "distance", "surface"]:
+        raise ValueError("{0} is an invalid value for parameter 'channels': "
+                         "must be 'normal', 'distance' or 'surface'."
+                         .format(channels))
+
+    # apply augmentation
+    if augmentation:
+        image = augment(image)
+
+    return image
+
+
+def build_rna_2d(data, id_cell):
+    # TODO add documentation
+    # get coordinates
+    cyt_coord, _, rna_coord = get_coordinates(data, id_cell)
+
+    # TODO manage the case where different spots meet at different heights,
+    #  but same xy localization
+    # build the dense representation for the rna if available
+    max_x = cyt_coord[:, 0].max() + 5
+    max_y = cyt_coord[:, 1].max() + 5
+    values = [1] * rna_coord.shape[0]
+    rna = coo_matrix((values, (rna_coord[:, 0], rna_coord[:, 1])),
+                     shape=(max_x, max_y))
+    rna = (rna > 0)
+    rna = cast_img_float32(rna.todense())
+
+    return rna
 
 
 def build_cell_2d(data, id_cell):
@@ -641,7 +688,8 @@ class Generator:
     # TODO check threading.Lock()
     # TODO add classes
     def __init__(self, data, method, batch_size, input_shape, augmentation,
-                 with_label, nb_classes, nb_epoch_max=10, shuffle=True):
+                 with_label, nb_classes, nb_epoch_max=10, shuffle=True,
+                 precompute_features=False):
         # make generator threadsafe
         self.lock = threading.Lock()
 
@@ -655,6 +703,7 @@ class Generator:
         self.nb_classes = nb_classes
         self.nb_epoch_max = nb_epoch_max
         self.shuffle = shuffle
+        self.precompute_features = precompute_features
 
         # initialize generator
         self.nb_samples = self.data.shape[0]
@@ -662,6 +711,13 @@ class Generator:
         self.nb_batch_per_epoch = self._get_batch_per_epoch()
         self.i_batch = 0
         self.i_epoch = 0
+
+        # precompute feature if necessary
+        if self.precompute_features and "cell_ID" in self.data.columns:
+            unique_cells = list(set(self.data.loc[:, "cell_ID"]))
+            self.precomputed_features = self._precompute_features(unique_cells)
+        else:
+            self.precomputed_features = None
 
     def __len__(self):
         if self.nb_epoch_max is None:
@@ -751,7 +807,8 @@ class Generator:
                 input_shape=self.input_shape,
                 augmentation=self.augmentation,
                 with_label=self.with_label,
-                nb_classes=self.nb_classes)
+                nb_classes=self.nb_classes,
+                precomputed_features=self.precomputed_features)
 
             return batch_data, batch_label
 
@@ -764,9 +821,34 @@ class Generator:
                 input_shape=self.input_shape,
                 augmentation=self.augmentation,
                 with_label=self.with_label,
-                nb_classes=self.nb_classes)
+                nb_classes=self.nb_classes,
+                precomputed_features=self.precomputed_features)
 
             return batch_data
+
+    def _precompute_features(self, unique_cells):
+        """
+
+        Parameters
+        ----------
+        unique_cells
+
+        Returns
+        -------
+
+        """
+        # TODO add documentation
+        # get a sample for each instance of cell
+        d_features = {}
+        for cell in unique_cells:
+            df_cell = self.data.loc[self.data.cell_ID == cell, :]
+            cell_ref_if = df_cell.index[0]
+            image_ref = build_input_image(self.data, cell_ref_if,
+                                          channels=self.method,
+                                          input_shape=self.input_shape)
+            d_features[cell] = (image_ref[:, :, 1], image_ref[:, :, 2])
+
+        return d_features
 
     def reset(self):
         # initialize generator
@@ -776,8 +858,10 @@ class Generator:
         self.i_epoch = 0
 
 
+# TODO try to fully vectorize this step
 def build_batch(data, indices, method="normal", input_shape=(224, 224),
-                augmentation=True, with_label=False, nb_classes=9):
+                augmentation=True, with_label=False, nb_classes=9,
+                precomputed_features=None):
     """Build a batch of data.
 
     Parameters
@@ -799,6 +883,12 @@ def build_batch(data, indices, method="normal", input_shape=(224, 224),
         Return label of the image as well.
     nb_classes : int
         Number of different classes available.
+    precomputed_features : dict
+        Some datasets are simulated from a small limited set of background
+        cells (cytoplasm and nucleus). In this case, we can precompute and keep
+        in memory the related features layers in order to dramatically speed
+        up the program. this dict associate the id of the reference cells to
+        their computed features layers (cytoplasm, nucleus).
 
     Returns
     -------
@@ -808,7 +898,6 @@ def build_batch(data, indices, method="normal", input_shape=(224, 224),
         Tensor of the encoded label, with shape (batch_size,)
 
     """
-    # TODO try to fully vectorize this step
     # initialize the batch
     batch_size = len(indices)
     batch_data = np.zeros((batch_size, input_shape[0], input_shape[1], 3),
@@ -817,8 +906,16 @@ def build_batch(data, indices, method="normal", input_shape=(224, 224),
     # build each input image of the batch
     for i in range(batch_size):
         id_cell = indices[i]
-        image = build_input_image(data, id_cell, method, input_shape,
-                                  augmentation)
+
+        # use precomputed features if available
+        if precomputed_features is None:
+            image = build_input_image(data, id_cell, method, input_shape,
+                                      augmentation)
+        else:
+            image = build_input_image_precomputed(data, id_cell, method,
+                                                  input_shape, augmentation,
+                                                  precomputed_features)
+
         batch_data[i] = image
 
     # return images with one-hot labels
