@@ -18,6 +18,7 @@ from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
 from skimage.transform import resize
 from skimage.morphology.selem import square
 from skimage.morphology import binary_dilation
+from skimage.draw import polygon_perimeter
 from scipy.sparse import coo_matrix
 from sklearn.preprocessing import LabelEncoder
 
@@ -443,6 +444,16 @@ def get_coordinates(data, id_cell):
     rna = data.loc[id_cell, "RNA_pos"]
     rna = np.array(rna, dtype=np.int64)
 
+    # complete cytoplasm and nucleus coordinates
+    cyt_x, cyt_y = polygon_perimeter(cyt[:, 0], cyt[:, 1])
+    cyt_x = cyt_x[:, np.newaxis]
+    cyt_y = cyt_y[:, np.newaxis]
+    cyt = np.concatenate((cyt_x, cyt_y), axis=-1)
+    nuc_x, nuc_y = polygon_perimeter(nuc[:, 0], nuc[:, 1])
+    nuc_x = nuc_x[:, np.newaxis]
+    nuc_y = nuc_y[:, np.newaxis]
+    nuc = np.concatenate((nuc_x, nuc_y), axis=-1)
+
     return cyt, nuc, rna
 
 
@@ -524,10 +535,6 @@ def get_distance_layers(cyt, nuc):
     mask_cyt = mask_cyt.astype(np.bool)
     mask_nuc = mask_nuc.astype(np.bool)
 
-    # case where the initial boundary is too fragmented to return a volume
-    if mask_cyt.sum() * mask_nuc.sum() == 0:
-        return np.zeros_like(cyt), np.zeros_like(nuc)
-
     # compute distances from cytoplasm and nucleus
     distance_cyt = ndi.distance_transform_edt(mask_cyt)
     distance_nuc_ = ndi.distance_transform_edt(~mask_nuc)
@@ -566,28 +573,6 @@ def get_surface_layers(cyt, nuc):
     # compute surface from cytoplasm and nucleus
     surface_cyt = ndi.binary_fill_holes(cyt)
     surface_nuc = ndi.binary_fill_holes(nuc)
-
-    # check if we need to dilate the border
-    if np.array_equal(surface_cyt, cyt) or np.array_equal(surface_nuc, nuc):
-        # we dilate the surface until the boundaries are fully connected and
-        # we can return a plain surface (we apply at most three rounds of
-        # dilatation, each time with a larger kernel size)
-        for kernel_size in [2, 3, 4]:
-            kernel = square(kernel_size, dtype=np.float32)
-            cyt = binary_dilation(cyt, selem=kernel).astype(np.float32)
-            nuc = binary_dilation(nuc, selem=kernel).astype(np.float32)
-            surface_cyt = ndi.binary_fill_holes(cyt)
-            surface_nuc = ndi.binary_fill_holes(nuc)
-
-            if (not np.array_equal(surface_cyt, cyt)
-                    and not np.array_equal(surface_nuc, nuc)):
-                # cast to np.float32
-                surface_cyt = cast_img_float32(surface_cyt)
-                surface_nuc = cast_img_float32(surface_nuc)
-
-                return surface_cyt, surface_nuc
-
-        return np.zeros_like(cyt), np.zeros_like(nuc)
 
     # cast to np.float32
     surface_cyt = cast_img_float32(surface_cyt)
