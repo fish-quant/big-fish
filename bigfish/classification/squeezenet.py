@@ -76,7 +76,7 @@ class SqueezeNet0(BaseModel):
         # TODO debug early stopping
         # define early stopping
         early_stop = EarlyStopping(
-            monitor="val_acc",
+            monitor="val_categorical_accuracy",
             min_delta=0,
             patience=5,
             verbose=1,
@@ -132,7 +132,7 @@ class SqueezeNet0(BaseModel):
 
         # define early stopping
         early_stop = EarlyStopping(
-            monitor='val_acc',
+            monitor='val_categorical_accuracy',
             min_delta=0,
             patience=5,
             verbose=1,
