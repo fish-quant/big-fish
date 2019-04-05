@@ -106,7 +106,9 @@ if __name__ == '__main__':
         augmentation=True,
         with_label=True,
         nb_classes=nb_classes,
-        nb_epoch_max=None)
+        nb_epoch_max=None,
+        shuffle=True,
+        precompute_features=True)
     print("Number of train batches per epoch: {0}"
           .format(train_generator.nb_batch_per_epoch))
 
@@ -119,7 +121,9 @@ if __name__ == '__main__':
         augmentation=False,
         with_label=True,
         nb_classes=nb_classes,
-        nb_epoch_max=None)
+        nb_epoch_max=None,
+        shuffle=True,
+        precompute_features=True)
     print("Number of validation batches per epoch: {0}"
           .format(validation_generator.nb_batch_per_epoch))
 
@@ -133,7 +137,8 @@ if __name__ == '__main__':
         with_label=True,
         nb_classes=nb_classes,
         nb_epoch_max=None,
-        shuffle=False)
+        shuffle=False,
+        precompute_features=True)
     print("Number of test batches per epoch: {0}"
           .format(test_generator.nb_batch_per_epoch))
     print()
