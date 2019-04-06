@@ -11,13 +11,9 @@ import numpy as np
 from scipy import ndimage as ndi
 
 from .augmentation import augment
-from .utils import check_array
-from .preprocess import (cast_img_uint8, cast_img_uint16, cast_img_float32,
-                         cast_img_float64)
+from .preprocess import cast_img_float32
 
-from skimage.transform import resize
 from skimage.draw import polygon_perimeter
-from scipy.sparse import coo_matrix
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -281,81 +277,85 @@ def get_map_label(data, column_num="label", columns_str="pattern_name"):
 
 # ### Build images ###
 
-def build_input_image(data, id_cell, channels="normal", input_shape=None,
-                      augmentation=False):
+def build_image(data, id_cell, image_shape=None, coord_refinement=True,
+                method="normal", augmentation=False):
     """
 
     Parameters
     ----------
-    data : pandas.DataFrame
-        Dataframe with the data.
-    id_cell : int
-        Index of the targeted cell.
-    channels : str
-        channels used in the input image.
-            - 'normal' for (rna, cyt, nuc)
-            - 'distance' for (rna, distance_cyt, distance_nuc)
-            - 'surface' for (rna, surface_cyt, surface_nuc)
-    input_shape : Tuple[int]
-        Shape of the input image.
-    augmentation : bool
-        Apply a random operator on the image.
+    data
+    id_cell
+    image_shape
+    coord_refinement
+    method
+    augmentation
 
     Returns
     -------
-    image : np.ndarray, np.float32
-        A 3-d tensor with shape (x, y, channels). Values are normalized between
-        0 and 1 (binaries values are unchanged and float values are rescaled
-        according to their original dtype).
 
     """
-    # TODO improve the resizing of different channels
-    # build image from coordinates data
-    cyt_coord, nuc_coord, rna_coord = get_coordinates(data, id_cell)
-    cyt, nuc, _ = from_coord_to_image(cyt_coord, nuc_coord)
+    # TODO add documentation
+    # TODO add sanity check for precomputation
+    # get coordinates
+    rna_coord, cyt_coord, nuc_coord = get_coordinates(data, id_cell,
+                                                      image_shape,
+                                                      coord_refinement)
 
-    # build rna directly with the right shape
-    rna = _build_resize_rna(rna_coord, cyt.shape, input_shape)
+    # build matrices
+    if image_shape is None:
+        max_x = cyt_coord[:, 0].max() + 5
+        max_y = cyt_coord[:, 1].max() + 5
+        image_shape = (max_x, max_y)
+    rna = np.zeros(image_shape, dtype=np.float32)
+    rna[rna_coord[:, 0], rna_coord[:, 1]] = 1.0
+    cyt = np.zeros(image_shape, dtype=np.float32)
+    cyt[cyt_coord[:, 0], cyt_coord[:, 1]] = 1.0
+    nuc = np.zeros(image_shape, dtype=np.float32)
+    nuc[nuc_coord[:, 0], nuc_coord[:, 1]] = 1.0
 
-    # build the required input image
-    if channels == "normal":
-        # TODO improve resizing using 'polynom_delimeter'
-        cyt = resize_image(cyt, new_shape=input_shape, binary=True)
-        nuc = resize_image(nuc, new_shape=input_shape, binary=True)
-        image = np.stack((rna, cyt, nuc), axis=-1)
-    elif channels == "surface":
+    # get features
+    if method == "normal":
+        pass
+    elif method == "surface":
         cyt, nuc = get_surface_layers(cyt, nuc)
-        cyt = resize_image(cyt, new_shape=input_shape, binary=True)
-        nuc = resize_image(nuc, new_shape=input_shape, binary=True)
-        image = np.stack((rna, cyt, nuc), axis=-1)
-    elif channels == "distance":
+    elif method == "distance":
         cyt, nuc = get_distance_layers(cyt, nuc)
-        cyt = resize_image(cyt, new_shape=input_shape, binary=False)
-        nuc = resize_image(nuc, new_shape=input_shape, binary=False)
-        image = np.stack((rna, cyt, nuc), axis=-1)
     else:
-        raise ValueError("{0} is an invalid value for parameter 'channels': "
-                         "must be 'normal', 'distance' or 'surface'."
-                         .format(channels))
+        raise ValueError(
+            "{0} is an invalid value for parameter 'channels': must be "
+            "'normal', 'distance' or 'surface'.".format(method))
 
-    # apply augmentation
+    # stack image
+    image = np.stack((rna, cyt, nuc), axis=-1)
+
+    # augment
     if augmentation:
         image = augment(image)
 
     return image
 
 
-def build_input_image_precomputed(data, id_cell, channels="normal",
-                                  input_shape=None, augmentation=False,
-                                  precomputed_features=None):
-    # TODO improve the resizing of different channels
+def build_image_precomputed(data, id_cell, image_shape=None,
+                            precomputed_features=None, augmentation=False):
+    """
+
+    Parameters
+    ----------
+    data
+    id_cell
+    image_shape
+    precomputed_features
+    augmentation
+
+    Returns
+    -------
+
+    """
     # TODO add documentation
+    # TODO add sanity check for precomputation
+
     # build rna image from coordinates data
-    cyt_coord, nuc_coord, rna_coord = get_coordinates(data, id_cell)
-    cyt, nuc, _ = from_coord_to_image(cyt_coord, nuc_coord)
-    rna = _build_resize_rna(rna_coord, cyt.shape, input_shape)
-    if channels == "distance":
-        rna = cast_img_float32(rna)
+    rna = _build_rna(data, id_cell, image_shape)
 
     # get precomputed features
     id_cell = data.loc[id_cell, "cell_ID"]
@@ -363,10 +363,6 @@ def build_input_image_precomputed(data, id_cell, channels="normal",
 
     # build the required input image
     image = np.stack((rna, cyt, nuc), axis=-1)
-    if channels not in ["normal", "distance", "surface"]:
-        raise ValueError("{0} is an invalid value for parameter 'channels': "
-                         "must be 'normal', 'distance' or 'surface'."
-                         .format(channels))
 
     # apply augmentation
     if augmentation:
@@ -375,160 +371,98 @@ def build_input_image_precomputed(data, id_cell, channels="normal",
     return image
 
 
-def _build_resize_rna(rna_coord, current_shape, resized_shape):
+def _build_rna(data, id_cell, output_shape=None):
+    # TODO add documentation
+    # TODO check if 'polygone_perimeter' changes the input shape
+    # get coordinates
+    rna_coord = data.loc[id_cell, "RNA_pos"]
+    rna_coord = np.array(rna_coord, dtype=np.int64)
+
+    # get current shape
+    cyt_coord = data.loc[id_cell, "pos_cell"]
+    cyt_coord = np.array(cyt_coord, dtype=np.int64)
+    max_x = cyt_coord[:, 0].max() + 5
+    max_y = cyt_coord[:, 1].max() + 5
+    input_shape = (max_x, max_y)
+
+    if output_shape is not None:
+        # compute resizing factor
+        factor = _compute_resizing_factor(input_shape, output_shape)
+
+        # resize coordinates directly
+        rna_coord = _resize_coord(rna_coord, factor)
+
+    else:
+        output_shape = input_shape
+
+    # build rna image
+    rna = np.zeros(output_shape, dtype=np.float32)
+    rna[rna_coord[:, 0], rna_coord[:, 1]] = 1.0
+
+    return rna
+
+
+def get_coordinates(data, id_cell, output_shape=None, coord_refinement=True):
     """
 
     Parameters
     ----------
-    rna_coord
-    current_shape
-    resized_shape
+    data
+    id_cell
+    output_shape
+    coord_refinement
 
     Returns
     -------
 
     """
     # TODO add documentation
-    # compute resizing factor
-    delta_x = resized_shape[0] / current_shape[0]
-    delta_y = resized_shape[1] / current_shape[1]
-    factor = np.array([delta_x, delta_y, 1])[np.newaxis, :]
-
-    # resize coordinates directly
-    rna_coord = np.round(rna_coord * factor)
-
-    # build rna image
-    values = [1] * rna_coord.shape[0]
-    rna = coo_matrix((values, (rna_coord[:, 0], rna_coord[:, 1])),
-                     shape=resized_shape)
-    rna = (rna > 0)
-    rna = cast_img_float32(rna.todense())
-
-    return rna
-
-
-def build_cell_2d(data, id_cell):
-    """Build 2-d images from data coordinates, without resizing.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Dataframe with the data.
-    id_cell : int
-        Index of the targeted cell.
-
-    Returns
-    -------
-    cyt : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
-    nuc : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
-    rna : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
-
-    """
     # get coordinates
-    cyt_coord, nuc_coord, rna_coord = get_coordinates(data, id_cell)
+    rna_coord = data.loc[id_cell, "RNA_pos"]
+    rna_coord = np.array(rna_coord, dtype=np.int64)
+    cyt_coord = data.loc[id_cell, "pos_cell"]
+    cyt_coord = np.array(cyt_coord, dtype=np.int64)
+    nuc_coord = data.loc[id_cell, "pos_nuc"]
+    nuc_coord = np.array(nuc_coord, dtype=np.int64)
 
-    # build 2d images
-    cyt, nuc, rna = from_coord_to_image(cyt_coord, nuc_coord, rna_coord)
-
-    return cyt, nuc, rna
-
-
-def get_coordinates(data, id_cell):
-    """Get the coordinates a specific cell.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Dataframe with the data.
-    id_cell : int
-        Index of the targeted cell.
-
-    Returns
-    -------
-    cyt : np.ndarray, np.int64
-        Cytoplasm coordinates with shape (x, y).
-    nuc : np.ndarray, np.int64
-        Nucleus coordinates with shape (x, y).
-    rna : np.ndarray, np.int64
-        RNA spots coordinates with shape (x, y, z).
-
-    """
-    # get coordinates
-    cyt = data.loc[id_cell, "pos_cell"]
-    cyt = np.array(cyt, dtype=np.int64)
-    nuc = data.loc[id_cell, "pos_nuc"]
-    nuc = np.array(nuc, dtype=np.int64)
-    rna = data.loc[id_cell, "RNA_pos"]
-    rna = np.array(rna, dtype=np.int64)
+    # resize coordinates
+    if output_shape is not None:
+        max_x = cyt_coord[:, 0].max() + 5
+        max_y = cyt_coord[:, 1].max() + 5
+        input_shape = (max_x, max_y)
+        factor = _compute_resizing_factor(input_shape, output_shape)
+        rna_coord = _resize_coord(rna_coord, factor)
+        cyt_coord = _resize_coord(cyt_coord, factor[:, :2])
+        nuc_coord = _resize_coord(nuc_coord, factor[:, :2])
 
     # complete cytoplasm and nucleus coordinates
-    cyt_x, cyt_y = polygon_perimeter(cyt[:, 0], cyt[:, 1])
-    cyt_x = cyt_x[:, np.newaxis]
-    cyt_y = cyt_y[:, np.newaxis]
-    cyt = np.concatenate((cyt_x, cyt_y), axis=-1)
-    nuc_x, nuc_y = polygon_perimeter(nuc[:, 0], nuc[:, 1])
-    nuc_x = nuc_x[:, np.newaxis]
-    nuc_y = nuc_y[:, np.newaxis]
-    nuc = np.concatenate((nuc_x, nuc_y), axis=-1)
+    if coord_refinement:
+        cyt_x, cyt_y = polygon_perimeter(cyt_coord[:, 0], cyt_coord[:, 1])
+        cyt_x = cyt_x[:, np.newaxis]
+        cyt_y = cyt_y[:, np.newaxis]
+        cyt_coord = np.concatenate((cyt_x, cyt_y), axis=-1)
+        nuc_x, nuc_y = polygon_perimeter(nuc_coord[:, 0], nuc_coord[:, 1])
+        nuc_x = nuc_x[:, np.newaxis]
+        nuc_y = nuc_y[:, np.newaxis]
+        nuc_coord = np.concatenate((nuc_x, nuc_y), axis=-1)
 
-    return cyt, nuc, rna
+    return rna_coord, cyt_coord, nuc_coord
 
 
-def from_coord_to_image(cyt_coord, nuc_coord, rna_coord=None):
-    """Build 2-d images from the coordinates data.
+def _compute_resizing_factor(input_shape, output_shape):
+    # compute factor
+    delta_x = output_shape[0] / input_shape[0]
+    delta_y = output_shape[1] / input_shape[1]
+    factor = np.array([delta_x, delta_y, 1], dtype=np.float32)[np.newaxis, :]
 
-    Parameters
-    ----------
-    cyt_coord : np.ndarray, np.int64
-        Cytoplasm coordinates in 2-d with shape (x, y).
-    nuc_coord : np.ndarray, np.int64
-        Nucleus coordinates in 2-d with shape (x, y).
-    rna_coord : np.ndarray, np.int64
-        RNA spots coordinates in 3-d with shape (x, y, z).
+    return factor
 
-    Returns
-    -------
-    cyt : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
-    nuc : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
-    rna : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
 
-    """
-    # build the dense representation for the cytoplasm
-    values = [1] * cyt_coord.shape[0]
-    max_x = cyt_coord[:, 0].max() + 5
-    max_y = cyt_coord[:, 1].max() + 5
-    cyt = coo_matrix((values, (cyt_coord[:, 0], cyt_coord[:, 1])),
-                     shape=(max_x, max_y))
-    cyt = (cyt > 0)
-    cyt = cast_img_float32(cyt.todense())
+def _resize_coord(coord, factor):
+    # resize coordinates directly
+    coord = np.round(coord * factor).astype(np.int64)
 
-    # build the dense representation for the nucleus
-    values = [1] * nuc_coord.shape[0]
-    nuc = coo_matrix((values, (nuc_coord[:, 0], nuc_coord[:, 1])),
-                     shape=(max_x, max_y))
-    nuc = (nuc > 0)
-    nuc = cast_img_float32(nuc.todense())
-
-    if rna_coord is None:
-        return cyt, nuc, None
-
-    else:
-        # TODO manage the case where different spots meet at different heights,
-        #  but same xy localization
-        # build the dense representation for the rna if available
-        values = [1] * rna_coord.shape[0]
-        rna = coo_matrix((values, (rna_coord[:, 0], rna_coord[:, 1])),
-                         shape=(max_x, max_y))
-        rna = (rna > 0)
-        rna = cast_img_float32(rna.todense())
-
-        return cyt, nuc, rna
+    return coord
 
 
 def get_distance_layers(cyt, nuc):
@@ -599,67 +533,6 @@ def get_surface_layers(cyt, nuc):
     surface_nuc = cast_img_float32(surface_nuc)
 
     return surface_cyt, surface_nuc
-
-
-def resize_image(image, new_shape=None, binary=False):
-    """Resize image.
-
-    If the size is decreased, the image is downsampled using a mean filter. If
-    the shape is increased, new pixels' values are interpolated using spline
-    method.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image the resize with shape (y, x) or (y, x, channel).
-    new_shape : Tuple[int]
-        Spatial shape used for input images.
-    binary : bool
-        Keep binaries values after the resizing.
-
-    Returns
-    -------
-    image_output : np.ndarray
-        Resized image with shape (new_y, new_x) or (new_y, new_x, channel).
-
-    """
-    # check image dtype
-    check_array(image, dtype=[np.uint8, np.uint16,
-                              np.float32, np.float64,
-                              np.bool])
-
-    # get default output_shape
-    if new_shape is None:
-        return image
-
-    # resize
-    image_dtype = image.dtype
-    if binary:
-        image_output = resize(image, new_shape,
-                              mode="constant",
-                              cval=0,
-                              order=0,
-                              anti_aliasing=False)
-    else:
-        image_output = resize(image, new_shape,
-                              mode="constant",
-                              cval=0,
-                              order=1,
-                              anti_aliasing=False)
-
-    # cast the image in the original dtype
-    if image_dtype == np.bool:
-        image_output = (image_output > 0)
-    elif image_dtype == np.uint8:
-        image_output = cast_img_uint8(image_output)
-    elif image_dtype == np.uint16:
-        image_output = cast_img_uint16(image_output)
-    elif image_dtype == np.float32:
-        image_output = cast_img_float32(image_output)
-    elif image_dtype == np.float64:
-        image_output = cast_img_float64(image_output)
-
-    return image_output
 
 
 def get_label(data, id_cell):
@@ -846,10 +719,13 @@ class Generator:
         d_features = {}
         for cell in unique_cells:
             df_cell = self.data.loc[self.data.cell_ID == cell, :]
-            cell_ref_if = df_cell.index[0]
-            image_ref = build_input_image(self.data, cell_ref_if,
-                                          channels=self.method,
-                                          input_shape=self.input_shape)
+            id_cell = df_cell.index[0]
+            image_ref = build_image(
+                self.data, id_cell,
+                image_shape=self.input_shape,
+                coord_refinement=True,
+                method=self.method,
+                augmentation=False)
             d_features[cell] = (image_ref[:, :, 1], image_ref[:, :, 2])
 
         return d_features
@@ -908,24 +784,30 @@ def build_batch(data, indices, method="normal", input_shape=(224, 224),
                           dtype=np.float32)
 
     # build each input image of the batch
-    for i in range(batch_size):
-        id_cell = indices[i]
-
-        # use precomputed features if available
-        if precomputed_features is None:
-            image = build_input_image(data, id_cell, method, input_shape,
-                                      augmentation)
-        else:
-            image = build_input_image_precomputed(data, id_cell, method,
-                                                  input_shape, augmentation,
-                                                  precomputed_features)
-
-        batch_data[i] = image
+    if precomputed_features is None:
+        for i in range(batch_size):
+            id_cell = indices[i]
+            image = build_image(
+                data, id_cell,
+                image_shape=input_shape,
+                coord_refinement=True,
+                method=method,
+                augmentation=augmentation)
+            batch_data[i] = image
+    else:
+        for i in range(batch_size):
+            id_cell = indices[i]
+            image = build_image_precomputed(
+                data, id_cell,
+                image_shape=input_shape,
+                precomputed_features=precomputed_features,
+                augmentation=augmentation)
+            batch_data[i] = image
 
     # return images with one-hot labels
     if with_label:
         labels = np.array(data.loc[indices, "label"], dtype=np.int64)
-        batch_label = one_hot_label(labels, nb_classes)
+        batch_label = _one_hot_label(labels, nb_classes)
 
         return batch_data, batch_label
 
@@ -935,7 +817,7 @@ def build_batch(data, indices, method="normal", input_shape=(224, 224),
         return batch_data
 
 
-def one_hot_label(labels, nb_classes):
+def _one_hot_label(labels, nb_classes):
     """Binarize labels in a one-vs-all fashion.
 
     Parameters

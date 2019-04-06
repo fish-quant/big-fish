@@ -13,12 +13,9 @@ from .preprocess import (build_stack, check_recipe, build_simulated_dataset,
                          gaussian_filter, build_stacks, cast_img_float32,
                          cast_img_float64, compute_illumination_surface,
                          correct_illumination_surface, clean_simulated_data)
-from .preparation import (split_from_background, build_cell_2d,
-                          get_coordinates, from_coord_to_image,
-                          get_distance_layers, get_surface_layers,
-                          build_input_image, resize_image, build_batch,
-                          get_label, one_hot_label, Generator,
-                          encode_labels, get_map_label)
+from .preparation import (split_from_background, build_image, get_coordinates,
+                          get_distance_layers, get_surface_layers, build_batch,
+                          get_label, Generator, encode_labels, get_map_label)
 from .augmentation import augment
 from .utils import check_array, check_features_df, check_range_value
 
@@ -50,18 +47,14 @@ __all__ = ["read_tif",
            "correct_illumination_surface",
            "clean_simulated_data",
            "split_from_background",
-           "build_cell_2d",
            "get_coordinates",
-           "from_coord_to_image",
            "get_distance_layers",
            "get_surface_layers",
-           "build_input_image",
            "check_range_value",
-           "resize_image",
            "augment",
            "build_batch",
            "get_label",
-           "one_hot_label",
            "Generator",
            "encode_labels",
-           "get_map_label"]
+           "get_map_label",
+           "build_image"]
