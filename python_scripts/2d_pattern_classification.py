@@ -8,6 +8,8 @@ import os
 import argparse
 import time
 
+import numpy as np
+
 import bigfish.stack as stack
 import bigfish.classification as classification
 
@@ -186,6 +188,14 @@ if __name__ == '__main__':
                                               verbose=0)
     print("Loss test: {0:.3f} | Accuracy test: {1:.3f}"
           .format(loss, 100 * accuracy))
+
+    print("--- PREDICTION ---", "\n")
+
+    # make predictions on the testing dataset
+    test_generator.reset()
+    predictions, probabilities = model.predict_generator(test_generator, True)
+    path = os.path.join(args.log_directory, "test_predictions.npz")
+    np.savez(path, predictions=predictions, probabilities=probabilities)
 
     end_time = time.time()
     duration = int(round((end_time - start_time) / 60))
