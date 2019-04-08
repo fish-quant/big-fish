@@ -16,12 +16,14 @@ Version: 1.0 and 1.1 (see github https://github.com/DeepScale/SqueezeNet)
 """
 
 import os
+import warnings
 
 import tensorflow as tf
 import numpy as np
 
 from .base import BaseModel, get_optimizer
 
+from tensorflow.python.keras.backend import function, learning_phase
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
@@ -296,6 +298,43 @@ class SqueezeNet0(BaseModel):
                      val_categorical_accuracy=self.history.history["loss"])
 
         return
+
+    def get_feature_map(self, generator, after_average_pooling=True):
+        # TODO add documentation
+        # TODO ask generator without label
+        # check generator
+        label_back = False
+        if generator.with_label:
+            warnings.warn("Label is disabled from generator during the "
+                          "computation of the feature map.")
+            generator.with_label = False
+            label_back = True
+
+        # get input layer
+        input_ = self.model.input
+
+        # get embedding layer
+        if after_average_pooling:
+            output_ = self.model.layers[-2].output
+        else:
+            output_ = self.model.layers[-3].output
+
+        # define the steps to compute the feature map
+        features_map = function([input_, learning_phase()], [output_])
+
+        # compute the feature map
+        embedding = [features_map([batch, 0])[0] for batch in generator]
+        embedding = np.array(embedding)
+        embedding = np.concatenate(embedding, axis=0)
+
+        if not after_average_pooling:
+            a, b, c, d = embedding.shape
+            embedding = np.reshape(embedding, (a, b * c * d))
+
+        # reset parameter 'with_label' if necessary
+        generator.with_label = label_back
+
+        return embedding
 
 
 # ### Architecture functions ###
