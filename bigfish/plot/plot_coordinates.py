@@ -182,15 +182,16 @@ def plot_cell_coordinates(data, id_cell, title=None, framesize=(5, 10),
 
     """
     # get the cytoplasm, the nuclei and the rna spots
-    cyt, nuc, rna = stack.get_coordinates(data, id_cell)
+    rna_coord, cyt_coord, nuc_coord = stack.get_coordinates(data, id_cell)
 
     # plot
     plt.figure(figsize=framesize)
     if title is not None:
         plt.title(title, fontweight="bold", fontsize=25)
-    plt.plot(cyt[:, 1], cyt[:, 0], c="black", linewidth=2)
-    plt.plot(nuc[:, 1], nuc[:, 0], c="steelblue", linewidth=2)
-    plt.scatter(rna[:, 1], rna[:, 0], s=25, c="firebrick", marker=".")
+    plt.plot(cyt_coord[:, 1], cyt_coord[:, 0], c="black", linewidth=2)
+    plt.plot(nuc_coord[:, 1], nuc_coord[:, 0], c="steelblue", linewidth=2)
+    plt.scatter(rna_coord[:, 1], rna_coord[:, 0], s=25, c="firebrick",
+                marker=".")
     plt.tight_layout()
     save_plot(path_output, ext)
     plt.show()
