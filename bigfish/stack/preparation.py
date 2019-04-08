@@ -11,7 +11,7 @@ import numpy as np
 from scipy import ndimage as ndi
 
 from .augmentation import augment
-from .preprocess import cast_img_float32
+from .preprocess import cast_img_float32, mean_filter
 
 from skimage.draw import polygon_perimeter
 from sklearn.preprocessing import LabelEncoder
@@ -109,162 +109,49 @@ def encode_labels(data, column_name="pattern_name", classes_to_analyse="all"):
         List of the classes to keep and encode.
 
     """
-    # experimental analysis
-    if classes_to_analyse == "experimental":
-        data, encoder, classes = _encode_label_experimental(data, column_name)
-    # 2-d analysis
-    elif classes_to_analyse == "2d":
-        data, encoder, classes = _encode_label_2d(data, column_name)
-    # complete analysis
-    elif classes_to_analyse == "all":
-        data, encoder, classes = _encode_label_all(data, column_name)
+    # get label encoder
+    encoder, classes = get_label_encoder(classes_to_analyze=classes_to_analyse)
+
+    # filter rows
+    query = "{0} in {1}".format(column_name, str(classes))
+    data = data.query(query)
+
+    # encode labels
+    if column_name == "label":
+        data = data.assign(
+            label_str=data.loc[:, column_name],
+            label_num=encoder.transform(data.loc[:, column_name]))
+    else:
+        data = data.assign(
+            label=encoder.transform(data.loc[:, column_name]))
+
+    return data, encoder, classes
+
+
+def get_label_encoder(classes_to_analyze="all"):
+    # TODO add documentation
+    # get set of classes to analyze
+    if classes_to_analyze == "experimental":
+        classes = ["random", "foci", "cellext", "inNUC", "nuc2D"]
+    elif classes_to_analyze == "2d":
+        classes = ["random", "foci", "cellext", "inNUC", "nuc2D", "cell2D",
+                   "polarized"]
+    elif classes_to_analyze == "all":
+        classes = ["random", "foci", "cellext", "inNUC", "nuc2D", "cell2D",
+                   "polarized", "cell3D", "nuc3D"]
     else:
         raise ValueError("'classes_to_analyse' can only take three values: "
                          "'experimental', '2d' or 'all'.")
 
-    return data, encoder, classes
-
-
-def _encode_label_experimental(data, column_name):
-    """Filter the 5 classes included in the experimental dataset, then encode
-    them from a string format to a numerical one.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Dataframe with a feature containing the label in string format.
-    column_name : str
-        Name of the feature to use in the dataframe as label.
-
-    Returns
-    -------
-    data : pd.DataFrame
-        Dataframe with the encoded label in an additional column 'label'. If
-        the original columns label is already named 'label', we rename both
-        columns 'label_str' and 'label_num'.
-    encoder : sklearn.preprocessing.LabelEncoder
-        Fitted encoder to encode of decode a label.
-    classes : List[str]
-        List of the classes to keep and encode.
-
-    """
-    # get classes to use
-    classes = ["random", "foci", "cellext", "inNUC", "nuc2D"]
-
     # fit a label encoder
     encoder = LabelEncoder()
     encoder.fit(classes)
 
-    # filter rows
-    query = "{0} in {1}".format(column_name, str(classes))
-    data = data.query(query)
-
-    # encode labels
-    if column_name == "label":
-        data = data.assign(
-            label_str=data.loc[:, column_name],
-            label_num=encoder.transform(data.loc[:, column_name]))
-    else:
-        data = data.assign(
-            label=encoder.transform(data.loc[:, column_name]))
-
-    return data, encoder, classes
-
-
-def _encode_label_2d(data, column_name):
-    """Filter the 2-d classes, then encode them from a string format to a
-    numerical one.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Dataframe with a feature containing the label in string format.
-    column_name : str
-        Name of the feature to use in the dataframe as label.
-
-    Returns
-    -------
-    data : pd.DataFrame
-        Dataframe with the encoded label in an additional column 'label'. If
-        the original columns label is already named 'label', we rename both
-        columns 'label_str' and 'label_num'.
-    encoder : sklearn.preprocessing.LabelEncoder
-        Fitted encoder to encode of decode a label.
-    classes : List[str]
-        List of the classes to keep and encode.
-
-    """
-    # get classes to use
-    classes = ["random", "foci", "cellext", "inNUC", "nuc2D", "cell2D",
-               "polarized"]
-
-    # fit a label encoder
-    encoder = LabelEncoder()
-    encoder.fit(classes)
-
-    # filter rows
-    query = "{0} in {1}".format(column_name, str(classes))
-    data = data.query(query)
-
-    # encode labels
-    if column_name == "label":
-        data = data.assign(
-            label_str=data.loc[:, column_name],
-            label_num=encoder.transform(data.loc[:, column_name]))
-    else:
-        data = data.assign(
-            label=encoder.transform(data.loc[:, column_name]))
-
-    return data, encoder, classes
-
-
-def _encode_label_all(data, column_name):
-    """Encode all the classes from a string format to a numerical one.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Dataframe with a feature containing the label in string format.
-    column_name : str
-        Name of the feature to use in the dataframe as label.
-
-    Returns
-    -------
-    data : pd.DataFrame
-        Dataframe with the encoded label in an additional column 'label'. If
-        the original columns label is already named 'label', we rename both
-        columns 'label_str' and 'label_num'.
-    encoder : sklearn.preprocessing.LabelEncoder
-        Fitted encoder to encode of decode a label.
-    classes : List[str]
-        List of the classes to keep and encode.
-
-    """
-    # get classes to use
-    classes = ["random", "foci", "cellext", "inNUC", "nuc2D", "cell2D",
-               "polarized", "cell3D", "nuc3D"]
-
-    # fit a label encoder
-    encoder = LabelEncoder()
-    encoder.fit(classes)
-
-    # filter rows
-    query = "{0} in {1}".format(column_name, str(classes))
-    data = data.query(query)
-
-    # encode labels
-    if column_name == "label":
-        data = data.assign(
-            label_str=data.loc[:, column_name],
-            label_num=encoder.transform(data.loc[:, column_name]))
-    else:
-        data = data.assign(
-            label=encoder.transform(data.loc[:, column_name]))
-
-    return data, encoder, classes
+    return encoder, classes
 
 
 def get_map_label(data, column_num="label", columns_str="pattern_name"):
+    # TODO add documentation
     label_num = list(set(data.loc[:, column_num]))
     label_str = list(set(data.loc[:, columns_str]))
     d = {}
@@ -484,6 +371,7 @@ def get_distance_layers(cyt, nuc):
         A 2-d tensor with shape (x, y) showing distance to the nucleus border.
 
     """
+    # TODO can return NaN
     # compute surfaces from cytoplasm and nucleus
     mask_cyt, mask_nuc = get_surface_layers(cyt, nuc)
     mask_cyt = mask_cyt.astype(np.bool)
@@ -837,3 +725,122 @@ def _one_hot_label(labels, nb_classes):
     label_one_hot = np.eye(nb_classes, dtype=np.float32)[labels]
 
     return label_one_hot
+
+
+# ### Experimental data ###
+
+def format_experimental_data(data, label_encoder=None):
+    # TODO add documentation
+    # initialize the formatted dataset
+    data_formatted = data.copy(deep=True)
+
+    # format coordinates
+    data_formatted.loc[:, 'pos_cell'] = data_formatted.apply(
+        lambda row: _decompose_experimental_coordinate(row["pos"].T)[0],
+        axis=1)
+    data_formatted.loc[:, 'pos_nuc'] = data_formatted.apply(
+        lambda row: _decompose_experimental_coordinate(row["pos"].T)[1],
+        axis=1)
+    data_formatted.loc[:, 'RNA_pos'] = data_formatted.apply(
+        lambda row: _decompose_experimental_coordinate(row["pos"].T)[2],
+        axis=1)
+
+    # format cell indices
+    data_formatted.loc[:, 'cell_ID'] = data_formatted.index
+
+    # format RNA count
+    data_formatted.loc[:, 'nb_rna'] = data_formatted.apply(
+        lambda row: len(row["RNA_pos"]),
+        axis=1)
+
+    # format label
+    if label_encoder is not None:
+        pattern_level = [None] * data_formatted.shape[0]
+        data_formatted.loc[:, 'pattern_level'] = pattern_level
+        data_formatted.loc[:, 'pattern_name'] = data_formatted.apply(
+            lambda row: _label_experimental_num_to_str_(row["labels"]),
+            axis=1)
+        data_formatted.loc[:, 'label'] = data_formatted.apply(
+            lambda row: label_encoder.transform([row["pattern_name"]])[0],
+            axis=1)
+
+    # remove useless columns
+    if label_encoder is not None:
+        features_to_keep = ['gene', 'pos_nuc', 'pos_cell', 'RNA_pos', 'cell_ID',
+                            'nb_rna', 'pattern_level', 'pattern_name', 'label']
+    else:
+        features_to_keep = ['gene', 'pos_nuc', 'pos_cell', 'RNA_pos',
+                            'cell_ID', 'nb_rna']
+    data_formatted = data_formatted.loc[:, features_to_keep]
+
+    return data_formatted
+
+
+def _decompose_experimental_coordinate(positions):
+    # TODO add documentation
+    # get coordinate for each element of the cell
+    nuc_coord = positions[positions[:, 2] == 0]
+    nuc_coord = nuc_coord[:, :2].astype(np.int64)
+    cyt_coord = positions[positions[:, 2] == 1]
+    cyt_coord = cyt_coord[:, :2].astype(np.int64)
+    rna_coord = positions[positions[:, 2] == 2]
+    rna_coord = rna_coord.astype(np.int64)
+    rna_coord[:, 2] = np.zeros((rna_coord.shape[0],), dtype=np.int64)
+
+    return cyt_coord, nuc_coord, rna_coord
+
+
+def _label_experimental_num_to_str_(label_num):
+    # TODO add documentation
+    if label_num == 1:
+        label_str = "foci"
+    elif label_num == 2:
+        label_str = "cellext"
+    elif label_num == 3:
+        label_str = "inNUC"
+    elif label_num == 4:
+        label_str = "nuc2D"
+    elif label_num == 5:
+        label_str = "random"
+    else:
+        raise ValueError("Label value should be comprised between 1 and 5.")
+
+    return label_str
+
+
+def remove_transcription_site(data):
+    # TODO add documentation
+    data_corrected = data.copy(deep=True)
+    for index, row in data_corrected.iterrows():
+        id_cell = row['cell_ID']
+        image = build_image(data, id_cell,
+                            coord_refinement=True,
+                            method="surface")
+        rna, cyt, nuc = image[:, :, 0], image[:, :, 1], image[:, :, 2]
+        transcription_site = _get_transcription_site(rna, nuc, threshold=0.3)
+        rna[transcription_site > 0] = 0
+        rna_pos = np.vstack(list(np.where(rna)) +
+                            [np.zeros(np.sum(rna).astype(np.int),
+                                      dtype=np.int64)]).T
+        data_corrected.at[index, 'RNA_pos'] = rna_pos
+
+    return data_corrected
+
+
+def _get_transcription_site(rna, nuc, threshold=0.3):
+    # TODO add documentation
+    # count RNA inside the nucleus
+    nb_rna_in_nuc = np.sum(rna[nuc > 0])
+
+    # compute a density map
+    density = nb_rna_in_nuc / nuc.sum()
+    rna_in_nuc = 255 * rna.astype(np.uint8)
+    density_img = mean_filter(rna_in_nuc, kernel_shape="disk", kernel_size=4)
+    density_img = cast_img_float32(density_img)
+
+    # get transcription sites
+    transcription_site = density_img > threshold
+
+    return transcription_site
+
+

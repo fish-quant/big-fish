@@ -15,7 +15,9 @@ from .preprocess import (build_stack, check_recipe, build_simulated_dataset,
                          correct_illumination_surface, clean_simulated_data)
 from .preparation import (split_from_background, build_image, get_coordinates,
                           get_distance_layers, get_surface_layers, build_batch,
-                          get_label, Generator, encode_labels, get_map_label)
+                          get_label, Generator, encode_labels, get_map_label,
+                          format_experimental_data, get_label_encoder,
+                          remove_transcription_site)
 from .augmentation import augment
 from .utils import check_array, check_features_df, check_range_value
 
@@ -57,4 +59,7 @@ __all__ = ["read_tif",
            "Generator",
            "encode_labels",
            "get_map_label",
-           "build_image"]
+           "build_image",
+           "format_experimental_data",
+           "get_label_encoder",
+           "remove_transcription_site"]
