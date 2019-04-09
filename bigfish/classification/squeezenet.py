@@ -80,7 +80,7 @@ class SqueezeNet0(BaseModel):
         early_stop = EarlyStopping(
             monitor="val_categorical_accuracy",
             min_delta=0,
-            patience=5,
+            patience=10,
             verbose=2)
         callbacks.append(early_stop)
 
@@ -135,7 +135,7 @@ class SqueezeNet0(BaseModel):
         early_stop = EarlyStopping(
             monitor='val_categorical_accuracy',
             min_delta=0,
-            patience=5,
+            patience=10,
             verbose=2)
         callbacks.append(early_stop)
 
