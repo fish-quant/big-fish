@@ -8,6 +8,7 @@ import os
 import threading
 
 import numpy as np
+import pandas as pd
 from scipy import ndimage as ndi
 
 from .augmentation import augment
@@ -78,6 +79,69 @@ def split_from_background(data, p_validation=0.2, p_test=0.2, logdir=None):
     return data_train, data_validation, data_test
 
 
+# ### Filter data ###
+
+def filter_data(data, proportion_to_exclude=0.2):
+    # TODO add documentation
+
+    if (isinstance(proportion_to_exclude, float)
+            and 0 <= proportion_to_exclude <= 1):
+        p = int(proportion_to_exclude * 10)
+    elif (isinstance(proportion_to_exclude, int)
+          and 0 <= proportion_to_exclude <= 100):
+        p = proportion_to_exclude // 10
+    else:
+        raise ValueError("'proportion' must be a float between 0 and 1 or an "
+                         "integer between 0 and 100.")
+
+    # filter inNUC, nuc2D, cell3D, "cell2D" and nuc3D
+    l = ['p10', 'p20', 'p30', 'p40', 'p50', 'p60', 'p70', 'p80', 'p90', 'p100']
+    level_kept = l[:p]
+    query = "pattern_level not in {0}".format(str(level_kept))
+    data_filtered = data.query(query)
+
+    # filter foci
+    l = ['p50', 'p60', 'p70', 'p80', 'p90', 'p100', 'p110', 'p120', 'p130',
+         'p140', 'p150']
+    level_kept = l[:p]
+    query = "pattern_level not in {0} or pattern_name != 'foci'".format(
+        str(level_kept))
+    data_filtered = data_filtered.query(query)
+
+    # reset index
+    data_filtered.reset_index(drop=True, inplace=True)
+
+    return data_filtered
+
+
+# ### Balance data ###
+
+def balance_data(data, column_to_balance, verbose=0):
+    # TODO add documentation
+    # TODO make it consistent for int values
+    values = list(data.loc[:, column_to_balance].value_counts().index)
+    frequencies = list(data.loc[:, column_to_balance].value_counts())
+
+    max_frequency = max(frequencies)
+    diff_frequency = [max_frequency - frequency for frequency in frequencies]
+
+    for i, value in enumerate(values):
+        n = diff_frequency[i]
+        if verbose > 0:
+            print("add {0} new samples {1} to balance the dataset..."
+                  .format(n, value))
+        df = data.query("{0} == '{1}'".format(column_to_balance, value))
+        df = df.sample(n, replace=True, random_state=13)
+        data = pd.concat([data, df])
+    if verbose > 0:
+        print()
+
+    # reset index
+    data.reset_index(drop=True, inplace=True)
+
+    return data
+
+
 # ### Encode labels ###
 
 def encode_labels(data, column_name="pattern_name", classes_to_analyse="all"):
@@ -124,6 +188,10 @@ def encode_labels(data, column_name="pattern_name", classes_to_analyse="all"):
     else:
         data = data.assign(
             label=encoder.transform(data.loc[:, column_name]))
+
+    # reset index
+    data.loc[:, "original_index"] = data.index
+    data.reset_index(drop=True, inplace=True)
 
     return data, encoder, classes
 
@@ -808,8 +876,9 @@ def _label_experimental_num_to_str_(label_num):
     return label_str
 
 
-def remove_transcription_site(data):
+def remove_transcription_site(data, threshold):
     # TODO add documentation
+    # TODO vectorize it
     data_corrected = data.copy(deep=True)
     for index, row in data_corrected.iterrows():
         id_cell = row['cell_ID']
@@ -817,30 +886,24 @@ def remove_transcription_site(data):
                             coord_refinement=True,
                             method="surface")
         rna, cyt, nuc = image[:, :, 0], image[:, :, 1], image[:, :, 2]
-        transcription_site = _get_transcription_site(rna, nuc, threshold=0.3)
-        rna[transcription_site > 0] = 0
-        rna_pos = np.vstack(list(np.where(rna)) +
-                            [np.zeros(np.sum(rna).astype(np.int),
-                                      dtype=np.int64)]).T
+
+        rna_in = np.copy(rna)
+        rna_in[nuc == 0] = 0
+        rna_out = np.copy(rna)
+        rna_out[nuc > 0] = 0
+        rna_in = 255 * rna_in.astype(np.uint8)
+        density_img = mean_filter(rna_in, kernel_shape="disk", kernel_size=4)
+        density_img = cast_img_float32(density_img)
+        transcription_site = density_img > threshold
+        rna_in[transcription_site] = 0
+
+        rna = rna_in + rna_out
+
+        rna_pos = np.nonzero(rna)
+        rna_pos = np.column_stack(rna_pos).astype(np.int64)
+        rna_pos = np.concatenate(
+            [rna_pos, np.zeros((rna_pos.shape[0], 1), dtype=np.int64)],
+            axis=1)
         data_corrected.at[index, 'RNA_pos'] = rna_pos
 
     return data_corrected
-
-
-def _get_transcription_site(rna, nuc, threshold=0.3):
-    # TODO add documentation
-    # count RNA inside the nucleus
-    nb_rna_in_nuc = np.sum(rna[nuc > 0])
-
-    # compute a density map
-    density = nb_rna_in_nuc / nuc.sum()
-    rna_in_nuc = 255 * rna.astype(np.uint8)
-    density_img = mean_filter(rna_in_nuc, kernel_shape="disk", kernel_size=4)
-    density_img = cast_img_float32(density_img)
-
-    # get transcription sites
-    transcription_site = density_img > threshold
-
-    return transcription_site
-
-
