@@ -81,8 +81,7 @@ class SqueezeNet0(BaseModel):
             monitor="val_categorical_accuracy",
             min_delta=0,
             patience=5,
-            verbose=2,
-            baseline=0.9)
+            verbose=2)
         callbacks.append(early_stop)
 
         # fit model
@@ -137,8 +136,7 @@ class SqueezeNet0(BaseModel):
             monitor='val_categorical_accuracy',
             min_delta=0,
             patience=5,
-            verbose=2,
-            baseline=0.9)
+            verbose=2)
         callbacks.append(early_stop)
 
         # fit model from generator
