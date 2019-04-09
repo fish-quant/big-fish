@@ -85,6 +85,8 @@ if __name__ == '__main__':
                                                column_name="pattern_name",
                                                classes_to_analyse=args.classes)
     nb_classes = len(classes)
+    df = stack.filter_data(df, proportion_to_exclude=0.2)
+    df = stack.balance_data(df, column_to_balance="pattern_name")
     print("Number of classes: {0}".format(nb_classes))
     print("Classes: {0}".format(classes))
     print("Shape input dataframe (after preparation): {0}".format(df.shape))
@@ -187,7 +189,7 @@ if __name__ == '__main__':
                                               args.multiprocessing,
                                               verbose=0)
     print("Loss test: {0:.3f} | Accuracy test: {1:.3f}"
-          .format(loss, 100 * accuracy))
+          .format(loss, 100 * accuracy), "\n")
 
     print("--- PREDICTION ---", "\n")
 
