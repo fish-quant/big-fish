@@ -19,6 +19,7 @@ from sklearn.preprocessing import LabelEncoder
 
 
 # TODO define the requirements for 'data'
+# TODO add logging
 
 # ### Split data ###
 
@@ -142,7 +143,7 @@ def balance_data(data, column_to_balance, verbose=0):
     return data
 
 
-# ### Encode labels ###
+# ### Encode labels and genes ###
 
 def encode_labels(data, column_name="pattern_name", classes_to_analyse="all"):
     """Filter classes we want to analyze and encode them from a string format
@@ -220,6 +221,7 @@ def get_label_encoder(classes_to_analyze="all"):
 
 def get_map_label(data, column_num="label", columns_str="pattern_name"):
     # TODO add documentation
+    # TODO redo with encoder
     label_num = list(set(data.loc[:, column_num]))
     label_str = list(set(data.loc[:, columns_str]))
     d = {}
@@ -228,6 +230,14 @@ def get_map_label(data, column_num="label", columns_str="pattern_name"):
         d[label_str_] = label_num
 
     return d
+
+
+def get_gene_encoder(genes_str):
+    # encode genes
+    encoder_gene = LabelEncoder()
+    encoder_gene.fit(genes_str)
+
+    return encoder_gene
 
 
 # ### Build images ###
