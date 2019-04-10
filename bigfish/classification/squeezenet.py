@@ -16,7 +16,6 @@ Version: 1.0 and 1.1 (see github https://github.com/DeepScale/SqueezeNet)
 """
 
 import os
-import warnings
 
 import tensorflow as tf
 import numpy as np
@@ -299,15 +298,6 @@ class SqueezeNet0(BaseModel):
 
     def get_feature_map(self, generator, after_average_pooling=True):
         # TODO add documentation
-        # TODO ask generator without label
-        # check generator
-        label_back = False
-        if generator.with_label:
-            warnings.warn("Label is disabled from generator during the "
-                          "computation of the feature map.")
-            generator.with_label = False
-            label_back = True
-
         # get input layer
         input_ = self.model.input
 
@@ -321,16 +311,18 @@ class SqueezeNet0(BaseModel):
         features_map = function([input_, learning_phase()], [output_])
 
         # compute the feature map
-        embedding = [features_map([batch, 0])[0] for batch in generator]
+        if generator.with_label:
+            embedding = [features_map([batch, 0])[0]
+                         for (batch, _) in generator]
+        else:
+            embedding = [features_map([batch, 0])[0]
+                         for batch in generator]
         embedding = np.array(embedding)
         embedding = np.concatenate(embedding, axis=0)
 
         if not after_average_pooling:
             a, b, c, d = embedding.shape
             embedding = np.reshape(embedding, (a, b * c * d))
-
-        # reset parameter 'with_label' if necessary
-        generator.with_label = label_back
 
         return embedding
 
