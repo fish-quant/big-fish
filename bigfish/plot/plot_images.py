@@ -11,6 +11,9 @@ import numpy as np
 
 from .utils import save_plot
 
+from skimage.segmentation import find_boundaries
+from matplotlib.colors import ListedColormap
+
 
 # TODO add title in the plot and remove axes
 
@@ -275,7 +278,8 @@ def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
 
 
 def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
-                      framesize=(15, 15), path_output=None, ext="png"):
+                      bondary=False, framesize=(15, 15),
+                      path_output=None, ext="png"):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
     Parameters
@@ -310,15 +314,24 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
     if label is not None:
         stack.check_array(label, ndim=2, dtype=np.int64)
 
+    # TODO clean it
+    boundaries = None
+    if bondary and label is not None:
+        boundaries = find_boundaries(label, mode='thick')
+        boundaries = np.ma.masked_where(boundaries == 0, boundaries)
+
     # plot
     if label is not None:
         fig, ax = plt.subplots(1, 3, sharex='col', figsize=framesize)
         ax[0].imshow(tensor[r, c, z, :, :])
+        ax[0].imshow(boundaries, cmap=ListedColormap(['red']))
         ax[0].set_title("Z-slice: {0}".format(z),
                         fontweight="bold", fontsize=15)
         ax[1].imshow(segmentation)
+        ax[1].imshow(boundaries, cmap=ListedColormap(['red']))
         ax[1].set_title("Segmentation", fontweight="bold", fontsize=15)
         ax[2].imshow(label)
+        ax[2].imshow(boundaries, cmap=ListedColormap(['red']))
         ax[2].set_title("Labels", fontweight="bold", fontsize=15)
 
     else:
