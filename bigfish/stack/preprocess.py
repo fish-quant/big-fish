@@ -941,7 +941,8 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     Returns
     -------
     tensor : np.ndarray, np.uint
-        Tensor to rescale with shape (r, c, z, y, x).
+        Tensor to rescale with shape (r, c, z, y, x), (c, z, y, x), (z, y, x)
+        or (y, x).
 
     """
     # check parameters
