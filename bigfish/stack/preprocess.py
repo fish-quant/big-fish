@@ -26,7 +26,6 @@ from scipy import ndimage as ndi
 
 
 # TODO add safety checks
-# TODO add a stack builder without recipe
 
 # ### Simulated data ###
 
@@ -946,7 +945,10 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
 
     """
     # check parameters
-    check_array(tensor, ndim=[2, 3, 4, 5], dtype=[np.uint8, np.uint16])
+    check_array(tensor,
+                ndim=[2, 3, 4, 5],
+                dtype=[np.uint8, np.uint16],
+                allow_nan=False)
     check_parameter(channel_to_stretch=(int, list, type(None)),
                     stretching_percentile=float)
 
