@@ -27,7 +27,7 @@ from scipy import ndimage as ndi
 
 
 # TODO add safety checks
-
+# TODO add a stack builder without recipe
 
 # ### Simulated data ###
 
@@ -250,6 +250,8 @@ def build_stack(recipe, input_folder, input_dimension=None, normalize=False,
 
     """
     # TODO add sanity checks for the parameters
+    # TODO ensure we can pass a str and not just a list of str in the recipe
+    # TODO allow different patterns for the recipe
     # build stack from recipe and tif files
     tensor = load_stack(recipe, input_folder, input_dimension)
 
@@ -335,6 +337,7 @@ def load_stack(recipe, input_folder, input_dimension=None):
     check_recipe(recipe)
 
     # if the initial dimension of the files is unknown, we read one of them
+    # TODO be sure to read one of the files targeted by the recipe
     if input_dimension is None:
         fov_str = recipe["fov"]
         ext_str = "." + recipe["ext"]
@@ -378,6 +381,7 @@ def check_recipe(recipe):
         recipe.
 
     """
+    # TODO remove the expected dimension ?
     # check recipe is a dictionary with the "fov" key
     if (not isinstance(recipe, dict)
             or "fov" not in recipe
@@ -987,10 +991,14 @@ def cast_img_uint8(tensor):
         Image cast.
 
     """
+    # TODO validate the warnings
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint16,
+    check_array(tensor, dtype=[np.uint8, np.uint16,
                                np.float32, np.float64,
                                np.bool])
+
+    if tensor.dtype == np.uint8:
+        return tensor
 
     # check the range value for float tensors
     if tensor.dtype in [np.float32, np.float64]:
@@ -1001,12 +1009,12 @@ def cast_img_uint8(tensor):
                              .format(tensor.dtype, tensor.min(), tensor.max()))
 
     # check the range value for integer tensors
-    elif tensor.dtype == np.uint16:
-        if not check_range_value(tensor, 0, 255):
-            raise ValueError("To cast a tensor from np.uint16 to np.uint8, "
-                             "its values must be between 0 and 255, and not "
-                             "{0} and {1}.Otherwise, the values are clipped."
-                             .format(tensor.min(), tensor.max()))
+    #elif tensor.dtype == np.uint16:
+    #    if not check_range_value(tensor, 0, 255):
+    #        raise ValueError("To cast a tensor from np.uint16 to np.uint8, "
+    #                         "its values must be between 0 and 255, and not "
+    #                         "{0} and {1}. Otherwise, the values are clipped."
+    #                         .format(tensor.min(), tensor.max()))
 
     # cast tensor
     with warnings.catch_warnings():
