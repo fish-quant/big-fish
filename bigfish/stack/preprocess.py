@@ -1059,9 +1059,9 @@ def cast_img_uint8(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.uint16,
-                               np.float32, np.float64,
-                               np.bool])
+    check_array(tensor,
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
+                allow_nan=False)
 
     if tensor.dtype == np.uint8:
         return tensor
@@ -1101,9 +1101,9 @@ def cast_img_uint16(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.uint16,
-                               np.float32, np.float64,
-                               np.bool])
+    check_array(tensor,
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
+                allow_nan=False)
 
     if tensor.dtype == np.uint16:
         return tensor
@@ -1146,9 +1146,9 @@ def cast_img_float32(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.uint16,
-                               np.float32, np.float64,
-                               np.bool])
+    check_array(tensor,
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
+                allow_nan=False)
 
     # cast tensor
     with warnings.catch_warnings():
@@ -1177,9 +1177,9 @@ def cast_img_float64(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor, dtype=[np.uint8, np.uint16,
-                               np.float32, np.float64,
-                               np.bool])
+    check_array(tensor,
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
+                allow_nan=False)
 
     # cast tensor
     with warnings.catch_warnings():
