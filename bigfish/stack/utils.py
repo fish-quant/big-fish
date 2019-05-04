@@ -10,6 +10,8 @@ import re
 import numpy as np
 import pandas as pd
 
+from skimage.draw import polygon_perimeter
+
 
 # ### Sanity checks dataframe ###
 
@@ -340,3 +342,60 @@ def check_parameter(**kwargs):
                              .format(arg, expected_dtype, type(parameter)))
 
     return
+
+
+# ### Coordinate utilities ###
+
+def complete_coordinates_2d(list_coord):
+    """Complete a 2-d coordinates array, by generating/interpolating missing
+    points.
+
+    Parameters
+    ----------
+    list_coord : List[np.array]
+        List of the coordinates arrays to complete, with shape (nb_points, 2).
+
+    Returns
+    -------
+
+    """
+    # check parameter
+    check_parameter(list_coord=list)
+
+    # for each array in the list, complete its coordinates using the scikit
+    # image method 'polygon_perimeter'
+    list_coord_completed = []
+    for coord in list_coord:
+        coord_x, coord_y = polygon_perimeter(coord[:, 0], coord[:, 1])
+        coord_x = coord_x[:, np.newaxis]
+        coord_y = coord_y[:, np.newaxis]
+        new_coord = np.concatenate((coord_x, coord_y), axis=-1)
+        list_coord_completed.append(new_coord)
+
+    return list_coord_completed
+
+
+def from_coord_to_image(coord, image_shape=None):
+    """Convert an array of coordinates into a binary matrix.
+
+    Parameters
+    ----------
+    coord : np.ndarray, np.uint64
+        Array of coordinate with shape (nb_points, 2) or (nb_points, 3).
+    image_shape:
+
+    Returns
+    -------
+    image : np.ndarray, np.float32
+        Binary matrix plotting the coordinates values.
+
+    """
+    # build matrices
+    if image_shape is None:
+        max_x = coord[:, 0].max() + 5
+        max_y = coord[:, 1].max() + 5
+        image_shape = (max_x, max_y)
+    image = np.zeros(image_shape, dtype=np.float32)
+    image[coord[:, 0], coord[:, 1]] = 1.0
+
+    return image
