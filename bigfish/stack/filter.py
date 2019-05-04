@@ -325,9 +325,8 @@ def remove_background(image, kernel_shape="disk", kernel_size=200):
     # subtract the background from the original image, clipping negative
     # values to 0
     mask = image > background
-    output = np.zeros_like(image, dtype=image.dtype)
     image_without_back = np.subtract(image, background,
-                                     out=output,
+                                     out=np.zeros_like(image),
                                      where=mask)
 
     return image_without_back
