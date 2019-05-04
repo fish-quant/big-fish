@@ -13,19 +13,16 @@ import pandas as pd
 
 from .loader import read_image, read_cell_json, read_rna_json
 from .utils import (check_array, check_parameter, check_recipe,
-                    check_range_value)
+                    check_range_value, check_df, complete_coordinates_2d,
+                    from_coord_to_image)
 
 from sklearn.preprocessing import LabelEncoder
 
 from skimage import img_as_ubyte, img_as_float32, img_as_float64, img_as_uint
 from skimage.exposure import rescale_intensity
 
-from scipy.sparse import coo_matrix
-
 from scipy import ndimage as ndi
 
-
-# TODO add safety checks
 
 # ### Simulated data ###
 
@@ -206,7 +203,7 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
     for recipe, input_folder in data_map:
 
         # load and generate tensors for each fov stored in a recipe
-        nb_fov = count_nb_fov(recipe)
+        nb_fov = _count_nb_fov(recipe)
         for i_fov in range(nb_fov):
             tensor = build_stack(recipe, input_folder, input_dimension, i_fov,
                                  check, normalize, channel_to_stretch,
@@ -217,7 +214,7 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
                 yield tensor
 
 
-def count_nb_fov(recipe):
+def _count_nb_fov(recipe):
     """Count the number of different fields of view that can be defined from
     the recipe.
 
@@ -351,7 +348,7 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
                     return_origin=bool)
 
     # build stack from recipe and tif files
-    tensor = load_stack(recipe, input_folder, input_dimension, i_fov)
+    tensor = _load_stack(recipe, input_folder, input_dimension, i_fov)
 
     # check the validity of the loaded tensor
     if check:
@@ -371,7 +368,7 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
     return tensor
 
 
-def load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
+def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
     """Build a 5-d tensor from the same fields of view (fov).
 
     The function stacks a set of images using a recipe mapping the
@@ -461,14 +458,14 @@ def load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
                     i_fov=int)
 
     # complete the recipe with unused morphemes
-    recipe = fit_recipe(recipe)
+    recipe = _fit_recipe(recipe)
 
     # if the initial dimension of the files is unknown, we read one of them
     if input_dimension is None:
-        input_dimension = get_input_dimension(recipe, input_folder)
+        input_dimension = _get_input_dimension(recipe, input_folder)
 
     # get the number of elements to stack per dimension
-    nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
+    nb_r, nb_c, nb_z = _get_nb_element_per_dimension(recipe)
 
     # we stack our files according to their initial dimension
     if input_dimension == 2:
@@ -490,7 +487,7 @@ def load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
     return stack
 
 
-def fit_recipe(recipe):
+def _fit_recipe(recipe):
     """Fit a recipe.
 
     Fitting a recipe consists in wrapping every values of 'fov', 'r', 'c' and
@@ -751,7 +748,7 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
     return path
 
 
-def get_nb_element_per_dimension(recipe):
+def _get_nb_element_per_dimension(recipe):
     """Count the number of element to stack for each dimension ('r', 'c'
     and 'z').
 
@@ -775,7 +772,7 @@ def get_nb_element_per_dimension(recipe):
     return len(recipe["r"]), len(recipe["c"]), len(recipe["z"])
 
 
-def get_input_dimension(recipe, input_folder):
+def _get_input_dimension(recipe, input_folder):
     """ Load an arbitrary image to get the original dimension of the files.
 
     Parameters
@@ -839,7 +836,7 @@ def build_stack_no_recipe(paths, input_dimension=None, check=False,
                     cast_8bit=bool)
 
     # build stack from tif files
-    tensor = load_stack_no_recipe(paths, input_dimension)
+    tensor = _load_stack_no_recipe(paths, input_dimension)
 
     # check the validity of the loaded tensor
     if check:
@@ -859,7 +856,7 @@ def build_stack_no_recipe(paths, input_dimension=None, check=False,
     return tensor
 
 
-def load_stack_no_recipe(paths, input_dimension=None):
+def _load_stack_no_recipe(paths, input_dimension=None):
     """Build a 5-d tensor from the same field of view (fov), without recipe.
 
     Files with a path listed are stacked together, then empty dimensions are
@@ -1190,8 +1187,8 @@ def cast_img_float64(tensor):
 
 
 # ### Coordinates data cleaning ###
-# TODO add safety check for these cleaning functions
-def clean_simulated_data(data, data_cell, path_output=None):
+
+def clean_simulated_data(data, data_cell, label_encoder=None, path_output=None):
     """Clean simulated dataset.
 
     Parameters
@@ -1202,6 +1199,8 @@ def clean_simulated_data(data, data_cell, path_output=None):
     data_cell : pandas.DataFrame
         Dataframe with the 2D coordinates of the nucleus and the cytoplasm of
         actual cells used to simulate data.
+    label_encoder : sklearn.preprocessing.LabelEncoder
+        Label encoder from string to integer.
     path_output : str
         Path to save the cleaned dataset.
 
@@ -1214,15 +1213,28 @@ def clean_simulated_data(data, data_cell, path_output=None):
     id_volume : List[int]
         Background id from 'data_cell' to remove.
     id_rna : List[int]
-        Cell id to remove from data.
+        Cell id to remove from data because of rna coordinates
+    label_encoder : sklearn.preprocessing.LabelEncoder
+        Label encoder from string to integer.
 
     """
-    # TODO remove the 'SettingWithCopyWarning'
+    # check dataframes and parameters
+    check_parameter(label_encoder=(type(LabelEncoder()), type(None)),
+                    path_output=(str, type(None)))
+    check_df(data,
+             features=["name_img_BGD", "pos_cell", "RNA_pos", "cell_ID",
+                       "pattern_level", "pattern_name"],
+             features_nan=["name_img_BGD", "pos_cell", "RNA_pos", "cell_ID",
+                           "pattern_level", "pattern_name"])
+    check_df(data_cell,
+             features=["name_img_BGD", "pos_cell", "pos_nuc"],
+             features_nan=["name_img_BGD", "pos_cell", "pos_nuc"])
+
     # filter invalid simulated cell backgrounds
-    data_clean, background_to_remove, id_volume = clean_volume(data, data_cell)
+    data_clean, background_to_remove, id_volume = _clean_volume(data, data_cell)
 
     # filter invalid simulated rna spots
-    data_clean, id_rna = clean_rna(data_clean)
+    data_clean, id_rna = _clean_rna(data_clean)
 
     # make the feature 'n_rna' consistent
     data_clean["nb_rna"] = data_clean.apply(
@@ -1230,13 +1242,17 @@ def clean_simulated_data(data, data_cell, path_output=None):
         axis=1)
 
     # remove useless features
-    data_final = data_clean[
-        ['RNA_pos', 'cell_ID', 'pattern_level', 'pattern_name', 'pos_cell',
-         'pos_nuc', "nb_rna"]]
+    data_final = data_clean.loc[:, ['RNA_pos', 'cell_ID', 'pattern_level',
+                                    'pattern_name', 'pos_cell', 'pos_nuc',
+                                    "nb_rna"]]
 
     # encode the label
-    le = LabelEncoder()
-    data_final["label"] = le.fit_transform(data_final["pattern_name"])
+    if label_encoder is None:
+        label_encoder = LabelEncoder()
+        label_str = set(data_final.loc[:, "pattern_name"])
+        label_encoder.fit(label_str)
+    data_final.loc[:, "label"] = label_encoder.transform(
+        data_final.loc[:, "pattern_name"])
 
     # reset index
     data_final.reset_index(drop=True, inplace=True)
@@ -1245,10 +1261,10 @@ def clean_simulated_data(data, data_cell, path_output=None):
     if path_output is not None:
         data_final.to_pickle(path_output)
 
-    return data_final, background_to_remove, id_volume, id_rna
+    return data_final, background_to_remove, id_volume, id_rna, label_encoder
 
 
-def clean_volume(data, data_cell):
+def _clean_volume(data, data_cell):
     """Remove misaligned simulated cells from the dataset.
 
     Parameters
@@ -1271,7 +1287,7 @@ def clean_volume(data, data_cell):
 
     """
     # for each cell, check if the volume is valid or not
-    data_cell["valid_volume"] = data_cell.apply(
+    data_cell.loc[:, "valid_volume"] = data_cell.apply(
         lambda row: _check_volume(row["pos_cell"], row["pos_nuc"]),
         axis=1)
 
@@ -1284,17 +1300,18 @@ def clean_volume(data, data_cell):
             id_to_remove.append(i)
 
     # remove invalid simulated cells
-    data_clean = data[~data["name_img_BGD"].isin(background_to_remove)]
+    invalid_rows = data.loc[:, "name_img_BGD"].isin(background_to_remove)
+    data_clean = data.loc[~invalid_rows, :]
 
     return data_clean, background_to_remove, id_to_remove
 
 
-def _check_volume(cyto_coord, nuc_coord):
+def _check_volume(cyt_coord, nuc_coord):
     """Check nucleus coordinates are not outside the boundary of the cytoplasm.
 
     Parameters
     ----------
-    cyto_coord : pandas.Series
+    cyt_coord : pandas.Series
         Coordinates of the cytoplasm membrane.
     nuc_coord : pandas.Series
         Coordinates of the nucleus border.
@@ -1306,27 +1323,27 @@ def _check_volume(cyto_coord, nuc_coord):
 
     """
     # get coordinates
-    cyto = np.array(cyto_coord)
-    nuc = np.array(nuc_coord)
+    cyt_coord = np.array(cyt_coord)
+    nuc_coord = np.array(nuc_coord)
 
-    max_x = max(cyto[:, 0].max() + 5, nuc[:, 0].max() + 5)
-    max_y = max(cyto[:, 1].max() + 5, nuc[:, 1].max() + 5)
+    # complete coordinates
+    list_coord = complete_coordinates_2d([cyt_coord, nuc_coord])
+    cyt_coord, nuc_coord = list_coord[0], list_coord[1]
 
-    # build the dense representation for the cytoplasm
-    values = [1] * cyto.shape[0]
-    cyto = coo_matrix((values, (cyto[:, 0], cyto[:, 1])),
-                      shape=(max_x, max_y)).todense()
+    # get image shape
+    max_x = max(cyt_coord[:, 0].max() + 5, nuc_coord[:, 0].max() + 5)
+    max_y = max(cyt_coord[:, 1].max() + 5, nuc_coord[:, 1].max() + 5)
+    image_shape = (max_x, max_y)
 
-    # build the dense representation for the nucleus
-    values = [1] * nuc.shape[0]
-    nuc = coo_matrix((values, (nuc[:, 0], nuc[:, 1])),
-                     shape=(max_x, max_y)).todense()
+    # build the dense representation for the cytoplasm and the nucleus
+    cyt = from_coord_to_image(cyt_coord, image_shape=image_shape)
+    nuc = from_coord_to_image(nuc_coord, image_shape=image_shape)
 
     # check if the volume is valid
-    mask_cyto = ndi.binary_fill_holes(cyto)
+    mask_cyt = ndi.binary_fill_holes(cyt)
     mask_nuc = ndi.binary_fill_holes(nuc)
-    frame = np.zeros((max_x, max_y))
-    diff = frame - mask_cyto + mask_nuc
+    frame = np.zeros(image_shape)
+    diff = frame - mask_cyt + mask_nuc
     diff = (diff > 0).sum()
 
     if diff > 0:
@@ -1335,7 +1352,7 @@ def _check_volume(cyto_coord, nuc_coord):
         return True
 
 
-def clean_rna(data):
+def _clean_rna(data):
     """Remove cells with misaligned simulated rna spots from the dataset.
 
     Parameters
@@ -1353,7 +1370,7 @@ def clean_rna(data):
 
     """
     # for each cell we check if the rna spots are valid or not
-    data["valid_rna"] = data.apply(
+    data.loc[:, "valid_rna"] = data.apply(
         lambda row: _check_rna(row["pos_cell"], row["RNA_pos"]),
         axis=1)
 
@@ -1364,18 +1381,18 @@ def clean_rna(data):
             id_to_remove.append(i)
 
     # remove invalid simulated cells
-    data_clean = data[data["valid_rna"]]
+    data_clean = data.loc[data.loc[:, "valid_rna"], :]
 
     return data_clean, id_to_remove
 
 
-def _check_rna(cyto_coord, rna_coord):
+def _check_rna(cyt_coord, rna_coord):
     """Check rna spots coordinates are not outside the boundary of the
     cytoplasm.
 
     Parameters
     ----------
-    cyto_coord : pandas.Series
+    cyt_coord : pandas.Series
         Coordinates of the cytoplasm membrane.
     rna_coord : pandas.Series
         Coordinates of the rna spots.
@@ -1387,34 +1404,32 @@ def _check_rna(cyto_coord, rna_coord):
 
     """
     # get coordinates
-    cyto = np.array(cyto_coord)
+    cyt_coord = np.array(cyt_coord)
     if not isinstance(rna_coord[0], list):
         # it means we have only one spot
         return False
-    rna = np.array(rna_coord)
+    rna_coord = np.array(rna_coord)
 
     # check if the coordinates are positive
-    if rna.min() < 0:
+    if rna_coord.min() < 0:
         return False
 
-    max_x = int(max(cyto[:, 0].max() + 5, rna[:, 0].max() + 5))
-    max_y = int(max(cyto[:, 1].max() + 5, rna[:, 1].max() + 5))
+    # complete coordinates
+    cyt_coord = complete_coordinates_2d([cyt_coord])[0]
 
-    # build the dense representation for the cytoplasm
-    values = [1] * cyto.shape[0]
-    cyto = coo_matrix((values, (cyto[:, 0], cyto[:, 1])),
-                      shape=(max_x, max_y)).todense()
+    # get image shape
+    max_x = int(max(cyt_coord[:, 0].max() + 5, rna_coord[:, 0].max() + 5))
+    max_y = int(max(cyt_coord[:, 1].max() + 5, rna_coord[:, 1].max() + 5))
+    image_shape = (max_x, max_y)
 
-    # build the dense representation for the rna
-    values = [1] * rna.shape[0]
-    rna = coo_matrix((values, (rna[:, 0], rna[:, 1])),
-                     shape=(max_x, max_y)).todense()
-    rna = (rna > 0)
+    # build the dense representation for the cytoplasm and the rna
+    cyt = from_coord_to_image(cyt_coord, image_shape=image_shape)
+    rna = from_coord_to_image(rna_coord, image_shape=image_shape)
 
     # check if the coordinates are valid
-    mask_cyto = ndi.binary_fill_holes(cyto)
-    frame = np.zeros((max_x, max_y))
-    diff = frame - mask_cyto + rna
+    mask_cyt = ndi.binary_fill_holes(cyt)
+    frame = np.zeros(image_shape)
+    diff = frame - mask_cyt + rna
     diff = (diff > 0).sum()
 
     if diff > 0:
