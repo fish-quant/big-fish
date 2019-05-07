@@ -10,13 +10,12 @@ from skimage.morphology import remove_small_objects, remove_small_holes
 from skimage.measure import label
 from scipy import ndimage as ndi
 import numpy as np
-from skimage.morphology import watershed
-from skimage.filters import threshold_otsu
 from skimage.measure import regionprops
+
 
 # TODO rename functions
 # TODO complete documentation methods
-
+# TODO add sanity functions
 
 def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
                         return_label=False, **kwargs):
@@ -104,9 +103,9 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
 
     """
     # remove background noise from image
-    image = _remove_background(image,
-                               kernel_shape=kernel_shape,
-                               kernel_size=kernel_size)
+    image = stack.remove_background(image,
+                                    kernel_shape=kernel_shape,
+                                    kernel_size=kernel_size)
 
     # discriminate nuclei from background, applying a threshold.
     image_segmented = image >= threshold
@@ -119,108 +118,3 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
 
     return image_segmented
 
-
-def _remove_background(image, kernel_shape="disk", kernel_size=200):
-    """Remove background noise from a 2-d image.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.uint
-        Image to process. Casting in np.uint8 makes the computation faster.
-    kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
-        The size of the kernel. For the rectangle we expect two integers
-        (width, height).
-
-    Returns
-    -------
-    image_without_back : np.ndarray, np.uint
-        Image processed.
-
-    """
-    # compute background noise with a large mean filter
-    background = stack.mean_filter(image,
-                                   kernel_shape=kernel_shape,
-                                   kernel_size=kernel_size)
-    # subtract the background from the original image, clipping negative
-    # values to 0
-    mask = image > background
-    image_without_back = np.subtract(image, background,
-                                     out=np.zeros_like(image, dtype=np.uint8),
-                                     where=mask)
-
-    return image_without_back
-
-
-def label_instances(image_segmented):
-    """Count and label the different instances previously segmented in an
-    image.
-
-    Parameters
-    ----------
-    image_segmented : np.ndarray, bool
-        Binary segmented image with shape (y, x).
-
-    Returns
-    -------
-    image_label : np.ndarray, np.uint64
-        Labelled image. Each object is characterized by the same pixel value.
-    nb_labels : int
-        Number of different instances counted in the image.
-
-    """
-    image_label, nb_labels = label(image_segmented, return_num=True)
-    return image_label, nb_labels
-
-
-def cyt_segmentation_2d(tensor, r, c_nuc, c_cyt, segmentation_method):
-    # TODO add documentation
-    # check tensor dimensions and its dtype
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
-
-    # apply segmentation
-    # TODO validate the pipeline with this cast
-    image_segmented = stack.cast_img_uint8(tensor)
-    if segmentation_method == "watershed":
-        image_segmented = watershed_2d(image_segmented, r, c_nuc, c_cyt)
-    else:
-        pass
-    return image_segmented
-
-
-def watershed_2d(tensor, r, c_nuc, c_cyt):
-    # TODO add documentation
-    # TODO better integration with nuclei segmentation
-    # nuclei segmentation
-    _, nuc_labelled, _ = nuc_segmentation_2d(
-        tensor,
-        projection_method="mip",
-        r=r, c=c_nuc,
-        segmentation_method="threshold",
-        return_label=True)
-
-    # get source image
-    cyt = tensor[r, c_cyt, :, :, :]
-    cyt_projected = stack.projection(tensor, method="mip", r=r, c=c_cyt)
-
-    # get a mask for the cytoplasm
-    mask = (cyt_projected > threshold_otsu(cyt_projected))
-    mask = remove_small_objects(mask, 200)
-    mask = remove_small_holes(mask, 200)
-
-    # get image to apply watershed on
-    seed = np.sum(cyt, 0)
-    seed = seed.max() - seed
-    seed[nuc_labelled > 0] = 0
-
-    # get the markers from the nuclei
-    markers = np.zeros_like(seed)
-    for r in regionprops(nuc_labelled):
-        markers[tuple(map(int, r.centroid))] = r.label
-
-    # apply watershed
-    cyt_segmented = watershed(seed, markers, mask=mask)
-
-    return cyt_segmented
