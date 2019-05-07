@@ -12,7 +12,8 @@ import pandas as pd
 from scipy import ndimage as ndi
 
 from .augmentation import augment
-from .preprocess import cast_img_float32, mean_filter
+from .preprocess import cast_img_float32
+from .filter import mean_filter
 
 from skimage.draw import polygon_perimeter
 from sklearn.preprocessing import LabelEncoder
@@ -402,6 +403,7 @@ def get_coordinates(data, id_cell, output_shape=None, coord_refinement=True):
 
     # complete cytoplasm and nucleus coordinates
     if coord_refinement:
+        # TODO use util.complete_coordinates_2d
         cyt_x, cyt_y = polygon_perimeter(cyt_coord[:, 0], cyt_coord[:, 1])
         cyt_x = cyt_x[:, np.newaxis]
         cyt_y = cyt_y[:, np.newaxis]

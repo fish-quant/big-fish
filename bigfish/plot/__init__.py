@@ -11,17 +11,14 @@ from .plot_coordinates import (plot_volume, plot_rna, plot_distribution_rna,
                                plot_cell_coordinates, plot_layers_coordinates)
 from .plot_classification import plot_confusion_matrix, plot_2d_projection
 
-__all__ = ["plot_yx",
-           "plot_images",
-           "plot_channels_2d",
-           "plot_projection",
-           "plot_segmentation",
-           "plot_spot_detection",
-           "plot_illumination_surface",
-           "plot_volume",
-           "plot_rna",
-           "plot_distribution_rna",
-           "plot_cell_coordinates",
-           "plot_layers_coordinates",
-           "plot_confusion_matrix",
-           "plot_2d_projection"]
+
+_images = ["plot_yx", "plot_images", "plot_channels_2d", "plot_projection",
+           "plot_illumination_surface", "plot_segmentation",
+           "plot_spot_detection"]
+
+_coordinates = ["plot_volume", "plot_rna", "plot_distribution_rna",
+                "plot_cell_coordinates", "plot_layers_coordinates"]
+
+_classification = ["plot_confusion_matrix", "plot_2d_projection"]
+
+__all__ = _images + _coordinates + _classification

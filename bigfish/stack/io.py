@@ -11,13 +11,16 @@ import numpy as np
 import pandas as pd
 
 from skimage import io
-from .utils import check_array, check_features_df
+from .utils import check_array, check_df
 
 
-def read_tif(path):
-    """Read an image with the .tif or .tiff extension.
+# ### Read ###
 
-    The input image should be in 2-d or 3-d, with unsigned integer 16 bits.
+def read_image(path):
+    """Read an image with the .png, .tif or .tiff extension.
+
+    The input image should be in 2-d or 3-d, with unsigned integer 8 or 16
+    bits.
 
     Parameters
     ----------
@@ -26,7 +29,7 @@ def read_tif(path):
 
     Returns
     -------
-    tensor : ndarray, np.uint16
+    tensor : ndarray, np.uint
         A 2-d or 3-d tensor with spatial dimensions.
 
     """
@@ -34,7 +37,7 @@ def read_tif(path):
     tensor = io.imread(path)
 
     # check the image is in unsigned integer 16 bits with 2 or 3 dimensions
-    check_array(tensor, dtype=np.uint16, ndim=[2, 3])
+    check_array(tensor, dtype=[np.uint8, np.uint16], ndim=[2, 3])
 
     return tensor
 
@@ -58,7 +61,9 @@ def read_cell_json(path):
     df = pd.read_json(path)
 
     # check the output has the right features
-    check_features_df(df, features=["name_img_BGD", "pos_cell", "pos_nuc"])
+    check_df(df,
+             features=["name_img_BGD", "pos_cell", "pos_nuc"],
+             features_nan=["name_img_BGD", "pos_cell", "pos_nuc"])
 
     return df
 
@@ -91,7 +96,9 @@ def read_rna_json(path):
     expected_features = ['RNA_pos', 'cell_ID', 'mRNA_level_avg',
                          'mRNA_level_label', 'n_RNA', 'name_img_BGD',
                          'pattern_level', 'pattern_name', 'pattern_prop']
-    check_features_df(df, features=expected_features)
+    check_df(df,
+             features=expected_features,
+             features_nan=expected_features)
 
     return df
 
@@ -116,3 +123,31 @@ def read_pickle(path):
         data = pickle.load(f)
 
     return data
+
+
+# ### Write ###
+
+def save_image(image, path):
+    """Save a 2-d or 3-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Tensor to save with shape (z, y, x) or (y, x).
+    path : str
+        Path of the saved image.
+
+    Returns
+    -------
+
+    """
+    # check image
+    check_array(image,
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, bool],
+                ndim=[2, 3],
+                allow_nan=False)
+
+    # save image
+    io.imsave(path, image, check_contrast=False)
+
+    return
