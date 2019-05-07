@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .loader import read_image, read_cell_json, read_rna_json
+from .io import read_image, read_cell_json, read_rna_json
 from .utils import (check_array, check_parameter, check_recipe,
                     check_range_value, check_df, complete_coordinates_2d,
                     from_coord_to_image)
@@ -341,11 +341,15 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
 
     """
     # check parameters
-    check_parameter(normalize=bool,
+    check_recipe(recipe)
+    check_parameter(input_folder=str,
+                    input_dimension=(int, type(None)),
+                    i_fov=int,
+                    check=bool,
+                    normalize=bool,
                     channel_to_stretch=(int, list, type(None)),
                     stretching_percentile=float,
-                    cast_8bit=bool,
-                    return_origin=bool)
+                    cast_8bit=bool)
 
     # build stack from recipe and tif files
     tensor = _load_stack(recipe, input_folder, input_dimension, i_fov)
@@ -451,12 +455,6 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
         Tensor with shape (r, c, z, y, x).
 
     """
-    # check parameters
-    check_recipe(recipe)
-    check_parameter(input_folder=str,
-                    input_dimension=(int, type(None)),
-                    i_fov=int)
-
     # complete the recipe with unused morphemes
     recipe = _fit_recipe(recipe)
 
@@ -513,7 +511,7 @@ def _fit_recipe(recipe):
     # initialize and fit the dimensions 'fov', 'r', 'c' and 'z'
     for key in ['fov', 'r', 'c', 'z']:
         if key not in recipe:
-            recipe[key] = list("")
+            recipe[key] = [None]
         value = recipe[key]
         if isinstance(value, str):
             recipe[key] = [value]
@@ -564,8 +562,8 @@ def _build_stack_from_2d(recipe, input_folder, fov=0, nb_r=1, nb_c=1, nb_z=1):
             # load and stack z elements (2-d tensors)
             tensors_2d = []
             for z in range(nb_z):
-                path = get_path_from_recipe(recipe, input_folder, fov=fov,
-                                            r=r, c=c, z=z)
+                path = _get_path_from_recipe(recipe, input_folder, fov=fov,
+                                             r=r, c=c, z=z)
                 tensor_2d = read_image(path)
                 tensors_2d.append(tensor_2d)
 
@@ -614,14 +612,14 @@ def _build_stack_from_3d(recipe, input_folder, fov=0, nb_r=1, nb_c=1):
         # load and stack channel elements (3-d tensors)
         tensors_3d = []
         for c in range(nb_c):
-            path = get_path_from_recipe(recipe, input_folder, fov=fov, r=r,
-                                        c=c)
+            path = _get_path_from_recipe(recipe, input_folder, fov=fov, r=r,
+                                         c=c)
             tensor_3d = read_image(path)
             tensors_3d.append(tensor_3d)
 
-            # stack 3-d tensors in 4-d
-            tensor_4d = np.stack(tensors_3d, axis=0)
-            tensors_4d.append(tensor_4d)
+        # stack 3-d tensors in 4-d
+        tensor_4d = np.stack(tensors_3d, axis=0)
+        tensors_4d.append(tensor_4d)
 
     # stack 4-d tensors in 5-d
     tensor_5d = np.stack(tensors_4d, axis=0)
@@ -654,7 +652,7 @@ def _build_stack_from_4d(recipe, input_folder, fov=0, nb_r=1):
     # load each file from a new round element and stack them
     tensors_4d = []
     for r in range(nb_r):
-        path = get_path_from_recipe(recipe, input_folder, fov=fov, r=r)
+        path = _get_path_from_recipe(recipe, input_folder, fov=fov, r=r)
         tensor_4d = read_image(path)
         tensors_4d.append(tensor_4d)
 
@@ -685,13 +683,13 @@ def _build_stack_from_5d(recipe, input_folder, fov=0):
 
     """
     # the recipe can only contain one file with a 5-d tensor per fov
-    path = get_path_from_recipe(recipe, input_folder, fov=fov)
+    path = _get_path_from_recipe(recipe, input_folder, fov=fov)
     tensor_5d = read_image(path)
 
     return tensor_5d
 
 
-def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
+def _get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
     """Build the path of a file from a recipe and the indices of specific
     elements.
 
@@ -728,7 +726,7 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
 
     # get filename recombining elements of the recipe
     filename = path_separators[0]  # usually an empty string
-    for (element_name, separator) in zip(path_elements, path_separators):
+    for (element_name, separator) in zip(path_elements, path_separators[1:]):
         # if we need an element from a list of elements of the same dimension
         # (eg. to pick a specific channel 'c' among a list of channels)
         if element_name in map_element_index:
@@ -791,7 +789,7 @@ def _get_input_dimension(recipe, input_folder):
 
     """
     # get a valid path from the recipe
-    path = get_path_from_recipe(recipe, input_folder)
+    path = _get_path_from_recipe(recipe, input_folder)
 
     # load the image and return the number of dimensions
     image = read_image(path)
@@ -830,7 +828,9 @@ def build_stack_no_recipe(paths, input_dimension=None, check=False,
 
     """
     # check parameters
-    check_parameter(normalize=bool,
+    check_parameter(paths=(str, list),
+                    input_dimension=(int, type(None)),
+                    normalize=bool,
                     channel_to_stretch=(int, list, type(None)),
                     stretching_percentile=float,
                     cast_8bit=bool)
@@ -875,10 +875,6 @@ def _load_stack_no_recipe(paths, input_dimension=None):
         Tensor with shape (r, c, z, y, x).
 
     """
-    # check parameters
-    check_parameter(paths=str,
-                    input_dimension=(int, type(None)))
-
     # load an image and get the number of dimensions
     if input_dimension is None:
         testfile = read_image(paths[0])
