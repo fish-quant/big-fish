@@ -128,10 +128,6 @@ def check_array(array, ndim=None, dtype=None, allow_nan=True):
         Types expected.
     allow_nan : bool
         Allow NaN values or not.
-    min_array : int
-        Minimum value allowed.
-    max_array : int
-        Maximum value allowed.
 
     Returns
     -------
@@ -142,10 +138,8 @@ def check_array(array, ndim=None, dtype=None, allow_nan=True):
     # check parameters
     check_parameter(array=np.ndarray,
                     ndim=(int, list, type(None)),
-                    dtype=(type, type(None)),
-                    allow_nan=bool,
-                    min_array=(int, type(None)),
-                    max_array=(int, type(None)))
+                    dtype=(type, list, type(None)),
+                    allow_nan=bool)
 
     # check the dtype
     if dtype is not None:
@@ -281,6 +275,7 @@ def check_recipe(recipe):
     -------
 
     """
+    # TODO check files exists
     # check recipe is a dictionary
     if not isinstance(recipe, dict):
         raise Exception("The recipe is not valid. It should be a dictionary.")
@@ -305,10 +300,10 @@ def check_recipe(recipe):
 
     # check keys and values of the recipe
     for key, value in recipe.items():
-        if key not in ['fov', 'r', 'c', 'z', 'ext', 'opt']:
+        if key not in ['fov', 'r', 'c', 'z', 'ext', 'opt', 'pattern']:
             raise ValueError("The recipe can only contain the keys 'fov', "
-                             "'r', 'c', 'z', 'ext' or 'opt'. Not {0}."
-                             .format(key))
+                             "'r', 'c', 'z', 'ext', 'opt' or 'pattern'. "
+                             "Not '{0}'.".format(key))
         if not isinstance(value, (list, str)):
             raise TypeError("A recipe can only contain lists or strings, "
                             "not {0}.".format(type(value)))
