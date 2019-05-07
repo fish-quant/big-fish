@@ -9,7 +9,8 @@ dist/
 big_fish.egg-info/
 
 # Notebooks
-notebooks/*
+notebooks/old
+notebooks/.ipynb_checkpoints
 
 # Data
 data/input/*
