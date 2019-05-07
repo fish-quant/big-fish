@@ -298,7 +298,8 @@ def remove_background(image, kernel_shape="disk", kernel_size=200):
     Parameters
     ----------
     image : np.ndarray, np.uint
-        Image to process. Casting in np.uint8 makes the computation faster.
+        Image to process with shape (y, x). Casting in np.uint8 makes the
+        computation faster.
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
         'rectangle' or 'square').
