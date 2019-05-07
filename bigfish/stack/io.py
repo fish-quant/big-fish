@@ -14,6 +14,8 @@ from skimage import io
 from .utils import check_array, check_df
 
 
+# ### Read ###
+
 def read_image(path):
     """Read an image with the .png, .tif or .tiff extension.
 
@@ -121,3 +123,29 @@ def read_pickle(path):
         data = pickle.load(f)
 
     return data
+
+
+# ### Write ###
+
+def save_image(image, path):
+    """Save a 2-d or 3-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Tensor to save with shape (z, y, x) or (y, x).
+    path : str
+        Path of the saved image.
+
+    Returns
+    -------
+
+    """
+    # check image
+    check_array(image, dtype=[np.uint8, np.uint16, np.float], ndim=[2, 3])
+
+
+    # save image
+    io.imsave(path, arr, plugin=None, check_contrast=True,
+                      **plugin_args)
+    return

@@ -9,21 +9,22 @@ import bigfish.stack as stack
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .utils import save_plot
+from .utils import save_plot, get_minmax_values
 
 from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap
 
 
 # TODO add title in the plot and remove axes
+# TODO add parameter for vmin and vmax
 
 def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
-            path_output=None, ext="png"):
+            remove_frame=False, path_output=None, ext="png"):
     """Plot the selected yx plan of the selected dimensions of an image.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
+    tensor : np.ndarray
         A 2-d, 3-d or 5-d tensor with shape (y, x), (z, y, x) or
         (r, c, z, y, x) respectively.
     r : int
@@ -36,6 +37,8 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
         Title of the image.
     framesize : tuple
         Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
     path_output : str
         Path to save the image (without extension).
     ext : str or List[str]
@@ -46,11 +49,19 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
     -------
 
     """
-    # check tensor
-    stack.check_array(tensor, ndim=[2, 3, 5],
+    # check parameters
+    stack.check_array(tensor,
+                      ndim=[2, 3, 5],
                       dtype=[np.uint8, np.uint16,
                              np.float32, np.float64,
-                             bool])
+                             bool],
+                      allow_nan=False)
+    stack.check_parameter(r=int, c=int, z=int,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
 
     # get the 2-d tensor
     xy_tensor = None
@@ -61,31 +72,42 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
     elif tensor.ndim == 5:
         xy_tensor = tensor[r, c, z, :, :]
 
+    # get minimum and maximum value of the image
+    vmin, vmax = get_minmax_values(tensor)
+
     # plot
-    plt.figure(figsize=framesize)
-    plt.imshow(xy_tensor)
-    if title is not None:
+    if remove_frame:
+        fig = plt.figure(figsize=framesize, frameon=False)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+    else:
+        plt.figure(figsize=framesize)
+    plt.imshow(xy_tensor, vmin=vmin, vmax=vmax)
+    if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
-    plt.axis('off')
-    plt.tight_layout()
-    save_plot(path_output, ext)
+    if not remove_frame:
+        plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
     plt.show()
 
     return
 
 
-def plot_images(images, framesize=(15, 15), titles=None,
+def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
                 path_output=None, ext="png"):
     """Plot or subplot of 2-d images.
 
     Parameters
     ----------
-    images : np.ndarray or List[np.ndarray]
+    tensors : np.ndarray or List[np.ndarray]
         Images with shape (y, x).
-    framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
     titles : List[str]
         Titles of the subplots.
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
     path_output : str
         Path to save the image (without extension).
     ext : str or List[str]
@@ -97,49 +119,78 @@ def plot_images(images, framesize=(15, 15), titles=None,
 
     """
     # enlist image if necessary
-    if isinstance(images, np.ndarray):
-        images = [images]
+    if isinstance(tensors, np.ndarray):
+        tensors = [tensors]
 
-    # check images
-    for image in images:
-        stack.check_array(image, ndim=2,
-                          dtype=[np.uint8, np.uint16, np.float32, np.float64,
-                                 bool])
+    # check parameters
+    stack.check_parameter(tensors=list,
+                          titles=(str, list, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
+    for tensor in tensors:
+        stack.check_array(tensor,
+                          ndim=2,
+                          dtype=[np.uint8, np.uint16,
+                                 np.float32, np.float64,
+                                 bool],
+                          allow_nan=False)
 
     # we plot 3 images by row maximum
-    nrow = int(np.ceil(len(images)/3))
-    ncol = min(len(images), 3)
+    nrow = int(np.ceil(len(tensors)/3))
+    ncol = min(len(tensors), 3)
 
     # plot one image
-    if len(images) == 1:
-        plot_yx(images[0], framesize=framesize, title=titles,
-                path_output=path_output, ext=ext)
+    if len(tensors) == 1:
+        plot_yx(tensors[0], title=titles[0], framesize=framesize,
+                remove_frame=remove_frame, path_output=path_output, ext=ext)
+
         return
 
     # plot multiple images
     fig, ax = plt.subplots(nrow, ncol, figsize=framesize)
-    if len(images) in [2, 3]:
-        for i, image in enumerate(images):
-            ax[i].imshow(image)
+
+    # one row
+    if len(tensors) in [2, 3]:
+        for i, tensor in enumerate(tensors):
+            if remove_frame:
+                ax[i].axis("off")
+            vmin, vmax = get_minmax_values(tensor)
+            ax[i].imshow(tensor, vmin=vmin, vmax=vmax)
             if titles is not None:
                 ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
+
+    # several rows
     else:
-        for i, image in enumerate(images):
+        # we complete the row with empty frames
+        r = nrow * 3 - len(tensors)
+        tensors_completed = [tensor for tensor in tensors] + [None] * r
+
+        for i, tensor in enumerate(tensors_completed):
             row = i // 3
             col = i % 3
-            ax[row, col].imshow(image)
+            if tensor is None:
+                ax[row, col].set_visible(False)
+                continue
+            if remove_frame:
+                ax[row, col].axis("off")
+            vmin, vmax = get_minmax_values(tensor)
+            ax[row, col].imshow(tensor, vmin=vmin, vmax=vmax)
             if titles is not None:
                 ax[row, col].set_title(titles[i],
                                        fontweight="bold", fontsize=15)
+
     plt.tight_layout()
-    save_plot(path_output, ext)
+    if path_output is not None:
+        save_plot(path_output, ext)
     plt.show()
 
     return
 
 
-def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), titles=None,
-                     path_output=None, ext="png"):
+def plot_channels_2d(tensor, r=0, z=0, titles=None, framesize=(15, 15),
+                     remove_frame=False, path_output=None, ext="png"):
     """Subplot the yx plan of the selected dimensions of an image for all
     channels.
 
@@ -151,10 +202,12 @@ def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), titles=None,
         Index of the round to keep.
     z : int
         Index of the z slice to keep.
-    framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
     titles : List[str]
         Titles of the subplots (one per channel).
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
     path_output : str
         Path to save the image (without extension).
     ext : str or List[str]
@@ -165,20 +218,37 @@ def plot_channels_2d(tensor, r=0, z=0, framesize=(15, 15), titles=None,
     -------
 
     """
-    # check tensor
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+    # check parameters
+    stack.check_array(tensor,
+                      ndim=5,
+                      dtype=[np.uint8, np.uint16],
+                      allow_nan=False)
+    stack.check_parameter(r=int,
+                          z=int,
+                          titles=(list, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
 
     # get the number of channels
     nb_channels = tensor.shape[1]
 
+    # get the minimum and maximal values of the tensor dtype
+    vmin, vmax = get_minmax_values(tensor)
+
     # plot
     fig, ax = plt.subplots(1, nb_channels, sharex='col', figsize=framesize)
     for i in range(nb_channels):
-        ax[i].imshow(tensor[r, i, z, :, :])
+        ax[i].imshow(tensor[r, i, z, :, :], vmin=vmin, vmax=vmax)
         if titles is not None:
             ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
+        if remove_frame:
+            ax[i].axis("off")
+
     plt.tight_layout()
-    save_plot(path_output, ext)
+    if path_output is not None:
+        save_plot(path_output, ext)
     plt.show()
 
     return
