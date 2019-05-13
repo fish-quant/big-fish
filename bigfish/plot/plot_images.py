@@ -15,11 +15,9 @@ from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap
 
 
-# TODO add title in the plot and remove axes
-# TODO add parameter for vmin and vmax
-
-def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
-            remove_frame=False, path_output=None, ext="png"):
+def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
+            framesize=(15, 15), remove_frame=False, path_output=None,
+            ext="png"):
     """Plot the selected yx plan of the selected dimensions of an image.
 
     Parameters
@@ -33,6 +31,8 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
         Index of the channel to keep.
     z : int
         Index of the z slice to keep.
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
     title : str
         Title of the image.
     framesize : tuple
@@ -57,6 +57,7 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
                              bool],
                       allow_nan=False)
     stack.check_parameter(r=int, c=int, z=int,
+                          rescale=bool,
                           title=(str, type(None)),
                           framesize=tuple,
                           remove_frame=bool,
@@ -73,7 +74,9 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
         xy_tensor = tensor[r, c, z, :, :]
 
     # get minimum and maximum value of the image
-    vmin, vmax = get_minmax_values(tensor)
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(tensor)
 
     # plot
     if remove_frame:
@@ -82,7 +85,10 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
         ax.axis('off')
     else:
         plt.figure(figsize=framesize)
-    plt.imshow(xy_tensor, vmin=vmin, vmax=vmax)
+    if not rescale:
+        plt.imshow(xy_tensor, vmin=vmin, vmax=vmax)
+    else:
+        plt.imshow(xy_tensor)
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
     if not remove_frame:
@@ -94,14 +100,16 @@ def plot_yx(tensor, r=0, c=0, z=0, title=None, framesize=(15, 15),
     return
 
 
-def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
-                path_output=None, ext="png"):
+def plot_images(tensors, rescale=False, titles=None, framesize=(15, 15),
+                remove_frame=False, path_output=None, ext="png"):
     """Plot or subplot of 2-d images.
 
     Parameters
     ----------
     tensors : np.ndarray or List[np.ndarray]
         Images with shape (y, x).
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
     titles : List[str]
         Titles of the subplots.
     framesize : tuple
@@ -124,6 +132,7 @@ def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
 
     # check parameters
     stack.check_parameter(tensors=list,
+                          rescale=bool,
                           titles=(str, list, type(None)),
                           framesize=tuple,
                           remove_frame=bool,
@@ -143,8 +152,13 @@ def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
 
     # plot one image
     if len(tensors) == 1:
-        plot_yx(tensors[0], title=titles[0], framesize=framesize,
-                remove_frame=remove_frame, path_output=path_output, ext=ext)
+        plot_yx(tensors[0],
+                rescale=rescale,
+                title=titles[0],
+                framesize=framesize,
+                remove_frame=remove_frame,
+                path_output=path_output,
+                ext=ext)
 
         return
 
@@ -156,8 +170,11 @@ def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
         for i, tensor in enumerate(tensors):
             if remove_frame:
                 ax[i].axis("off")
-            vmin, vmax = get_minmax_values(tensor)
-            ax[i].imshow(tensor, vmin=vmin, vmax=vmax)
+            if not rescale:
+                vmin, vmax = get_minmax_values(tensor)
+                ax[i].imshow(tensor, vmin=vmin, vmax=vmax)
+            else:
+                ax[i].imshow(tensor)
             if titles is not None:
                 ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
 
@@ -175,8 +192,11 @@ def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
                 continue
             if remove_frame:
                 ax[row, col].axis("off")
-            vmin, vmax = get_minmax_values(tensor)
-            ax[row, col].imshow(tensor, vmin=vmin, vmax=vmax)
+            if not rescale:
+                vmin, vmax = get_minmax_values(tensor)
+                ax[row, col].imshow(tensor, vmin=vmin, vmax=vmax)
+            else:
+                ax[row, col].imshow(tensor)
             if titles is not None:
                 ax[row, col].set_title(titles[i],
                                        fontweight="bold", fontsize=15)
@@ -189,8 +209,9 @@ def plot_images(tensors, titles=None, framesize=(15, 15), remove_frame=False,
     return
 
 
-def plot_channels_2d(tensor, r=0, z=0, titles=None, framesize=(15, 15),
-                     remove_frame=False, path_output=None, ext="png"):
+def plot_channels_2d(tensor, r=0, z=0, rescale=False, titles=None,
+                     framesize=(15, 15), remove_frame=False, path_output=None,
+                     ext="png"):
     """Subplot the yx plan of the selected dimensions of an image for all
     channels.
 
@@ -202,6 +223,8 @@ def plot_channels_2d(tensor, r=0, z=0, titles=None, framesize=(15, 15),
         Index of the round to keep.
     z : int
         Index of the z slice to keep.
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
     titles : List[str]
         Titles of the subplots (one per channel).
     framesize : tuple
@@ -225,6 +248,7 @@ def plot_channels_2d(tensor, r=0, z=0, titles=None, framesize=(15, 15),
                       allow_nan=False)
     stack.check_parameter(r=int,
                           z=int,
+                          rescale=bool,
                           titles=(list, type(None)),
                           framesize=tuple,
                           remove_frame=bool,
@@ -235,12 +259,17 @@ def plot_channels_2d(tensor, r=0, z=0, titles=None, framesize=(15, 15),
     nb_channels = tensor.shape[1]
 
     # get the minimum and maximal values of the tensor dtype
-    vmin, vmax = get_minmax_values(tensor)
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(tensor)
 
     # plot
     fig, ax = plt.subplots(1, nb_channels, sharex='col', figsize=framesize)
     for i in range(nb_channels):
-        ax[i].imshow(tensor[r, i, z, :, :], vmin=vmin, vmax=vmax)
+        if not rescale:
+            ax[i].imshow(tensor[r, i, z, :, :], vmin=vmin, vmax=vmax)
+        else:
+            ax[i].imshow(tensor[r, i, z, :, :], vmin=vmin, vmax=vmax)
         if titles is not None:
             ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
         if remove_frame:
@@ -281,6 +310,8 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     -------
 
     """
+    # TODO add title in the plot and remove axes
+    # TODO add parameter for vmin and vmax
     # check tensor
     stack.check_array(illumination_surface, ndim=4,
                       dtype=[np.float32, np.float64])
@@ -329,6 +360,8 @@ def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
     -------
 
     """
+    # TODO add title in the plot and remove axes
+    # TODO add parameter for vmin and vmax
     # check tensor
     stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
     stack.check_array(projection, ndim=2, dtype=[np.uint8, np.uint16,
@@ -378,6 +411,8 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
     -------
 
     """
+    # TODO add title in the plot and remove axes
+    # TODO add parameter for vmin and vmax
     # check tensor
     stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
     stack.check_array(segmentation, ndim=2, dtype=bool)
@@ -453,6 +488,8 @@ def plot_spot_detection(tensor, coordinates, radius, r=0, c=0, z=0,
     -------
 
     """
+    # TODO add title in the plot and remove axes
+    # TODO add parameter for vmin and vmax
     # TODO check coordinates shape
     # check tensor
     stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
