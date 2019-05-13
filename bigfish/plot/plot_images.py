@@ -332,54 +332,6 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     return
 
 
-def plot_projection(tensor, projection, r=0, c=0, z=0, framesize=(15, 15),
-                    path_output=None, ext="png"):
-    """Plot result of a 2-d projection.
-
-    Parameters
-    ----------
-    tensor : np.ndarray, np.uint
-        A 5-d tensor with shape (r, c, z, y, x).
-    projection : np.ndarray
-        A 2-d image with shape (y, x).
-    r : int
-        Index of the round to keep.
-    c : int
-        Index of the channel to keep.
-    z : int
-        Index of the z-slice to keep.
-    framesize : tuple
-        Size of the frame used to plot (plt.figure(figsize=framesize).
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-
-    Returns
-    -------
-
-    """
-    # TODO add title in the plot and remove axes
-    # TODO add parameter for vmin and vmax
-    # check tensor
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
-    stack.check_array(projection, ndim=2, dtype=[np.uint8, np.uint16,
-                                                 np.float32, np.float64])
-
-    # plot
-    fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
-    ax[0].imshow(tensor[r, c, z, :, :])
-    ax[0].set_title("Z-slice: {0}".format(z), fontweight="bold", fontsize=15)
-    ax[1].imshow(projection)
-    ax[1].set_title("Projected image", fontweight="bold", fontsize=15)
-    plt.tight_layout()
-    save_plot(path_output, ext)
-    plt.show()
-
-    return
-
-
 def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
                       bondary=False, framesize=(15, 15),
                       path_output=None, ext="png"):
