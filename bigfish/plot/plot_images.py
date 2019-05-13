@@ -332,8 +332,8 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     return
 
 
-def plot_segmentation(tensor, mask, rescale=False, plot_surface=False,
-                      title=None, framesize=(15, 5), remove_frame=False,
+def plot_segmentation(tensor, mask, rescale=False, title=None,
+                      framesize=(15, 5), remove_frame=False,
                       path_output=None, ext="png"):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
@@ -345,8 +345,6 @@ def plot_segmentation(tensor, mask, rescale=False, plot_surface=False,
         A 2-d image with shape (y, x).
     rescale : bool
         Rescale pixel values of the image (made by default in matplotlib).
-    plot_surface : bool
-        Plot the surface of the segmented object (or its boundary).
     title : str
         Title of the image.
     framesize : tuple
@@ -411,21 +409,94 @@ def plot_segmentation(tensor, mask, rescale=False, plot_surface=False,
         ax[2].imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         ax[2].imshow(tensor)
-    if not plot_surface:
-        boundaries = find_boundaries(mask, mode='thick')
-        boundaries = np.ma.masked_where(boundaries == 0, boundaries)
-        ax[2].imshow(boundaries, cmap=ListedColormap(['red']))
-        if title is not None:
-            ax[2].set_title("Boundary", fontweight="bold", fontsize=10)
-    else:
-        masked = np.ma.masked_where(mask == 0, mask)
-        ax[2].imshow(masked, cmap=ListedColormap(['cyan']), alpha=0.5)
-        if title is not None:
-            ax[2].set_title("Surface", fontweight="bold", fontsize=10)
+    masked = np.ma.masked_where(mask == 0, mask)
+    ax[2].imshow(masked, cmap=ListedColormap(['cyan']), alpha=0.5)
+    if title is not None:
+        ax[2].set_title("Surface", fontweight="bold", fontsize=10)
     if remove_frame:
         ax[2].axis("off")
 
     plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    plt.show()
+
+    return
+
+
+def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
+                               framesize=(10, 10), remove_frame=False,
+                               path_output=None, ext="png"):
+    """Plot the boundary of the segmented objects.
+
+    Parameters
+    ----------
+    tensor : np.ndarray
+        A 2-d tensor with shape (y, x).
+    mask : np.ndarray
+        A 2-d image with shape (y, x).
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
+    title : str
+        Title of the image.
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+
+    Returns
+    -------
+
+    """
+    # TODO compute boundary separately
+    # check parameters
+    stack.check_array(tensor,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16,
+                             np.float32, np.float64,
+                             bool],
+                      allow_nan=False)
+    stack.check_array(mask,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      allow_nan=False)
+    stack.check_parameter(rescale=bool,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
+
+    # get minimum and maximum value of the image
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(tensor)
+
+    # get boundary
+    boundaries = find_boundaries(mask, mode='thick')
+    boundaries = np.ma.masked_where(boundaries == 0, boundaries)
+
+    # plot
+    if remove_frame:
+        fig = plt.figure(figsize=framesize, frameon=False)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+    else:
+        plt.figure(figsize=framesize)
+    if not rescale:
+        plt.imshow(tensor, vmin=vmin, vmax=vmax)
+    else:
+        plt.imshow(tensor)
+    plt.imshow(boundaries, cmap=ListedColormap(['red']))
+    if title is not None and not remove_frame:
+        plt.title(title, fontweight="bold", fontsize=25)
+    if not remove_frame:
+        plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
     plt.show()
