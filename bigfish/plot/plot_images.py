@@ -152,9 +152,13 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
 
     # plot one image
     if len(tensors) == 1:
+        if titles is not None:
+            title = titles[0]
+        else:
+            title = None
         plot_yx(tensors[0],
                 rescale=rescale,
-                title=titles[0],
+                title=title,
                 framesize=framesize,
                 remove_frame=remove_frame,
                 path_output=path_output,
