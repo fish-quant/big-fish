@@ -410,7 +410,7 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
     else:
         ax[2].imshow(tensor)
     masked = np.ma.masked_where(mask == 0, mask)
-    ax[2].imshow(masked, cmap=ListedColormap(['cyan']), alpha=0.5)
+    ax[2].imshow(masked, cmap=ListedColormap(['red']), alpha=0.5)
     if title is not None:
         ax[2].set_title("Surface", fontweight="bold", fontsize=10)
     if remove_frame:
