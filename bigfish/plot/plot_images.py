@@ -332,9 +332,9 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     return
 
 
-def plot_segmentation(tensor, mask, rescale=False, title=None,
-                      framesize=(15, 5), remove_frame=False, path_output=None,
-                      ext="png"):
+def plot_segmentation(tensor, mask, rescale=False, plot_surface=False,
+                      title=None, framesize=(15, 5), remove_frame=False,
+                      path_output=None, ext="png"):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
     Parameters
@@ -345,6 +345,8 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
         A 2-d image with shape (y, x).
     rescale : bool
         Rescale pixel values of the image (made by default in matplotlib).
+    plot_surface : bool
+        Plot the surface of the segmented object (or its boundary).
     title : str
         Title of the image.
     framesize : tuple
@@ -409,87 +411,23 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
         ax[2].imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         ax[2].imshow(tensor)
-    masked = np.ma.masked_where(mask == 0, mask)
-    ax[2].imshow(masked, cmap='autumn', alpha=0.5)
-    if title is not None:
-        ax[2].set_title("Superposition", fontweight="bold", fontsize=10)
+    if not plot_surface:
+        boundaries = find_boundaries(mask, mode='thick')
+        boundaries = np.ma.masked_where(boundaries == 0, boundaries)
+        ax[2].imshow(boundaries, cmap=ListedColormap(['red']))
+        if title is not None:
+            ax[2].set_title("Boundary", fontweight="bold", fontsize=10)
+    else:
+        masked = np.ma.masked_where(mask == 0, mask)
+        ax[2].imshow(masked, cmap=ListedColormap(['cyan']), alpha=0.5)
+        if title is not None:
+            ax[2].set_title("Surface", fontweight="bold", fontsize=10)
     if remove_frame:
         ax[2].axis("off")
 
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
-
-    return
-
-
-def plot_boundaries(tensor, segmentation, r=0, c=0, z=0, label=None,
-                    bondary=False, framesize=(15, 15),
-                    path_output=None, ext="png"):
-    """Plot result of a 2-d segmentation, with labelled instances if available.
-    Parameters
-    ----------
-    tensor : np.ndarray, np.uint
-        A 5-d tensor with shape (r, c, z, y, x).
-    segmentation : np.ndarray, bool
-        A 2-d image with shape (y, x).
-    r : int
-        Index of the round to keep.
-    c : int
-        Index of the channel to keep.
-    z : int
-        Index of the z-slice to keep.
-    label : np.ndarray, np.int64
-        A 2-d image with shape (y, x).
-    framesize : tuple
-        Size of the frame used to plot (plt.figure(figsize=framesize).
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    Returns
-    -------
-    """
-    # TODO add title in the plot and remove axes
-    # TODO add parameter for vmin and vmax
-    # check tensor
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
-    stack.check_array(segmentation, ndim=2, dtype=bool)
-    if label is not None:
-        stack.check_array(label, ndim=2, dtype=np.int64)
-
-    # TODO clean it
-    boundaries = None
-    if bondary and label is not None:
-        boundaries = find_boundaries(label, mode='thick')
-        boundaries = np.ma.masked_where(boundaries == 0, boundaries)
-
-    # plot
-    if label is not None:
-        fig, ax = plt.subplots(1, 3, sharex='col', figsize=framesize)
-        ax[0].imshow(tensor[r, c, z, :, :])
-        ax[0].imshow(boundaries, cmap=ListedColormap(['red']))
-        ax[0].set_title("Z-slice: {0}".format(z),
-                        fontweight="bold", fontsize=15)
-        ax[1].imshow(segmentation)
-        ax[1].imshow(boundaries, cmap=ListedColormap(['red']))
-        ax[1].set_title("Segmentation", fontweight="bold", fontsize=15)
-        ax[2].imshow(label)
-        ax[2].imshow(boundaries, cmap=ListedColormap(['red']))
-        ax[2].set_title("Labels", fontweight="bold", fontsize=15)
-
-    else:
-        fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
-        ax[0].imshow(tensor[r, c, z, :, :])
-        ax[0].set_title("Z-slice: {0}".format(z),
-                        fontweight="bold", fontsize=15)
-        ax[1].imshow(segmentation)
-        ax[1].set_title("Segmentation", fontweight="bold", fontsize=15)
-
-    plt.tight_layout()
-    save_plot(path_output, ext)
     plt.show()
 
     return
