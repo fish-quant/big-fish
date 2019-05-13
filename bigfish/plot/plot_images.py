@@ -16,7 +16,7 @@ from matplotlib.colors import ListedColormap
 
 
 def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
-            framesize=(15, 15), remove_frame=False, path_output=None,
+            framesize=(8, 8), remove_frame=False, path_output=None,
             ext="png"):
     """Plot the selected yx plan of the selected dimensions of an image.
 
@@ -100,7 +100,7 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
     return
 
 
-def plot_images(tensors, rescale=False, titles=None, framesize=(15, 15),
+def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
                 remove_frame=False, path_output=None, ext="png"):
     """Plot or subplot of 2-d images.
 
@@ -210,7 +210,7 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 15),
 
 
 def plot_channels_2d(tensor, r=0, z=0, rescale=False, titles=None,
-                     framesize=(15, 15), remove_frame=False, path_output=None,
+                     framesize=(15, 5), remove_frame=False, path_output=None,
                      ext="png"):
     """Subplot the yx plan of the selected dimensions of an image for all
     channels.
@@ -269,7 +269,7 @@ def plot_channels_2d(tensor, r=0, z=0, rescale=False, titles=None,
         if not rescale:
             ax[i].imshow(tensor[r, i, z, :, :], vmin=vmin, vmax=vmax)
         else:
-            ax[i].imshow(tensor[r, i, z, :, :], vmin=vmin, vmax=vmax)
+            ax[i].imshow(tensor[r, i, z, :, :])
         if titles is not None:
             ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
         if remove_frame:
@@ -332,11 +332,102 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     return
 
 
-def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
-                      bondary=False, framesize=(15, 15),
-                      path_output=None, ext="png"):
+def plot_segmentation(tensor, mask, rescale=False, title=None,
+                      framesize=(15, 5), remove_frame=False, path_output=None,
+                      ext="png"):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
+    Parameters
+    ----------
+    tensor : np.ndarray
+        A 2-d tensor with shape (y, x).
+    mask : np.ndarray
+        A 2-d image with shape (y, x).
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
+    title : str
+        Title of the image.
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    stack.check_array(tensor,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16,
+                             np.float32, np.float64,
+                             bool],
+                      allow_nan=False)
+    stack.check_array(mask,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      allow_nan=False)
+    stack.check_parameter(rescale=bool,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
+
+    # get minimum and maximum value of the image
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(tensor)
+
+    # plot
+    fig, ax = plt.subplots(1, 3, sharex='col', figsize=framesize)
+
+    # image
+    if not rescale:
+        ax[0].imshow(tensor, vmin=vmin, vmax=vmax)
+    else:
+        ax[0].imshow(tensor)
+    if title is not None:
+        ax[0].set_title(title, fontweight="bold", fontsize=10)
+    if remove_frame:
+        ax[0].axis("off")
+
+    # label
+    ax[1].imshow(mask)
+    if title is not None:
+        ax[1].set_title("Segmentation", fontweight="bold", fontsize=10)
+    if remove_frame:
+        ax[1].axis("off")
+
+    # superposition
+    if not rescale:
+        ax[2].imshow(tensor, vmin=vmin, vmax=vmax)
+    else:
+        ax[2].imshow(tensor)
+    masked = np.ma.masked_where(mask == 0, mask)
+    ax[2].imshow(masked, cmap='autumn', alpha=0.5)
+    if title is not None:
+        ax[2].set_title("Superposition", fontweight="bold", fontsize=10)
+    if remove_frame:
+        ax[2].axis("off")
+
+    plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    plt.show()
+
+    return
+
+
+def plot_boundaries(tensor, segmentation, r=0, c=0, z=0, label=None,
+                    bondary=False, framesize=(15, 15),
+                    path_output=None, ext="png"):
+    """Plot result of a 2-d segmentation, with labelled instances if available.
     Parameters
     ----------
     tensor : np.ndarray, np.uint
@@ -358,10 +449,8 @@ def plot_segmentation(tensor, segmentation, r=0, c=0, z=0, label=None,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-
     Returns
     -------
-
     """
     # TODO add title in the plot and remove axes
     # TODO add parameter for vmin and vmax
