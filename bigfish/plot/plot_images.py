@@ -180,7 +180,7 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
             else:
                 ax[i].imshow(tensor)
             if titles is not None:
-                ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
+                ax[i].set_title(titles[i], fontweight="bold", fontsize=10)
 
     # several rows
     else:
@@ -203,7 +203,7 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
                 ax[row, col].imshow(tensor)
             if titles is not None:
                 ax[row, col].set_title(titles[i],
-                                       fontweight="bold", fontsize=15)
+                                       fontweight="bold", fontsize=10)
 
     plt.tight_layout()
     if path_output is not None:
@@ -275,7 +275,7 @@ def plot_channels_2d(tensor, r=0, z=0, rescale=False, titles=None,
         else:
             ax[i].imshow(tensor[r, i, z, :, :])
         if titles is not None:
-            ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
+            ax[i].set_title(titles[i], fontweight="bold", fontsize=10)
         if remove_frame:
             ax[i].axis("off")
 
