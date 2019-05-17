@@ -13,10 +13,14 @@ from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
 from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
                          build_stack_no_recipe, rescale,
                          cast_img_uint8, cast_img_uint16, cast_img_float32,
-                         cast_img_float64, clean_simulated_data)
+                         cast_img_float64, clean_simulated_data,
+                         deconstruct_image, reconstruct_image)
 from .filter import (log_filter, mean_filter, median_filter, maximum_filter,
                      minimum_filter, gaussian_filter, remove_background)
-from .projection import projection
+from .projection import (maximum_projection, mean_projection,
+                         median_projection, in_focus_selection,
+                         focus_measurement, get_in_focus_indices,
+                         focus_projection, focus_projection_fast)
 from .illumination import (compute_illumination_surface,
                            correct_illumination_surface)
 from .preparation import (split_from_background, build_image, get_coordinates,
@@ -38,12 +42,16 @@ _io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
 _preprocess = ["build_simulated_dataset", "build_stacks", "build_stack",
                "build_stack_no_recipe", "rescale",
                "cast_img_uint8", "cast_img_uint16", "cast_img_float32",
-               "cast_img_float64", "clean_simulated_data"]
+               "cast_img_float64", "clean_simulated_data", "deconstruct_image",
+               "reconstruct_image"]
 
 _filter = ["log_filter", "mean_filter", "median_filter", "maximum_filter",
            "minimum_filter", "gaussian_filter", "remove_background"]
 
-_projection = ["projection"]
+_projection = ["maximum_projection", "mean_projection", "median_projection",
+               "in_focus_selection", "focus_measurement",
+               "get_in_focus_indices", "focus_projection",
+               "focus_projection_fast"]
 
 _illumination = ["compute_illumination_surface",
                  "correct_illumination_surface"]
