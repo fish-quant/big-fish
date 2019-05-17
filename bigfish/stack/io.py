@@ -6,6 +6,7 @@ multidimensional tensor (np.ndarray) or a dataframe (pandas.DataFrame).
 """
 
 import pickle
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -143,11 +144,15 @@ def save_image(image, path):
     """
     # check image
     check_array(image,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, bool],
+                dtype=[np.uint8, np.uint16, np.int64,
+                       np.float32, np.float64,
+                       bool],
                 ndim=[2, 3],
                 allow_nan=False)
 
     # save image
-    io.imsave(path, image, check_contrast=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        io.imsave(path, image)
 
     return
