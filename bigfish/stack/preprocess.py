@@ -1182,9 +1182,208 @@ def cast_img_float64(tensor):
     return tensor
 
 
+# ### Resize and rescale ###
+# TODO debug
+def deconstruct_image(image, target_size):
+    """Deconstruct an image in a sequence of smaller or larger images in order
+    to fit with a segmentation method, while preserving image scale.
+
+    If the image need to be enlarged to reach the target size, we pad it. If
+    the current size is a multiple of the target size, image is cropped.
+    Otherwise, it is padded (to multiply the target size) then cropped.
+    Information about the deconstruction process are returned in order to
+    easily reconstruct the original image after transformation.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to deconstruct with shape (y, x).
+    target_size : int
+        Size of the elements to return.
+
+    Returns
+    -------
+    images : List[np.ndarray]
+        List of images to analyse independently.
+    deconstruction : dict
+        Dictionary with deconstruction information to help the reconstruction
+        of the original image.
+
+    """
+    # TODO adapt to non squared images
+    # TODO add an overlap in the crop
+    # check parameters
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8, np.uint16,
+                       np.float32, np.float64,
+                       bool],
+                allow_nan=False)
+    check_parameter(target_size=int)
+
+    # initialize metadata
+    (width, height) = image.shape
+    deconstruction = {"cropped": False, "padded": False,
+                      "original_width": width, "original_height": height}
+
+    # check if the image is squared
+    if width != height:
+        raise ValueError("Non-squared image are not supported yet.")
+
+    # case where the image is too small
+    if width < target_size:
+
+        # padding
+        to_add = target_size - width
+        right = int(to_add / 2)
+        left = to_add - right
+        pad_width = ((left, right), (left, right))
+        images = [np.pad(image, pad_width, mode="symmetric")]
+        deconstruction["padded"] = True
+        deconstruction["pad_left"] = left
+        deconstruction["pad_right"] = right
+
+    # case where the image is too large
+    elif width > target_size:
+
+        # current size is not a multiple of the target size
+        if width % target_size != 0:
+
+            # padding
+            to_add = target_size * (1 + width // target_size) - width
+            right = int(to_add / 2)
+            left = to_add - right
+            pad_width = ((left, right), (left, right))
+            image = np.pad(image, pad_width, mode="symmetric")
+            deconstruction["padded"] = True
+            deconstruction["pad_left"] = left
+            deconstruction["pad_right"] = right
+            (width, height) = image.shape
+
+        # cropping
+        nb_row = height // target_size
+        nb_col = width // target_size
+        images = []
+        for i_row in range(nb_row):
+            row_start = i_row * target_size
+            row_end = (i_row + 1) * target_size
+            for i_col in range(nb_col):
+                col_start = i_col * target_size
+                col_end = (i_col + 1) * target_size
+                image_ = image[row_start:row_end, col_start:col_end]
+                images.append(image_)
+        deconstruction["cropped"] = True
+        deconstruction["nb_row"] = nb_row
+        deconstruction["nb_col"] = nb_col
+
+    else:
+        images = [image.copy()]
+
+    # store number of images created from the original one
+    deconstruction["nb_images"] = len(images)
+
+    return images, deconstruction
+
+
+def reconstruct_image(images, deconstruction):
+    """Reconstruct an image based on the information stored during the
+    deconstruction process (padding and cropping).
+
+    Parameters
+    ----------
+    images : List[np.ndarray] or np.ndarray
+        Images used to reconstruct an image with the original width and height.
+    deconstruction : dict
+        Information of the deconstruction process.
+
+    Returns
+    -------
+    reconstructed_image : np.ndarray
+        Image with the original width and height.
+
+    """
+    # TODO adapt to non squared images
+    # TODO add an overlap in the crop
+    # TODO handle the different overlapped label values
+    # check parameters
+    check_parameter(images=(np.ndarray, list),
+                    deconstruction=dict)
+    if isinstance(images, np.ndarray):
+        images = [images]
+    for image_ in images:
+        check_array(image_,
+                    ndim=2,
+                    dtype=[np.uint8, np.uint16,
+                           np.float32, np.float64,
+                           bool],
+                    allow_nan=False)
+
+    # case where the original image was padded then cropped
+    if deconstruction["padded"] and deconstruction["cropped"]:
+
+        # reconstruct the padded image (cropped => padded - original)
+        nb_row = deconstruction["nb_row"]
+        nb_col = deconstruction["nb_col"]
+        image_ = images[0]
+        (cropped_width, cropped_height) = image_.shape
+        reconstructed_image = np.zeros(
+            (nb_row * cropped_height, nb_col * cropped_width),
+            dtype=image_.dtype)
+        i = 0
+        for i_row in range(nb_row):
+            row_ = i_row * cropped_height
+            _row = (i_row + 1) * cropped_height
+            for i_col in range(nb_col):
+                col_ = i_col * cropped_width
+                _col = (i_col + 1) * cropped_width
+                reconstructed_image[row_:_row, col_:_col] = images[i]
+                i += 1
+
+        # reconstruct the original image (cropped - padded => original)
+        left = deconstruction["pad_left"]
+        right = deconstruction["pad_right"]
+        reconstructed_image = reconstructed_image[left:-right, left:-right]
+
+    # case where the original image was padded only
+    elif deconstruction["padded"] and not deconstruction["cropped"]:
+
+        # reconstruct the original image from a padding (padded => original)
+        left = deconstruction["pad_left"]
+        right = deconstruction["pad_right"]
+        reconstructed_image = images[0][left:-right, left:-right]
+
+    # case where the original image was cropped only
+    elif not deconstruction["padded"] and deconstruction["cropped"]:
+
+        # reconstruct the original image from a cropping (cropped => original)
+        nb_row = deconstruction["nb_row"]
+        nb_col = deconstruction["nb_col"]
+        image_ = images[0]
+        (cropped_width, cropped_height) = image_.shape
+        reconstructed_image = np.zeros(
+            (nb_row * cropped_height, nb_col * cropped_width),
+            dtype=image_.dtype)
+        i = 0
+        for i_row in range(nb_row):
+            row_ = i_row * cropped_height
+            _row = (i_row + 1) * cropped_height
+            for i_col in range(nb_col):
+                col_ = i_col * cropped_width
+                _col = (i_col + 1) * cropped_width
+                reconstructed_image[row_:_row, col_:_col] = images[i]
+                i += 1
+
+    # case where no deconstruction happened
+    else:
+        reconstructed_image = images[0].copy()
+
+    return reconstructed_image
+
+
 # ### Coordinates data cleaning ###
 
-def clean_simulated_data(data, data_cell, label_encoder=None, path_output=None):
+def clean_simulated_data(data, data_cell, label_encoder=None,
+                         path_output=None):
     """Clean simulated dataset.
 
     Parameters
