@@ -5,17 +5,19 @@ Class and functions to segment nucleus and cytoplasm in 2-d and 3-d.
 """
 
 from bigfish import stack
+from .utils import label_instances
 
-from skimage.morphology import remove_small_objects, remove_small_holes
-from skimage.measure import label
 from scipy import ndimage as ndi
 import numpy as np
-from skimage.measure import regionprops
 
+from skimage.morphology.selem import disk
+from skimage.morphology import (reconstruction, binary_dilation,
+                                remove_small_objects)
 
 # TODO rename functions
 # TODO complete documentation methods
 # TODO add sanity functions
+
 
 def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
                         return_label=False, **kwargs):
@@ -118,3 +120,83 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
 
     return image_segmented
 
+
+def remove_segmented_nuc(image, mask, nuclei_size=500):
+    """Remove the nuclei we have already segmented in an image.
+
+    1) We only keep the segmented nuclei. The missed ones and the background
+    are set to 0 and removed from the original image, using a dilated mask.
+    2) We reconstruct the missing nuclei by small dilatation. As we used the
+    original image as a mask (the maximum allowed value at each pixel), the
+    background pixels remain unchanged. However, pixels from the missing
+    nuclei are partially reconstructed by the dilatation. This reconstructed
+    image only differs from the original one where the nuclei have been missed.
+    3) We substract the reconstructed image from the original one.
+    4) From the few pixels kept and restored from the missing nuclei, we build
+    a binary mask (dilatation, small object removal).
+    5) We apply this mask to the original image to get the original pixel
+    intensity of the missing nuclei.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Original image with shape (y, x).
+    mask : np.ndarray,
+        Result of the segmentation (with instance differentiation or not).
+    nuclei_size : int
+        Threshold above which we detect a nuclei.
+
+    Returns
+    -------
+    unsegmented_nuclei : np.ndarray
+        Image with shape (y, x) and the same dtype of the original image.
+        Nuclei previously detected in the mask are removed.
+
+    """
+    # TODO fix the dtype of the mask
+    # check parameters
+    stack.check_array(image,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16,
+                             np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_array(mask,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      allow_nan=False)
+
+    # cast mask in np.int64 if it is binary
+    if mask.dtype == bool or mask.dtype == np.uint16:
+        mask = mask.astype(np.int64)
+
+    # store original dtype
+    original_dtype = image.dtype
+
+    # dilate the mask
+    s = disk(10, bool)
+    dilated_mask = binary_dilation(mask, selem=s)
+
+    # remove the unsegmented nuclei from the original image
+    diff = image.copy()
+    diff[dilated_mask == 0] = 0
+
+    # reconstruct the missing nuclei by dilatation
+    s = disk(1)
+    image_reconstructed = reconstruction(diff, image, selem=s)
+    image_reconstructed = image_reconstructed.astype(original_dtype)
+
+    # substract the reconstructed image from the original one
+    image_filtered = image.copy()
+    image_filtered -= image_reconstructed
+
+    # build the binary mask for the missing nuclei
+    missing_mask = image_filtered > 0
+    missing_mask = remove_small_objects(missing_mask, nuclei_size)
+    s = disk(20, bool)
+    missing_mask = binary_dilation(missing_mask, selem=s)
+
+    # get the original pixel intensity of the unsegmented nuclei
+    unsegmented_nuclei = image.copy()
+    unsegmented_nuclei[missing_mask == 0] = 0
+
+    return unsegmented_nuclei
