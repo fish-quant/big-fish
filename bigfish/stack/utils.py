@@ -315,7 +315,7 @@ def check_recipe(recipe, data_directory=None):
     # check that requested files exist
     if data_directory is not None:
         if not os.path.isdir(data_directory):
-            raise ValueError("Directory does not exist: {0}."
+            raise ValueError("Directory does not exist: {0}"
                              .format(data_directory))
         recipe = fit_recipe(recipe)
         nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
@@ -327,7 +327,7 @@ def check_recipe(recipe, data_directory=None):
                         path = get_path_from_recipe(recipe, data_directory,
                                                     fov=fov, r=r, c=c, z=z)
                         if not os.path.isfile(path):
-                            raise ValueError("File does not exist:{0}."
+                            raise ValueError("File does not exist: {0}"
                                              .format(path))
 
     return
