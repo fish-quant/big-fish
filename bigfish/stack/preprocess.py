@@ -5,7 +5,6 @@ Functions used to format and clean any input loaded in bigfish.
 """
 
 import os
-import re
 import warnings
 
 import numpy as np
@@ -14,7 +13,8 @@ import pandas as pd
 from .io import read_image, read_cell_json, read_rna_json
 from .utils import (check_array, check_parameter, check_recipe,
                     check_range_value, check_df, complete_coordinates_2d,
-                    from_coord_to_image)
+                    from_coord_to_image, fit_recipe, get_path_from_recipe,
+                    get_nb_element_per_dimension, count_nb_fov)
 
 from sklearn.preprocessing import LabelEncoder
 
@@ -204,7 +204,7 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
     for recipe, input_folder in data_map:
 
         # load and generate tensors for each fov stored in a recipe
-        nb_fov = _count_nb_fov(recipe)
+        nb_fov = count_nb_fov(recipe)
         for i_fov in range(nb_fov):
             tensor = build_stack(recipe, input_folder, input_dimension, i_fov,
                                  check, normalize, channel_to_stretch,
@@ -213,45 +213,6 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
                 yield tensor, input_folder, recipe, i_fov
             else:
                 yield tensor
-
-
-def _count_nb_fov(recipe):
-    """Count the number of different fields of view that can be defined from
-    the recipe.
-
-    Parameters
-    ----------
-    recipe : dict
-        Map the images according to their field of view, their round,
-        their channel and their spatial dimensions. Can only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
-
-    Returns
-    -------
-    nb_fov : int
-        Number of different fields of view in the recipe.
-
-    """
-    # check recipe is a dictionary
-    if not isinstance(recipe, dict):
-        raise Exception("The recipe is not valid. It should be a dictionary.")
-
-    # check the fov key exists
-    if "fov" not in recipe:
-        return 1
-
-    # case where fov is directly a string
-    elif isinstance(recipe["fov"], str):
-        return 1
-
-    # case where fov is a list of strings
-    elif isinstance(recipe["fov"], list):
-        return len(recipe["fov"])
-
-    # non valid cases
-    else:
-        raise ValueError("'fov' should be a List or a str, not {0}"
-                         .format(type(recipe["fov"])))
 
 
 def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
@@ -459,14 +420,14 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
 
     """
     # complete the recipe with unused morphemes
-    recipe = _fit_recipe(recipe)
+    recipe = fit_recipe(recipe)
 
     # if the initial dimension of the files is unknown, we read one of them
     if input_dimension is None:
         input_dimension = _get_input_dimension(recipe, input_folder)
 
     # get the number of elements to stack per dimension
-    nb_r, nb_c, nb_z = _get_nb_element_per_dimension(recipe)
+    nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
 
     # we stack our files according to their initial dimension
     if input_dimension == 2:
@@ -486,45 +447,6 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
                          "or 5-d.".format(input_dimension))
 
     return stack
-
-
-def _fit_recipe(recipe):
-    """Fit a recipe.
-
-    Fitting a recipe consists in wrapping every values of 'fov', 'r', 'c' and
-    'z' in a list (an empty one if necessary). Values for 'ext' and 'opt' are
-    also initialized.
-
-    Parameters
-    ----------
-    recipe : dict
-        Map the images according to their field of view, their round,
-        their channel and their spatial dimensions. Can only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
-
-    Returns
-    -------
-    new_recipe : dict
-        Map the images according to their field of view, their round,
-        their channel and their spatial dimensions. Contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' and 'opt', initialized if
-        necessary.
-
-    """
-    # initialize and fit the dimensions 'fov', 'r', 'c' and 'z'
-    for key in ['fov', 'r', 'c', 'z']:
-        if key not in recipe:
-            recipe[key] = [None]
-        value = recipe[key]
-        if isinstance(value, str):
-            recipe[key] = [value]
-
-    # initialize the dimensions 'ext', 'opt'
-    for key in ['ext', 'opt']:
-        if key not in recipe:
-            recipe[key] = ""
-
-    return recipe
 
 
 def _build_stack_from_2d(recipe, input_folder, fov=0, nb_r=1, nb_c=1, nb_z=1):
@@ -565,8 +487,8 @@ def _build_stack_from_2d(recipe, input_folder, fov=0, nb_r=1, nb_c=1, nb_z=1):
             # load and stack z elements (2-d tensors)
             tensors_2d = []
             for z in range(nb_z):
-                path = _get_path_from_recipe(recipe, input_folder, fov=fov,
-                                             r=r, c=c, z=z)
+                path = get_path_from_recipe(recipe, input_folder, fov=fov,
+                                            r=r, c=c, z=z)
                 tensor_2d = read_image(path)
                 tensors_2d.append(tensor_2d)
 
@@ -615,8 +537,8 @@ def _build_stack_from_3d(recipe, input_folder, fov=0, nb_r=1, nb_c=1):
         # load and stack channel elements (3-d tensors)
         tensors_3d = []
         for c in range(nb_c):
-            path = _get_path_from_recipe(recipe, input_folder, fov=fov, r=r,
-                                         c=c)
+            path = get_path_from_recipe(recipe, input_folder, fov=fov, r=r,
+                                        c=c)
             tensor_3d = read_image(path)
             tensors_3d.append(tensor_3d)
 
@@ -655,7 +577,7 @@ def _build_stack_from_4d(recipe, input_folder, fov=0, nb_r=1):
     # load each file from a new round element and stack them
     tensors_4d = []
     for r in range(nb_r):
-        path = _get_path_from_recipe(recipe, input_folder, fov=fov, r=r)
+        path = get_path_from_recipe(recipe, input_folder, fov=fov, r=r)
         tensor_4d = read_image(path)
         tensors_4d.append(tensor_4d)
 
@@ -686,91 +608,10 @@ def _build_stack_from_5d(recipe, input_folder, fov=0):
 
     """
     # the recipe can only contain one file with a 5-d tensor per fov
-    path = _get_path_from_recipe(recipe, input_folder, fov=fov)
+    path = get_path_from_recipe(recipe, input_folder, fov=fov)
     tensor_5d = read_image(path)
 
     return tensor_5d
-
-
-def _get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
-    """Build the path of a file from a recipe and the indices of specific
-    elements.
-
-    Parameters
-    ----------
-    recipe : dict
-        Map the images according to their field of view, their round,
-        their channel and their spatial dimensions. Only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
-    input_folder : str
-        Path of the folder containing the images.
-    fov : int
-        Index of the 'fov' element in the recipe to use in the filename.
-    r : int
-        Index of the 'r' element in the recipe to use in the filename.
-    c : int
-        Index of the 'c' element in the recipe to use in the filename.
-    z : int
-        Index of the 'z' element in the recipe to use in the filename.
-
-    Returns
-    -------
-    path : str
-        Path of the file to load.
-
-    """
-    # build a map of the elements' indices
-    map_element_index = {"fov": fov, "r": r, "c": c, "z": z}
-
-    # get filename pattern and decompose it
-    recipe_pattern = recipe["pattern"]
-    path_elements = re.findall("fov|r|c|z|ext|opt", recipe_pattern)
-    path_separators = re.split("fov|r|c|z|ext|opt", recipe_pattern)
-
-    # get filename recombining elements of the recipe
-    filename = path_separators[0]  # usually an empty string
-    for (element_name, separator) in zip(path_elements, path_separators[1:]):
-        # if we need an element from a list of elements of the same dimension
-        # (eg. to pick a specific channel 'c' among a list of channels)
-        if element_name in map_element_index:
-            element_index = map_element_index[element_name]
-            element = recipe[element_name][element_index]
-        # if this element is unique for all the recipe (eg. 'fov')
-        else:
-            element = recipe[element_name]
-        # the filename is built ensuring the order of apparition of the
-        # different morphemes and their separators
-        filename += element
-        filename += separator
-
-    # get path
-    path = os.path.join(input_folder, filename)
-
-    return path
-
-
-def _get_nb_element_per_dimension(recipe):
-    """Count the number of element to stack for each dimension ('r', 'c'
-    and 'z').
-
-    Parameters
-    ----------
-    recipe : dict
-        Map the images according to their field of view, their round,
-        their channel and their spatial dimensions. Only contain the keys
-        'fov', 'r', 'c', 'z', 'ext' or 'opt'.
-
-    Returns
-    -------
-    nb_r : int
-        Number of rounds to be stacked.
-    nb_c : int
-        Number of channels to be stacked.
-    nb_z : int
-        Number of z layers to be stacked.
-
-    """
-    return len(recipe["r"]), len(recipe["c"]), len(recipe["z"])
 
 
 def _get_input_dimension(recipe, input_folder):
@@ -792,7 +633,7 @@ def _get_input_dimension(recipe, input_folder):
 
     """
     # get a valid path from the recipe
-    path = _get_path_from_recipe(recipe, input_folder)
+    path = get_path_from_recipe(recipe, input_folder)
 
     # load the image and return the number of dimensions
     image = read_image(path)

@@ -6,6 +6,8 @@ Utility functions for bigfish.stack submodule.
 
 import inspect
 import re
+import os
+import copy
 
 import numpy as np
 import pandas as pd
@@ -256,9 +258,9 @@ def check_range_value(array, min_=None, max_=None):
     return True
 
 
-# ### Sanity checks parameters ###
+# ### Recipe management (sanity checks, fitting) ###
 
-def check_recipe(recipe):
+def check_recipe(recipe, data_directory=None):
     """Check and validate a recipe.
 
     Checking a recipe consist in validating its filename pattern and the
@@ -270,12 +272,14 @@ def check_recipe(recipe):
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Can only contain the keys
         'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+    data_directory : str
+        Path of the directory with the files describes in the recipe. If it is
+        provided, the function check that the files exist.
 
     Returns
     -------
 
     """
-    # TODO check files exists
     # check recipe is a dictionary
     if not isinstance(recipe, dict):
         raise Exception("The recipe is not valid. It should be a dictionary.")
@@ -308,8 +312,190 @@ def check_recipe(recipe):
             raise TypeError("A recipe can only contain lists or strings, "
                             "not {0}.".format(type(value)))
 
+    # check that requested files exist
+    if data_directory is not None:
+        if not os.path.isdir(data_directory):
+            raise ValueError("Directory does not exist: {0}."
+                             .format(data_directory))
+        recipe = fit_recipe(recipe)
+        nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
+        nb_fov = count_nb_fov(recipe)
+        for fov in range(nb_fov):
+            for r in range(nb_r):
+                for c in range(nb_c):
+                    for z in range(nb_z):
+                        path = get_path_from_recipe(recipe, data_directory,
+                                                    fov=fov, r=r, c=c, z=z)
+                        if not os.path.isfile(path):
+                            raise ValueError("File does not exist:{0}."
+                                             .format(path))
+
     return
 
+
+def fit_recipe(recipe):
+    """Fit a recipe.
+
+    Fitting a recipe consists in wrapping every values of 'fov', 'r', 'c' and
+    'z' in a list (an empty one if necessary). Values for 'ext' and 'opt' are
+    also initialized.
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions. Can only contain the keys
+        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+
+    Returns
+    -------
+    new_recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions. Contain the keys
+        'pattern', 'fov', 'r', 'c', 'z', 'ext' and 'opt', initialized if
+        necessary.
+
+    """
+    # initialize recipe
+    new_recipe = copy.deepcopy(recipe)
+
+    # initialize and fit the dimensions 'fov', 'r', 'c' and 'z'
+    for key in ['fov', 'r', 'c', 'z']:
+        if key not in new_recipe:
+            new_recipe[key] = [None]
+        value = new_recipe[key]
+        if isinstance(value, str):
+            new_recipe[key] = [value]
+
+    # initialize the dimensions 'ext', 'opt'
+    for key in ['ext', 'opt']:
+        if key not in new_recipe:
+            new_recipe[key] = ""
+
+    return new_recipe
+
+
+def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
+    """Build the path of a file from a recipe and the indices of specific
+    elements.
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions. Only contain the keys
+        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+    input_folder : str
+        Path of the folder containing the images.
+    fov : int
+        Index of the 'fov' element in the recipe to use in the filename.
+    r : int
+        Index of the 'r' element in the recipe to use in the filename.
+    c : int
+        Index of the 'c' element in the recipe to use in the filename.
+    z : int
+        Index of the 'z' element in the recipe to use in the filename.
+
+    Returns
+    -------
+    path : str
+        Path of the file to load.
+
+    """
+    # build a map of the elements' indices
+    map_element_index = {"fov": fov, "r": r, "c": c, "z": z}
+
+    # get filename pattern and decompose it
+    recipe_pattern = recipe["pattern"]
+    path_elements = re.findall("fov|r|c|z|ext|opt", recipe_pattern)
+    path_separators = re.split("fov|r|c|z|ext|opt", recipe_pattern)
+
+    # get filename recombining elements of the recipe
+    filename = path_separators[0]  # usually an empty string
+    for (element_name, separator) in zip(path_elements, path_separators[1:]):
+        # if we need an element from a list of elements of the same dimension
+        # (eg. to pick a specific channel 'c' among a list of channels)
+        if element_name in map_element_index:
+            element_index = map_element_index[element_name]
+            element = recipe[element_name][element_index]
+        # if this element is unique for all the recipe (eg. 'fov')
+        else:
+            element = recipe[element_name]
+        # the filename is built ensuring the order of apparition of the
+        # different morphemes and their separators
+        filename += element
+        filename += separator
+
+    # get path
+    path = os.path.join(input_folder, filename)
+
+    return path
+
+
+def get_nb_element_per_dimension(recipe):
+    """Count the number of element to stack for each dimension ('r', 'c'
+    and 'z').
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions. Only contain the keys
+        'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+
+    Returns
+    -------
+    nb_r : int
+        Number of rounds to be stacked.
+    nb_c : int
+        Number of channels to be stacked.
+    nb_z : int
+        Number of z layers to be stacked.
+
+    """
+    return len(recipe["r"]), len(recipe["c"]), len(recipe["z"])
+
+
+def count_nb_fov(recipe):
+    """Count the number of different fields of view that can be defined from
+    the recipe.
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions. Can only contain the keys
+        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+
+    Returns
+    -------
+    nb_fov : int
+        Number of different fields of view in the recipe.
+
+    """
+    # check recipe is a dictionary
+    if not isinstance(recipe, dict):
+        raise Exception("The recipe is not valid. It should be a dictionary.")
+
+    # check the fov key exists
+    if "fov" not in recipe:
+        return 1
+
+    # case where fov is directly a string
+    elif isinstance(recipe["fov"], str):
+        return 1
+
+    # case where fov is a list of strings
+    elif isinstance(recipe["fov"], list):
+        return len(recipe["fov"])
+
+    # non valid cases
+    else:
+        raise ValueError("'fov' should be a List or a str, not {0}"
+                         .format(type(recipe["fov"])))
+
+
+# ### Sanity checks parameters ###
 
 def check_parameter(**kwargs):
     """Check dtype of the function's parameters.
