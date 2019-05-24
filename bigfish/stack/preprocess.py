@@ -116,17 +116,17 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
     The recipe dictionary for one field of view takes the form:
 
         {
-         "fov": str,     (optional)
-         "z": List[str], (optional)
-         "c": List[str], (optional)
-         "r": List[str], (optional)
-         "ext": str,     (optional)
-         "opt": str,     (optional)
+         "fov": List[str], (optional)
+         "z": List[str],   (optional)
+         "c": List[str],   (optional)
+         "r": List[str],   (optional)
+         "ext": str,       (optional)
+         "opt": str,       (optional)
          "pattern"
          }
 
     - A field of view is defined by an ID common to every images belonging to
-    the field of view ("fov").
+    the same field of view ("fov").
     - At least every images are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
@@ -135,6 +135,7 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
+    - The fields "fov", "z", "c" and "r" can be strings instead of lists.
 
     Example 1. Let us assume 3-d images (zyx dimensions) saved as
     "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
@@ -261,17 +262,17 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
     The recipe dictionary for one field of view takes the form:
 
         {
-         "fov": str,     (optional)
-         "z": List[str], (optional)
-         "c": List[str], (optional)
-         "r": List[str], (optional)
-         "ext": str,     (optional)
-         "opt": str,     (optional)
+         "fov": List[str], (optional)
+         "z": List[str],   (optional)
+         "c": List[str],   (optional)
+         "r": List[str],   (optional)
+         "ext": str,       (optional)
+         "opt": str,       (optional)
          "pattern"
          }
 
     - A field of view is defined by an ID common to every images belonging to
-    the field of view ("fov").
+    the same field of view ("fov").
     - At least every images are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
@@ -280,6 +281,7 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
+    - The fields "fov", "z", "c" and "r" can be strings instead of lists.
 
     Example 1. Let us assume 3-d images (zyx dimensions) saved as
     "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
@@ -387,17 +389,17 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
     The recipe dictionary for one field of view takes the form:
 
         {
-         "fov": str,     (optional)
-         "z": List[str], (optional)
-         "c": List[str], (optional)
-         "r": List[str], (optional)
-         "ext": str,     (optional)
-         "opt": str,     (optional)
+         "fov": List[str], (optional)
+         "z": List[str],   (optional)
+         "c": List[str],   (optional)
+         "r": List[str],   (optional)
+         "ext": str,       (optional)
+         "opt": str,       (optional)
          "pattern"
          }
 
     - A field of view is defined by an ID common to every images belonging to
-    the field of view ("fov").
+    the same field of view ("fov").
     - At least every images are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
@@ -406,6 +408,7 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
+    - The fields "fov", "z", "c" and "r" can be strings instead of lists.
 
     Example 1. Let us assume 3-d images (zyx dimensions) saved as
     "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
