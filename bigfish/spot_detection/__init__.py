@@ -5,9 +5,10 @@ The bigfish.detection module includes function to detect RNA spot in 2-d and
 3-d.
 """
 
-from .detection import (detection, compute_snr, get_sigma)
+from .detection import (detection, compute_snr, get_sigma, detection_log_lm)
 
 
 __all__ = ["detection",
            "compute_snr",
-           "get_sigma"]
+           "get_sigma",
+           "detection_log_lm"]
