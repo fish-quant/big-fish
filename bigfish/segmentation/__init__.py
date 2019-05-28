@@ -6,14 +6,16 @@ cytoplasm and label them, in 2-d and 3-d.
 """
 
 from .utils import label_instances, compute_mean_size_object, merge_labels
-from .nuc_segmentation import (nuc_segmentation_2d, filtered_threshold,
-                               remove_segmented_nuc)
-from .cyt_segmentation import cyt_segmentation_2d, watershed_2d
+from .nuc_segmentation import (filtered_threshold, remove_segmented_nuc)
+from .cyt_segmentation import (build_cyt_relief, build_cyt_binary_mask,
+                               cyt_watershed)
+from .unet import get_input_size_unet
 
+_nuc = ["filtered_threshold", "remove_segmented_nuc"]
 
-_nuc = ["nuc_segmentation_2d", "filtered_threshold", "remove_segmented_nuc"]
+_cyt = ["build_cyt_relief", "build_cyt_binary_mask", cyt_watershed]
 
-_cyt = ["cyt_segmentation_2d", "watershed_2d"]
+_unet = ["get_input_size_unet"]
 
 _utils = ["label_instances", "compute_mean_size_object", "merge_labels"]
 
