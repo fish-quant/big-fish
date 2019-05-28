@@ -8,6 +8,7 @@ import bigfish.stack as stack
 
 import numpy as np
 from skimage.measure import label, regionprops
+from skimage.morphology import remove_small_objects
 
 
 def label_instances(mask):
@@ -101,6 +102,10 @@ def merge_labels(label_1, label_2):
     # count number of label
     nb_label_1 = label_1.max()
     nb_label_2 = label_2.max()
+
+    # clean masks
+    label_1 = remove_small_objects(label_1, 3000)
+    label_2 = remove_small_objects(label_2, 3000)
 
     # cast labels in np.int64
     label_1 = label_1.astype(np.int64)
