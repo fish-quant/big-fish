@@ -35,6 +35,7 @@ from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
 # TODO add cache routines
 # TODO manage multiprocessing
 # TODO improve logging
+# TODO use last version of the model
 # ### 2D models ###
 
 class SqueezeNet0(BaseModel):
