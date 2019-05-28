@@ -4,66 +4,180 @@
 Class and functions to segment nucleus and cytoplasm in 2-d and 3-d.
 """
 
-from bigfish import stack
-from .nuc_segmentation import nuc_segmentation_2d
+import numpy as np
+
+import bigfish.stack as stack
 
 from skimage.morphology import remove_small_objects, remove_small_holes
-import numpy as np
 from skimage.morphology import watershed
 from skimage.filters import threshold_otsu
 from skimage.measure import regionprops
+from scipy import ndimage as ndi
 
 
 # TODO rename functions
-# TODO complete documentation methods
 
 
-def cyt_segmentation_2d(tensor, r, c_nuc, c_cyt, segmentation_method):
-    # TODO add documentation
-    # check tensor dimensions and its dtype
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
+def build_cyt_relief(image_projected, nuc_labelled, alpha=0.8):
+    """Compute a 2-d representation of the cytoplasm to be used by watershed
+    algorithm.
 
-    # apply segmentation
-    # TODO validate the pipeline with this cast
-    image_segmented = stack.cast_img_uint8(tensor)
-    if segmentation_method == "watershed":
-        image_segmented = watershed_2d(image_segmented, r, c_nuc, c_cyt)
+    Cells are represented as watershed, with a low values to the center and
+    maximum values at their borders.
+
+    The equation used is:
+        relief = alpha * relief_pixel + (1 - alpha) * relief_distance
+
+    - 'relief_pixel' exploit the differences in pixel intensity values.
+    - 'relief_distance' use the distance from the nuclei.
+
+    Parameters
+    ----------
+    image_projected : np.ndarray, np.uint
+        Projected image of the cytoplasm with shape (y, x).
+    nuc_labelled : np.ndarray,
+        Result of the nuclei segmentation with shape (y, x).
+    alpha : float or int
+        Weight of the pixel intensity values to compute the relief. A value of
+        0 and 1 respectively return 'relief_distance' and 'relief_pixel'.
+
+    Returns
+    -------
+    relief : np.ndarray, np.uint
+        Relief image of the cytoplasm with shape (y, x).
+
+    """
+    # TODO use distance map from bigfish.stack
+    # check parameters
+    stack.check_array(image_projected,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16],
+                      allow_nan=False)
+    stack.check_array(nuc_labelled,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      allow_nan=False)
+    stack.check_parameter(alpha=(float, int))
+
+    # use pixel intensity of the cytoplasm channel to compute the seed.
+    if alpha == 1:
+        relief = image_projected.copy()
+        max_intensity = np.iinfo(image_projected.dtype).max
+        relief = max_intensity - relief
+        relief[nuc_labelled > 0] = 0
+
+    # use distance from the nuclei
+    elif alpha == 0:
+        binary_mask_nuc = nuc_labelled > 0
+        relief = ndi.distance_transform_edt(~binary_mask_nuc)
+        relief = np.true_divide(relief, relief.max(), dtype=np.float32)
+        if image_projected.dtype == np.uint8:
+            relief = stack.cast_img_uint8(relief)
+        else:
+            relief = stack.cast_img_uint16(relief)
+
+    # use both previous methods
+    elif 0 < alpha < 1:
+        relief_pixel = image_projected.copy()
+        max_intensity = np.iinfo(image_projected.dtype).max
+        relief_pixel = max_intensity - relief_pixel
+        relief_pixel[nuc_labelled > 0] = 0
+        relief_pixel = stack.cast_img_float32(relief_pixel)
+        binary_mask_nuc = nuc_labelled > 0
+        relief_distance = ndi.distance_transform_edt(~binary_mask_nuc)
+        relief_distance = np.true_divide(relief_distance,
+                                         relief_distance.max(),
+                                         dtype=np.float32)
+        relief = alpha * relief_pixel + (1 - alpha) * relief_distance
+        if image_projected.dtype == np.uint8:
+            relief = stack.cast_img_uint8(relief)
+        else:
+            relief = stack.cast_img_uint16(relief)
+
     else:
-        pass
-    return image_segmented
+        raise ValueError("Parameter 'alpha' is wrong. Must be comprised "
+                         "between 0 and 1. Currently 'alpha' is {0}"
+                         .format(alpha))
+
+    return relief
 
 
-def watershed_2d(tensor, r, c_nuc, c_cyt):
-    # TODO add documentation
-    # TODO better integration with nuclei segmentation
-    # nuclei segmentation
-    _, nuc_labelled, _ = nuc_segmentation_2d(
-        tensor,
-        projection_method="mip",
-        r=r, c=c_nuc,
-        segmentation_method="threshold",
-        return_label=True)
+def build_cyt_binary_mask(image_projected, threshold=None):
+    """Compute a binary mask of the cytoplasm.
 
-    # get source image
-    cyt = tensor[r, c_cyt, :, :, :]
-    cyt_projected = stack.projection(tensor, method="mip", r=r, c=c_cyt)
+    Parameters
+    ----------
+    image_projected : np.ndarray, np.uint
+        A 2-d projection of the cytoplasm with shape (y, x).
+    threshold : int
+        Intensity pixel threshold to compute the binary mask. If None, an Otsu
+        threshold is computed.
 
-    # get a mask for the cytoplasm
-    mask = (cyt_projected > threshold_otsu(cyt_projected))
-    mask = remove_small_objects(mask, 200)
-    mask = remove_small_holes(mask, 200)
+    Returns
+    -------
+    mask : np.ndarray, bool
+        Binary mask of the cytoplasm with shape (y, x).
 
-    # get image to apply watershed on
-    seed = np.sum(cyt, 0)
-    seed = seed.max() - seed
-    seed[nuc_labelled > 0] = 0
+    """
+    # check parameters
+    stack.check_array(image_projected,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16],
+                      allow_nan=False)
+    stack.check_parameter(threshold=(int, type(None)))
 
-    # get the markers from the nuclei
-    markers = np.zeros_like(seed)
+    # get a threshold
+    if threshold is None:
+        threshold = threshold_otsu(image_projected)
+
+    # compute a binary mask
+    mask = (image_projected > threshold)
+    mask = remove_small_objects(mask, 3000)
+    mask = remove_small_holes(mask, 2000)
+
+    return mask
+
+
+def cyt_watershed(relief, nuc_labelled, mask):
+    """Apply watershed algorithm on the cytoplasm to segment cell instances.
+
+    Parameters
+    ----------
+    relief : np.ndarray, np.uint
+        Relief image of the cytoplasm with shape (y, x).
+    nuc_labelled : np.ndarray
+        Result of the nuclei segmentation with shape (y, x).
+    mask : np.ndarray, bool
+        Binary mask of the cytoplasm with shape (y, x).
+
+    Returns
+    -------
+    cyt_segmented : np.ndarray, np.int64
+        Segmentation of the cytoplasm with instance differentiation and shape
+        (y, x).
+
+    """
+    # check parameters
+    stack.check_array(relief,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16],
+                      allow_nan=False)
+    stack.check_array(nuc_labelled,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      allow_nan=False)
+    stack.check_array(mask,
+                      ndim=2,
+                      dtype=[bool],
+                      allow_nan=False)
+
+    # get markers
+    markers = np.zeros_like(relief)
     for r in regionprops(nuc_labelled):
         markers[tuple(map(int, r.centroid))] = r.label
 
-    # apply watershed
-    cyt_segmented = watershed(seed, markers, mask=mask)
+    # segment cytoplasm
+    cyt_segmented = watershed(relief, markers, mask=mask)
+    cyt_segmented = cyt_segmented.astype(np.int64)
 
     return cyt_segmented
