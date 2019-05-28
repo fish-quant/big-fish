@@ -5,7 +5,6 @@ Class and functions to segment nucleus and cytoplasm in 2-d and 3-d.
 """
 
 from bigfish import stack
-from .utils import label_instances
 
 from scipy import ndimage as ndi
 import numpy as np
@@ -17,59 +16,6 @@ from skimage.morphology import (reconstruction, binary_dilation,
 # TODO rename functions
 # TODO complete documentation methods
 # TODO add sanity functions
-
-
-def nuc_segmentation_2d(tensor, projection_method, r, c, segmentation_method,
-                        return_label=False, **kwargs):
-    """Segment nuclei from a 2-d projection.
-
-    Parameters
-    ----------
-    tensor : nd.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
-    projection_method : str
-        Method used to project the image in 2-d.
-    r : int
-        Round index to process.
-    c : int
-        Channel index of the dapi image.
-    segmentation_method : str
-        Method used to segment the nuclei.
-    return_label : bool
-        Condition to count and label the instances segmented in the image.
-
-    Returns
-    -------
-    image_segmented : np.ndarray, bool
-        Binary 2-d image with shape (y, x).
-    image_labelled : np.ndarray, np.int64
-        Image with labelled segmented instances and shape (y, x).
-    nb_labels : int
-        Number of different instances segmented.
-    """
-    # check tensor dimensions and its dtype
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
-
-    # get a 2-d dapi image
-    image_2d = stack.projection(tensor,
-                                method=projection_method,
-                                r=r,
-                                c=c)
-
-    # apply segmentation
-    # TODO validate the pipeline with this cast
-    image_segmented = stack.cast_img_uint8(image_2d)
-    if segmentation_method == "threshold":
-        image_segmented = filtered_threshold(image_segmented, **kwargs)
-    else:
-        pass
-
-    # labelled and count segmented instances
-    if return_label:
-        image_labelled, nb_labels = label_instances(image_segmented)
-        return image_segmented, image_labelled, nb_labels
-    else:
-        return image_segmented
 
 
 def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
@@ -121,7 +67,7 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
     return image_segmented
 
 
-def remove_segmented_nuc(image, mask, nuclei_size=500):
+def remove_segmented_nuc(image, mask, nuclei_size=2000):
     """Remove the nuclei we have already segmented in an image.
 
     1) We only keep the segmented nuclei. The missed ones and the background
@@ -136,10 +82,11 @@ def remove_segmented_nuc(image, mask, nuclei_size=500):
     a binary mask (dilatation, small object removal).
     5) We apply this mask to the original image to get the original pixel
     intensity of the missing nuclei.
+    6) We remove pixels with a too low intensity (using Otsu thresholding).
 
     Parameters
     ----------
-    image : np.ndarray
+    image : np.ndarray, np.uint
         Original image with shape (y, x).
     mask : np.ndarray,
         Result of the segmentation (with instance differentiation or not).
@@ -154,11 +101,11 @@ def remove_segmented_nuc(image, mask, nuclei_size=500):
 
     """
     # TODO fix the dtype of the mask
+    # TODO start from the original image to manage the potential rescaling
     # check parameters
     stack.check_array(image,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16,
-                             np.float32, np.float64],
+                      dtype=[np.uint8, np.uint16],
                       allow_nan=False)
     stack.check_array(mask,
                       ndim=2,
@@ -198,5 +145,9 @@ def remove_segmented_nuc(image, mask, nuclei_size=500):
     # get the original pixel intensity of the unsegmented nuclei
     unsegmented_nuclei = image.copy()
     unsegmented_nuclei[missing_mask == 0] = 0
+    if original_dtype == np.uint8:
+        unsegmented_nuclei[unsegmented_nuclei < 40] = 0
+    else:
+        unsegmented_nuclei[unsegmented_nuclei < 10000] = 0
 
     return unsegmented_nuclei
