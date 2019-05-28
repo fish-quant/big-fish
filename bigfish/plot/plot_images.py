@@ -508,30 +508,28 @@ def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
     return
 
 
-def plot_spot_detection(tensor, coordinates, radius, r=0, c=0, z=0,
-                        framesize=(15, 15), projection_2d=False,
+def plot_spot_detection(tensor, coordinates, radius, rescale=False, title=None,
+                        framesize=(15, 5), remove_frame=False,
                         path_output=None, ext="png"):
-    """
+    """Plot detected spot on a 2-d image.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
-        A 5-d tensor with shape (r, c, z, y, x).
+    tensor : np.ndarray
+        A 2-d tensor with shape (y, x).
     coordinates : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or
         (nb_spots, 2) for 3-d or 2-d images respectively.
     radius : float
         Radius of the detected spots.
-    r : int
-        Index of the round to keep.
-    c : int
-        Index of the channel to keep.
-    z : int
-        Index of the z-slice to keep.
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
+    title : str
+        Title of the image.
     framesize : tuple
         Size of the frame used to plot (plt.figure(figsize=framesize).
-    projection_2d : bool
-        Project the image in 2-d and plot the spot detected on the projection.
+    remove_frame : bool
+        Remove axes and frame.
     path_output : str
         Path to save the image (without extension).
     ext : str or List[str]
@@ -542,62 +540,63 @@ def plot_spot_detection(tensor, coordinates, radius, r=0, c=0, z=0,
     -------
 
     """
-    # TODO add title in the plot and remove axes
-    # TODO add parameter for vmin and vmax
     # TODO check coordinates shape
-    # check tensor
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
-    stack.check_array(coordinates, ndim=2, dtype=np.int64)
+    # check parameters
+    stack.check_array(tensor,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16,
+                             np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_array(coordinates,
+                      ndim=2,
+                      dtype=[np.int64],
+                      allow_nan=False)
+    stack.check_parameter(radius=float,
+                          rescale=bool,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
 
-    # projection 2d
-    if projection_2d:
-        image_2d = stack.projection(tensor,
-                                    method="mip",
-                                    r=r,
-                                    c=c)
+    # get minimum and maximum value of the image
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(tensor)
 
-        # plot
-        fig, ax = plt.subplots(1, 2, figsize=framesize)
-        ax[0].imshow(image_2d)
-        ax[1].set_title("Projected image", fontweight="bold", fontsize=15)
-        ax[1].imshow(image_2d)
-        ax[1].set_title("All detected spots", fontweight="bold", fontsize=15)
-        for spot_coordinate in coordinates:
-            _, y, x = spot_coordinate
-            c = plt.Circle((x, y), radius,
-                           color="red",
-                           linewidth=1,
-                           fill=False)
-            ax[1].add_patch(c)
-        plt.tight_layout()
-        save_plot(path_output, ext)
-        plt.show()
+    # plot
+    fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
 
-    # a specific z-slice
+    # image
+    if not rescale:
+        ax[0].imshow(tensor, vmin=vmin, vmax=vmax)
     else:
-        # keep spot detected for a specific height
-        if coordinates.shape[1] == 3:
-            coordinates = coordinates[coordinates[:, 0] == z]
-            coordinates = coordinates[:, 1:]
+        ax[0].imshow(tensor)
+    if title is not None:
+        ax[0].set_title(title, fontweight="bold", fontsize=10)
+    if remove_frame:
+        ax[0].axis("off")
 
-        image_2d = tensor[r, c, z, :, :]
+    # spots
+    if not rescale:
+        ax[1].imshow(tensor, vmin=vmin, vmax=vmax)
+    else:
+        ax[1].imshow(tensor)
+    for spot_coordinate in coordinates:
+        _, y, x = spot_coordinate
+        c = plt.Circle((x, y), radius,
+                       color="red",
+                       linewidth=1,
+                       fill=False)
+        ax[1].add_patch(c)
+    if title is not None:
+        ax[1].set_title("All detected spots", fontweight="bold", fontsize=10)
+    if remove_frame:
+        ax[1].axis("off")
 
-        # plot
-        fig, ax = plt.subplots(1, 2, figsize=framesize)
-        ax[0].imshow(image_2d)
-        ax[0].set_title("Z-slice: {0}".format(z),
-                        fontweight="bold", fontsize=15)
-        ax[1].imshow(image_2d)
-        ax[1].set_title("Detected spots", fontweight="bold", fontsize=15)
-        for spot_coordinate in coordinates:
-            y, x = spot_coordinate
-            c = plt.Circle((x, y), radius,
-                           color="red",
-                           linewidth=1,
-                           fill=False)
-            ax[1].add_patch(c)
-        plt.tight_layout()
+    plt.tight_layout()
+    if path_output is not None:
         save_plot(path_output, ext)
-        plt.show()
+    plt.show()
 
     return
