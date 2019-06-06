@@ -7,7 +7,8 @@ The bigfish.detection module includes function to detect RNA spot in 2-d and
 
 from .spot_detection import (log_lm, local_maximum_detection,
                              spots_thresholding, compute_snr,
-                             from_threshold_to_snr, get_sigma)
+                             from_threshold_to_snr, get_sigma, log_cc, get_cc,
+                             filter_cc)
 from .gaussian_fit import (gaussian_3d, precompute_erf, build_reference_spot,
                            get_spot_volume, get_spot_surface,
                            initialize_spot_parameter_3d, objective_function,
@@ -15,7 +16,8 @@ from .gaussian_fit import (gaussian_3d, precompute_erf, build_reference_spot,
                            initialize_grid_3d)
 
 _detection = ["log_lm", "local_maximum_detection", "spots_thresholding",
-              "compute_snr", "from_threshold_to_snr", "get_sigma"]
+              "compute_snr", "from_threshold_to_snr", "get_sigma", "log_cc",
+              "get_cc", "filter_cc"]
 
 _fit = ["gaussian_3d", "precompute_erf", "build_reference_spot",
         "get_spot_volume", "get_spot_surface", "initialize_spot_parameter_3d",
