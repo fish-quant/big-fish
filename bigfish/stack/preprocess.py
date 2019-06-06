@@ -24,6 +24,8 @@ from skimage.exposure import rescale_intensity
 from scipy import ndimage as ndi
 
 
+# TODO be able to build only one channel
+
 # ### Simulated data ###
 
 def build_simulated_dataset(path_cell, path_rna, path_output=None):
