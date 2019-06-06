@@ -5,7 +5,8 @@
 import numpy as np
 
 from .utils import check_array, check_parameter
-from .preprocess import cast_img_float32, cast_img_float64
+from .preprocess import (cast_img_float32, cast_img_float64, cast_img_uint8,
+                         cast_img_uint16)
 
 from skimage.morphology.selem import square, diamond, rectangle, disk
 from skimage.filters import rank, gaussian
@@ -196,7 +197,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
     return image_filtered
 
 
-def log_filter(image, sigma):
+def log_filter(image, sigma, keep_dtype=False):
     """Apply a Laplacian of Gaussian filter to a 2-d or 3-d image.
 
     The function returns the inverse of the filtered image such that the pixels
@@ -211,11 +212,14 @@ def log_filter(image, sigma):
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
         float, the same sigma is applied to every dimensions.
+    keep_dtype : bool
+        Cast output image as input image.
 
     Returns
     -------
-    image_filtered : np.ndarray, np.float
+    image_filtered : np.ndarray
         Filtered image.
+
     """
     # check parameters
     check_array(image,
@@ -245,10 +249,19 @@ def log_filter(image, sigma):
     # reversed mexican hat, we inverse the result and clip negative values to 0
     image_filtered = np.clip(-image_filtered, a_min=0, a_max=None)
 
+    # cast filtered image
+    if keep_dtype:
+        if image.dtype == np.uint8:
+            image_filtered = cast_img_uint8(image_filtered)
+        elif image.dtype == np.uint16:
+            image_filtered = cast_img_uint16(image_filtered)
+        else:
+            pass
+
     return image_filtered
 
 
-def gaussian_filter(image, sigma, allow_negative=False):
+def gaussian_filter(image, sigma, allow_negative=False, keep_dtype=False):
     """Apply a Gaussian filter to a 2-d or 3-d image.
 
     Parameters
@@ -260,6 +273,9 @@ def gaussian_filter(image, sigma, allow_negative=False):
         float, the same sigma is applied to every dimensions.
     allow_negative : bool
         Allow negative values after the filtering or clip them to 0.
+    keep_dtype : bool
+        Cast output image as input image. Integer output can't allow negative
+        values.
 
     Returns
     -------
@@ -288,6 +304,15 @@ def gaussian_filter(image, sigma, allow_negative=False):
     # we clip negative values to 0
     if not allow_negative:
         image_filtered = np.clip(image_filtered, a_min=0, a_max=None)
+
+    # cast filtered image
+    if keep_dtype and not allow_negative:
+        if image.dtype == np.uint8:
+            image_filtered = cast_img_uint8(image_filtered)
+        elif image.dtype == np.uint16:
+            image_filtered = cast_img_uint16(image_filtered)
+        else:
+            pass
 
     return image_filtered
 
