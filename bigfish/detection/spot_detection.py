@@ -11,47 +11,11 @@ import numpy as np
 
 
 # TODO complete documentation methods
+# TODO add sanity check functions
 
 # ### Spot detection ###
 
-def detection(tensor, r, c, detection_method, **kwargs):
-    """Apply spot detection.
-
-    Parameters
-    ----------
-    tensor : nd.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
-    r : int
-        Round index to process.
-    c : int
-        Channel index of the smfish image.
-    detection_method : str
-        Method used to detect spots.
-
-    Returns
-    -------
-    peak_coordinates : np.ndarray, np.int64
-        Coordinate of the local peaks with shape (nb_peaks, 3) or
-        (nb_peaks, 2) for 3-d or 2-d images respectively.
-    radius : float
-        Radius of the detected peaks.
-
-    """
-    # check tensor dimensions and its dtype
-    stack.check_array(tensor, ndim=5, dtype=[np.uint8, np.uint16])
-
-    # get the smfish image
-    image = tensor[r, c, :, :, :]
-
-    # apply spot detection
-    peak_coordinates, radius = None, None
-    if detection_method == "log_lm":
-        peak_coordinates, radius = detection_log_lm(image, **kwargs)
-
-    return peak_coordinates, radius
-
-
-def detection_log_lm(image, sigma, minimum_distance=1, threshold=None):
+def log_lm(image, sigma, minimum_distance=1, threshold=None):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -76,57 +40,35 @@ def detection_log_lm(image, sigma, minimum_distance=1, threshold=None):
 
     Returns
     -------
-    peak_coordinates : np.ndarray, np.int64
-        Coordinate of the local peaks with shape (nb_peaks, 3) or
-        (nb_peaks, 2) for 3-d or 2-d images respectively.
-    radius : float
+    spots : np.ndarray, np.int64
+        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
+        for 3-d or 2-d images respectively.
+    radius : float, Tuple[float]
         Radius of the detected peaks.
 
     """
-    # cast image in np.float, apply LoG filter and find local maximum
-    mask = _log_lm(image, sigma, minimum_distance)
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_parameter(sigma=(float, int, tuple),
+                          minimum_distance=(float, int),
+                          threshold=(float, int))
 
-    # remove peak with a low intensity and return coordinates and radius
-    peak_coordinates, radius = _from_threshold_to_spots(image, sigma, mask,
-                                                        threshold)
-
-    return peak_coordinates, radius
-
-
-def _log_lm(image, sigma, minimum_distance=1):
-    """Find local maximum in a 2-d or 3-d image.
-
-    1) We smooth the image with a LoG filter.
-    2) We apply a multidimensional maximum filter.
-    3) A pixel which has the same value in the original and filtered images
-    is a local maximum.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.uint
-        Image to process with shape (z, y, x) or (y, x).
-    sigma : float or Tuple(float)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
-    minimum_distance : int
-        Minimum distance (in number of pixels) between two local peaks.
-
-    Returns
-    -------
-    mask : np.ndarray, bool
-        Mask with shape (z, y, x) or (y, x) indicating the local peaks.
-
-    """
     # cast image in np.float and apply LoG filter
-    image_filtered = stack.log_filter(image, sigma)
+    image_filtered = stack.log_filter(image, sigma, keep_dtype=False)
 
     # find local maximum
-    mask = _non_maximum_suppression_mask(image_filtered, minimum_distance)
+    mask = local_maximum_detection(image_filtered, minimum_distance)
 
-    return mask
+    # remove spots with a low intensity and return coordinates and radius
+    spots, radius = spots_thresholding(image, sigma, mask, threshold)
+
+    return spots, radius
 
 
-def _non_maximum_suppression_mask(image, minimum_distance):
+def local_maximum_detection(image, minimum_distance):
     """Compute a mask to keep only local maximum, in 2-d and 3-d.
 
     1) We apply a multidimensional maximum filter.
@@ -135,9 +77,9 @@ def _non_maximum_suppression_mask(image, minimum_distance):
 
     Parameters
     ----------
-    image : np.ndarray, np.float
+    image : np.ndarray, np.uint
         Image to process with shape (z, y, x) or (y, x).
-    minimum_distance : int
+    minimum_distance : int, float
         Minimum distance (in number of pixels) between two local peaks.
 
     Returns
@@ -146,12 +88,18 @@ def _non_maximum_suppression_mask(image, minimum_distance):
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
 
     """
-    # compute the kernel size (centered around our pixel because it is uneven
-    kernel_size = 2 * minimum_distance + 1
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_parameter(minimum_distance=(float, int))
+
+    # compute the kernel size (centered around our pixel because it is uneven)
+    kernel_size = int(2 * minimum_distance + 1)
 
     # apply maximum filter to the original image
-    image_filtered = ndi.maximum_filter(image, size=kernel_size,
-                                        mode='constant')
+    image_filtered = ndi.maximum_filter(image, size=kernel_size)
 
     # we keep the pixels with the same value before and after the filtering
     mask = image == image_filtered
@@ -159,8 +107,8 @@ def _non_maximum_suppression_mask(image, minimum_distance):
     return mask
 
 
-def _from_threshold_to_spots(image, sigma, mask, threshold):
-    """Filter detected local maximum and get coordinates of the remaining
+def spots_thresholding(image, sigma, mask, threshold):
+    """Filter detected spots and get coordinates of the remaining
     spots.
 
     Parameters
@@ -181,19 +129,37 @@ def _from_threshold_to_spots(image, sigma, mask, threshold):
     peak_coordinates : np.ndarray, np.int64
         Coordinate of the local peaks with shape (nb_peaks, 3) or
         (nb_peaks, 2) for 3-d or 2-d images respectively.
-    radius : float
+    radius : float or Tuple(float)
         Radius of the detected peaks.
 
     """
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_array(mask,
+                      ndim=[2, 3],
+                      dtype=[bool],
+                      allow_nan=False)
+    stack.check_parameter(sigma=(float, int, tuple),
+                          threshold=(float, int))
+
     # remove peak with a low intensity
     if isinstance(threshold, float):
         threshold *= image.max()
     mask_ = (mask & (image > threshold))
 
-    # get peak coordinates and radius
+    # get peak coordinates
     peak_coordinates = np.nonzero(mask_)
     peak_coordinates = np.column_stack(peak_coordinates)
-    radius = np.sqrt(image.ndim) * sigma[-1]
+
+    # compute radius
+    if isinstance(sigma, tuple):
+        radius = [np.sqrt(image.ndim) * sigma_ for sigma_ in sigma]
+        radius = tuple(radius)
+    else:
+        radius = np.sqrt(image.ndim) * sigma
 
     return peak_coordinates, radius
 
@@ -225,17 +191,17 @@ def compute_snr(image, sigma, minimum_distance=1,
 
     """
     # cast image in np.float, apply LoG filter and find local maximum
-    mask = _log_lm(image, sigma, minimum_distance)
+    mask = log_lm(image, sigma, minimum_distance)
 
     # apply a specific threshold to filter the detected spots and compute snr
-    l_snr = _from_threshold_to_snr(image, sigma, mask,
-                                   threshold_signal_detection,
-                                   neighbor_factor)
+    l_snr = from_threshold_to_snr(image, sigma, mask,
+                                  threshold_signal_detection,
+                                  neighbor_factor)
 
     return l_snr
 
 
-def _from_threshold_to_snr(image, sigma, mask, threshold=2000,
+def from_threshold_to_snr(image, sigma, mask, threshold=2000,
                            neighbor_factor=3):
     """
 
@@ -327,34 +293,31 @@ def _from_threshold_to_snr(image, sigma, mask, threshold=2000,
 
 # ### Utils ###
 
-def get_sigma(resolution_xy=103, resolution_z=300, psf_xy=200, psf_z=400):
-    """Compute the optimal sigma to use gaussian models with spots.
+def get_sigma(resolution_z=300, resolution_yx=103, psf_z=400, psf_yx=200):
+    """Compute the standard deviation of the PSF of the spots.
 
     Parameters
     ----------
-    resolution_xy : int
-        Distance, in nanometer, between two pixels along the XY dimension.
-    resolution_z : int
-        Distance, in nanometer, between two pixels along the Z dimension.
-
-    psf_xy : int
-        Theoretical size (in nanometer) of the signal emitted by a spot in
-        the XY plan.
+    resolution_z : float
+        Height of a voxel, along the z axis, in nanometer.
+    resolution_yx : float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_yx : int
+        Theoretical size of the PSF emitted by a spot in
+        the yx plan, in nanometer.
     psf_z : int
-        Theoretical size (in nanometer) of the signal emitted by a spot in
-        the Z plan.
+        Theoretical size of the PSF emitted by a spot in
+        the z plan, in nanometer.
 
     Returns
     -------
-    sigma : Tuple
-        A Tuple with 3 items corresponding to the sigma used by a gaussian
-        filter in each direction of the image (approximately the same size of
-        the spot in the image).
-
+    sigma_z : float
+        Standard deviation of the PSF, along the z axis, in pixel.
+    sigma_xy : float
+        Standard deviation of the PSF, along the yx plan, in pixel.
     """
     # compute sigma
-    sigma_xy = psf_xy / resolution_xy
     sigma_z = psf_z / resolution_z
-    sigma = (sigma_z, sigma_xy, sigma_xy)
+    sigma_yx = psf_yx / resolution_yx
 
-    return sigma
+    return sigma_z, sigma_yx
