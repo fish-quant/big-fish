@@ -141,7 +141,7 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
     for tensor in tensors:
         stack.check_array(tensor,
                           ndim=2,
-                          dtype=[np.uint8, np.uint16,
+                          dtype=[np.uint8, np.uint16, np.int64,
                                  np.float32, np.float64,
                                  bool],
                           allow_nan=False)
@@ -428,16 +428,19 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
     return
 
 
-def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
-                               framesize=(10, 10), remove_frame=False,
-                               path_output=None, ext="png"):
+def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
+                               title=None, framesize=(10, 10),
+                               remove_frame=False, path_output=None,
+                               ext="png"):
     """Plot the boundary of the segmented objects.
 
     Parameters
     ----------
     tensor : np.ndarray
         A 2-d tensor with shape (y, x).
-    mask : np.ndarray
+    mask_nuc : np.ndarray
+        A 2-d image with shape (y, x).
+    mask_cyt : np.ndarray
         A 2-d image with shape (y, x).
     rescale : bool
         Rescale pixel values of the image (made by default in matplotlib).
@@ -457,7 +460,6 @@ def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
     -------
 
     """
-    # TODO compute boundary separately
     # check parameters
     stack.check_array(tensor,
                       ndim=2,
@@ -465,7 +467,11 @@ def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
                              np.float32, np.float64,
                              bool],
                       allow_nan=False)
-    stack.check_array(mask,
+    stack.check_array(mask_nuc,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      allow_nan=False)
+    stack.check_array(mask_cyt,
                       ndim=2,
                       dtype=[np.uint8, np.uint16, np.int64, bool],
                       allow_nan=False)
@@ -481,9 +487,11 @@ def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
     if not rescale:
         vmin, vmax = get_minmax_values(tensor)
 
-    # get boundary
-    boundaries = find_boundaries(mask, mode='thick')
-    boundaries = np.ma.masked_where(boundaries == 0, boundaries)
+    # get boundaries
+    boundaries_nuc = find_boundaries(mask_nuc, mode='inner')
+    boundaries_nuc = np.ma.masked_where(boundaries_nuc == 0, boundaries_nuc)
+    boundaries_cyt = find_boundaries(mask_cyt, mode='inner')
+    boundaries_cyt = np.ma.masked_where(boundaries_cyt == 0, boundaries_cyt)
 
     # plot
     if remove_frame:
@@ -496,7 +504,8 @@ def plot_segmentation_boundary(tensor, mask, rescale=False, title=None,
         plt.imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         plt.imshow(tensor)
-    plt.imshow(boundaries, cmap=ListedColormap(['red']))
+    plt.imshow(boundaries_nuc, cmap=ListedColormap(['blue']))
+    plt.imshow(boundaries_cyt, cmap=ListedColormap(['red']))
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
     if not remove_frame:
