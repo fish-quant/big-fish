@@ -9,13 +9,16 @@ from bigfish import stack
 import scipy.ndimage as ndi
 import numpy as np
 
+from skimage.measure import label, regionprops
+
 
 # TODO complete documentation methods
 # TODO add sanity check functions
+# TODO improve documentation with optional output
 
-# ### Spot detection ###
+# ### LoG detection ###
 
-def log_lm(image, sigma, threshold, minimum_distance=1, return_log=False):
+def log_lm(image, sigma, threshold, minimum_distance=1):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -27,18 +30,15 @@ def log_lm(image, sigma, threshold, minimum_distance=1, return_log=False):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
         float, the same sigma is applied to every dimensions.
     threshold : float or int
-        A threshold to detect peaks. Considered as a relative threshold if
-        float.
+        A threshold to detect peaks.
     minimum_distance : int
         Minimum distance (in number of pixels) between two local peaks.
-    return_log : bool
-        Return the LoG filtered image.
 
     Returns
     -------
@@ -65,13 +65,9 @@ def log_lm(image, sigma, threshold, minimum_distance=1, return_log=False):
     mask = local_maximum_detection(image_filtered, minimum_distance)
 
     # remove spots with a low intensity and return coordinates and radius
-    spots, radius = spots_thresholding(image, sigma, mask, threshold)
+    spots, radius, _ = spots_thresholding(image, sigma, mask, threshold)
 
-    if return_log:
-        return spots, radius, image_filtered
-
-    else:
-        return spots, radius
+    return spots, radius
 
 
 def local_maximum_detection(image, minimum_distance):
@@ -113,7 +109,7 @@ def local_maximum_detection(image, minimum_distance):
     return mask
 
 
-def spots_thresholding(image, sigma, mask, threshold):
+def spots_thresholding(image, sigma, mask_lm, threshold):
     """Filter detected spots and get coordinates of the remaining
     spots.
 
@@ -124,11 +120,12 @@ def spots_thresholding(image, sigma, mask, threshold):
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
         float, the same sigma is applied to every dimensions.
-    mask : np.ndarray, bool
+    mask_lm : np.ndarray, bool
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
     threshold : float or int
-        A threshold to detect peaks. Considered as a relative threshold if
-        float.
+        A threshold to detect peaks.
+    return_mask : bool
+        Return the final mask with the spots.
 
     Returns
     -------
@@ -137,6 +134,8 @@ def spots_thresholding(image, sigma, mask, threshold):
         (nb_peaks, 2) for 3-d or 2-d images respectively.
     radius : float or Tuple(float)
         Radius of the detected peaks.
+    mask : np.ndarray, bool
+        Mask with shape (z, y, x) or (y, x) indicating the spots.
 
     """
     # check parameters
@@ -144,7 +143,7 @@ def spots_thresholding(image, sigma, mask, threshold):
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
                       allow_nan=False)
-    stack.check_array(mask,
+    stack.check_array(mask_lm,
                       ndim=[2, 3],
                       dtype=[bool],
                       allow_nan=False)
@@ -152,12 +151,10 @@ def spots_thresholding(image, sigma, mask, threshold):
                           threshold=(float, int))
 
     # remove peak with a low intensity
-    if isinstance(threshold, float):
-        threshold *= image.max()
-    mask_ = (mask & (image > threshold))
+    mask = (mask_lm & (image > threshold))
 
     # get peak coordinates
-    peak_coordinates = np.nonzero(mask_)
+    peak_coordinates = np.nonzero(mask)
     peak_coordinates = np.column_stack(peak_coordinates)
 
     # compute radius
@@ -167,7 +164,182 @@ def spots_thresholding(image, sigma, mask, threshold):
     else:
         radius = np.sqrt(image.ndim) * sigma
 
-    return peak_coordinates, radius
+    return peak_coordinates, radius, mask
+
+
+def log_cc(image, sigma, threshold):
+    """Find connected regions above a fixed threshold on a LoG filtered image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x) or (y, x).
+    sigma : float or Tuple(float)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+    threshold : float or int
+        A threshold to detect peaks. Considered as a relative threshold if
+        float.
+
+    Returns
+    -------
+    cc : np.ndarray, np.int64
+        Image labelled with shape (z, y, x) or (y, x).
+
+    """
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_parameter(sigma=(float, int, tuple),
+                          threshold=(float, int))
+
+    # cast image in np.float and apply LoG filter
+    image_filtered = stack.log_filter(image, sigma, keep_dtype=True)
+
+    # find connected components
+    cc = get_cc(image_filtered, threshold)
+
+    # TODO return coordinate of the centroid
+
+    return cc
+
+
+def get_cc(image, threshold):
+    """Find connected regions above a fixed threshold.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x) or (y, x).
+    threshold : float or int
+        A threshold to detect peaks.
+
+    Returns
+    -------
+    cc : np.ndarray, np.int64
+        Image labelled with shape (z, y, x) or (y, x).
+
+    """
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_parameter(threshold=(float, int))
+
+    # Compute binary mask of the filtered image
+    mask = image > threshold
+
+    # find connected components
+    cc = label(mask)
+
+    return cc
+
+
+def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
+    """Filter connected regions.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x) or (y, x).
+    cc : np.ndarray, np.int64
+        Image labelled with shape (z, y, x) or (y, x).
+    spots : np.ndarray, np.int64
+        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
+        for 3-d or 2-d images respectively.
+    min_area : int
+        Minimum number of pixels in the connected region.
+    min_nb_spots : int
+        Minimum number of spot detected in this region.
+    min_intensity_factor : int or float
+        Minimum pixel intensity in the connected region is equal to
+        median(intensity) * min_intensity_factor.
+
+    Returns
+    -------
+    regions_filtered : np.ndarray
+        Array with filtered skimage.measure._regionprops._RegionProperties.
+    cc_filtered : np.ndarray, np.int64
+        Image labelled with shape (z, y, x) or (y, x).
+
+    """
+    # TODO manage the difference between 2-d and 3-d data
+
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_array(cc,
+                      ndim=[2, 3],
+                      dtype=[np.int64],
+                      allow_nan=False)
+    stack.check_array(spots,
+                      ndim=2,
+                      dtype=[np.int64],
+                      allow_nan=False)
+    stack.check_parameter(min_area=int,
+                          min_nb_spots=int,
+                          min_intensity_factor=(float, int),
+                          return_cc=bool)
+
+    # get properties of the different connected regions
+    regions = regionprops(cc, intensity_image=image, cache=True)
+
+    # get different features of the regions
+    area = []
+    intensity = []
+    bbox = []
+    label = []
+    for i, region in enumerate(regions):
+        area.append(region.area)
+        intensity.append(region.max_intensity)
+        bbox.append(region.bbox)
+        label.append(region.label)
+    regions = np.array(regions)
+    area = np.array(area)
+    intensity = np.array(intensity)
+    bbox = np.array(bbox)
+    label = np.array(label)
+
+    # TODO make this part faster
+    # keep regions with a minimum number of spots
+    nb_spots_in = []
+    for box in bbox:
+        (min_z, min_y, min_x, max_z, max_y, max_x) = box
+        spots_in = spots.copy()
+        spots_in = spots_in[spots_in[:, 0] <= max_z]
+        spots_in = spots_in[spots_in[:, 1] <= max_y]
+        spots_in = spots_in[spots_in[:, 2] <= max_x]
+        spots_in = spots_in[min_z <= spots_in[:, 0]]
+        spots_in = spots_in[min_y <= spots_in[:, 1]]
+        spots_in = spots_in[min_x <= spots_in[:, 2]]
+        nb_spots_in.append(spots_in.shape[0])
+    nb_spots_in = np.array(nb_spots_in)
+    multiple_spots = nb_spots_in > min_nb_spots
+
+    # keep regions which reach a minimum intensity value
+    high_intensity = intensity > np.median(intensity) * min_intensity_factor
+
+    # keep regions with a minimum size
+    big_area = area > min_area
+
+    # filter regions and labels
+    mask = (multiple_spots + high_intensity) * big_area
+    regions_filtered = regions[mask]
+    labels_filtered = label[mask]
+
+    # filter the cc image
+    mask_cc = np.zeros_like(cc).astype(bool)
+    for i in labels_filtered:
+        mask_cc = (mask_cc | (cc == i))
+    cc_filtered = cc.copy()
+    cc_filtered[~mask_cc] = 0
+
+    return regions_filtered, cc_filtered
 
 
 # ### Signal-to-Noise ratio ###
