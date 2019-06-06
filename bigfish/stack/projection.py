@@ -137,7 +137,8 @@ def focus_projection(tensor):
     return projected_tensor
 
 
-def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7):
+def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7,
+                          method="median"):
     """Project the z-dimension of a tensor.
 
     Inspired from Aubin's thesis (part 5.3, strategy 5). Compare to the
@@ -146,7 +147,8 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7):
 
     1) Compute a focus value for each voxel zyx with a fixed neighborhood size.
     2) We keep 75% best in-focus z-slices (based on a global focus score).
-    3) Keep the median pixel intensity among the top 5 best focus z-slices.
+    3) Keep the median/maximum pixel intensity among the top 5 best
+    focus z-slices.
 
     Parameters
     ----------
@@ -157,6 +159,8 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7):
         z-slices to keep (integer above 1).
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
+    method : str
+        Projection method applied on the selected pixel values.
 
     Returns
     -------
@@ -202,7 +206,13 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7):
     # project tensor
     in_focus_image = in_focus_image.astype(np.float32)
     in_focus_image[in_focus_image == 0] = np.nan
-    projected_tensor = np.nanmedian(in_focus_image, axis=0)
+    if method == "median":
+        projected_tensor = np.nanmedian(in_focus_image, axis=0)
+    elif method == "max":
+        projected_tensor = np.nanmax(in_focus_image, axis=0)
+    else:
+        raise ValueError("Parameter 'method' should be 'median' or 'max', not "
+                         "'{0}'.".format(method))
     projected_tensor = projected_tensor.astype(tensor.dtype)
 
     return projected_tensor
