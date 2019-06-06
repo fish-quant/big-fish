@@ -429,6 +429,10 @@ def build_reference_spot(image, spots, radius, method="median"):
 
             volume_spot.append(image_spot)
 
+    # if no spot where detected
+    if len(volume_spot) == 0:
+        return None
+
     # project the different spot images
     volume_spot = np.stack(volume_spot, axis=0)
     if method == "mean":
