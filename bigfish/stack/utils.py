@@ -540,8 +540,12 @@ def complete_coordinates_2d(list_coord):
     -------
 
     """
+    # TODO improve documentation
+    # TODO remove the list
     # check parameter
-    check_parameter(list_coord=list)
+    check_parameter(list_coord=(list, np.ndarray))
+    if isinstance(list_coord, np.ndarray):
+        list_coord = [list_coord]
 
     # for each array in the list, complete its coordinates using the scikit
     # image method 'polygon_perimeter'
@@ -580,3 +584,16 @@ def from_coord_to_image(coord, image_shape=None):
     image[coord[:, 0], coord[:, 1]] = 1.0
 
     return image
+
+
+def get_offset_value():
+    """Return the margin pixel around a cell coordinate used to define its
+    bounding box.
+
+    Returns
+    -------
+    _ : int
+        Margin value (in pixels).
+
+    """
+    return 5
