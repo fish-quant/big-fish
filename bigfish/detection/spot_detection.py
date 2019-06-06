@@ -15,7 +15,7 @@ import numpy as np
 
 # ### Spot detection ###
 
-def log_lm(image, sigma, minimum_distance=1, threshold=None):
+def log_lm(image, sigma, threshold, minimum_distance=1, return_log=False):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -32,11 +32,13 @@ def log_lm(image, sigma, minimum_distance=1, threshold=None):
     sigma : float or Tuple(float)
         Sigma used for the gaussian filter (one for each dimension). If it's a
         float, the same sigma is applied to every dimensions.
-    minimum_distance : int
-        Minimum distance (in number of pixels) between two local peaks.
     threshold : float or int
         A threshold to detect peaks. Considered as a relative threshold if
         float.
+    minimum_distance : int
+        Minimum distance (in number of pixels) between two local peaks.
+    return_log : bool
+        Return the LoG filtered image.
 
     Returns
     -------
@@ -57,7 +59,7 @@ def log_lm(image, sigma, minimum_distance=1, threshold=None):
                           threshold=(float, int))
 
     # cast image in np.float and apply LoG filter
-    image_filtered = stack.log_filter(image, sigma, keep_dtype=False)
+    image_filtered = stack.log_filter(image, sigma, keep_dtype=True)
 
     # find local maximum
     mask = local_maximum_detection(image_filtered, minimum_distance)
@@ -65,7 +67,11 @@ def log_lm(image, sigma, minimum_distance=1, threshold=None):
     # remove spots with a low intensity and return coordinates and radius
     spots, radius = spots_thresholding(image, sigma, mask, threshold)
 
-    return spots, radius
+    if return_log:
+        return spots, radius, image_filtered
+
+    else:
+        return spots, radius
 
 
 def local_maximum_detection(image, minimum_distance):
