@@ -317,7 +317,7 @@ def gaussian_filter(image, sigma, allow_negative=False, keep_dtype=False):
     return image_filtered
 
 
-def remove_background(image, kernel_shape="disk", kernel_size=200):
+def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
     """Remove background noise from a 2-d image, subtracting a mean filtering.
 
     Parameters
@@ -356,3 +356,43 @@ def remove_background(image, kernel_shape="disk", kernel_size=200):
                                      where=mask)
 
     return image_without_back
+
+
+def remove_background_gaussian(image, sigma):
+    """Remove background noise from a 2-d or 3-d image, subtracting a gaussian
+    filtering.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to process with shape (z, y, x) or (y, x).
+    sigma : float, int, Tuple(float, int) or List(float, int)
+        Sigma used for the gaussian filter (one for each dimension). If it's a
+        float, the same sigma is applied to every dimensions.
+
+    Returns
+    -------
+    image_no_background : np.ndarray
+        Image processed with shape (z, y, x) or (y, x).
+
+    """
+    # check parameters
+    check_array(image,
+                ndim=[2, 3],
+                dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                allow_nan=False)
+    check_parameter(sigma=(float, int, tuple, list))
+
+    # apply a gaussian filter
+    image_filtered = gaussian_filter(image, sigma,
+                                     allow_negative=False,
+                                     keep_dtype=True)
+
+    # substract the gaussian filter
+    out = np.zeros_like(image)
+    image_no_background = np.subtract(image, image_filtered,
+                                      out=out,
+                                      where=(image > image_filtered),
+                                      dtype=image.dtype)
+
+    return image_no_background

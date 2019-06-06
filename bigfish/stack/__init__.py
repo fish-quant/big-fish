@@ -7,7 +7,7 @@ build stack of images.
 
 from .utils import (check_array, check_df, check_recipe, check_parameter,
                     check_range_value, complete_coordinates_2d,
-                    from_coord_to_image)
+                    from_coord_to_image, get_offset_value)
 from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
                  save_image)
 from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
@@ -16,7 +16,8 @@ from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
                          cast_img_float64, clean_simulated_data,
                          deconstruct_image, reconstruct_image)
 from .filter import (log_filter, mean_filter, median_filter, maximum_filter,
-                     minimum_filter, gaussian_filter, remove_background)
+                     minimum_filter, gaussian_filter, remove_background_mean,
+                     remove_background_gaussian)
 from .projection import (maximum_projection, mean_projection,
                          median_projection, in_focus_selection,
                          focus_measurement, get_in_focus_indices,
@@ -34,7 +35,7 @@ from .augmentation import augment
 
 _utils = ["check_array", "check_df", "check_recipe", "check_parameter",
           "check_range_value", "complete_coordinates_2d",
-          "from_coord_to_image"]
+          "from_coord_to_image", "get_offset_value"]
 
 _io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
        "save_image"]
@@ -46,7 +47,8 @@ _preprocess = ["build_simulated_dataset", "build_stacks", "build_stack",
                "reconstruct_image"]
 
 _filter = ["log_filter", "mean_filter", "median_filter", "maximum_filter",
-           "minimum_filter", "gaussian_filter", "remove_background"]
+           "minimum_filter", "gaussian_filter", "remove_background_mean",
+           "remove_background_gaussian"]
 
 _projection = ["maximum_projection", "mean_projection", "median_projection",
                "in_focus_selection", "focus_measurement",
