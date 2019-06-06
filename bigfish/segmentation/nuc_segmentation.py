@@ -102,6 +102,7 @@ def remove_segmented_nuc(image, mask, nuclei_size=2000):
     """
     # TODO fix the dtype of the mask
     # TODO start from the original image to manage the potential rescaling
+    # TODO improve the threshold
     # check parameters
     stack.check_array(image,
                       ndim=2,
