@@ -500,7 +500,7 @@ def initialize_spot_parameter_3d(image, spot_z, spot_y, spot_x, psf_z=400,
         radius_yx=radius_yx)
 
     # build a grid to fit the gaussian values
-    grid, center_z, center_y, center_x = _initialize_grid_3d(
+    grid, center_z, center_y, center_x = initialize_grid_3d(
         image_spot=image_spot,
         resolution_z=resolution_z,
         resolution_yx=resolution_yx,
@@ -513,8 +513,8 @@ def initialize_spot_parameter_3d(image, spot_z, spot_y, spot_x, psf_z=400,
             psf_background)
 
 
-def _initialize_grid_3d(image_spot, resolution_z, resolution_yx,
-                        return_centroid=False):
+def initialize_grid_3d(image_spot, resolution_z, resolution_yx,
+                       return_centroid=False):
     """Build a grid in nanometer to compute gaussian function over a full
     volume.
 
