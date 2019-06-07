@@ -124,12 +124,10 @@ def spots_thresholding(image, sigma, mask_lm, threshold):
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
     threshold : float or int
         A threshold to detect peaks.
-    return_mask : bool
-        Return the final mask with the spots.
 
     Returns
     -------
-    peak_coordinates : np.ndarray, np.int64
+    spots : np.ndarray, np.int64
         Coordinate of the local peaks with shape (nb_peaks, 3) or
         (nb_peaks, 2) for 3-d or 2-d images respectively.
     radius : float or Tuple(float)
@@ -154,8 +152,8 @@ def spots_thresholding(image, sigma, mask_lm, threshold):
     mask = (mask_lm & (image > threshold))
 
     # get peak coordinates
-    peak_coordinates = np.nonzero(mask)
-    peak_coordinates = np.column_stack(peak_coordinates)
+    spots = np.nonzero(mask)
+    spots = np.column_stack(spots)
 
     # compute radius
     if isinstance(sigma, tuple):
@@ -164,7 +162,7 @@ def spots_thresholding(image, sigma, mask_lm, threshold):
     else:
         radius = np.sqrt(image.ndim) * sigma
 
-    return peak_coordinates, radius, mask
+    return spots, radius, mask
 
 
 def log_cc(image, sigma, threshold):
@@ -380,7 +378,7 @@ def compute_snr(image, sigma, minimum_distance=1,
 
 
 def from_threshold_to_snr(image, sigma, mask, threshold=2000,
-                           neighbor_factor=3):
+                          neighbor_factor=3):
     """
 
     Parameters
