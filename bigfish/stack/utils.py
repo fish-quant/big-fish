@@ -116,7 +116,7 @@ def _check_nan_df(df, features_nan=None):
 
 
 # ### Sanity checks array ###
-
+# TODO fix the problem with _check_nan_array (too many calls, too slow)
 def check_array(array, ndim=None, dtype=None, allow_nan=True):
     """Full safety check of an array.
 
@@ -518,6 +518,7 @@ def check_parameter(**kwargs):
         expected_dtype = kwargs[arg]
         parameter = values[arg]
         if not isinstance(parameter, expected_dtype):
+            # TODO improve the error: raise 'Parameter array' when it comes from 'check_array'.
             raise ValueError("Parameter {0} should be cast in {1}. It is a {2}"
                              "instead."
                              .format(arg, expected_dtype, type(parameter)))
