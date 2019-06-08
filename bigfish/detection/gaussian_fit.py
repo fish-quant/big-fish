@@ -5,7 +5,7 @@ Functions to fit gaussian functions to the detected RNA spots.
 """
 
 import bigfish.stack as stack
-from .spot_detection import get_sigma
+from .spot_detection import get_sigma, get_cc, filter_cc
 
 import numpy as np
 
@@ -65,7 +65,7 @@ def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, resolution_z,
     stack.check_array(grid,
                       ndim=2,
                       dtype=np.float32,
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_parameter(mu_z=(float, int),
                           mu_y=(float, int),
                           mu_x=(float, int),
@@ -95,9 +95,9 @@ def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, resolution_z,
         i_x = np.around(np.abs(meshgrid_x - mu_x) / 5).astype(np.int64)
 
         # get precomputed values
-        voxel_integral_z = table_erf_z[i_z]
-        voxel_integral_y = table_erf_y[i_y]
-        voxel_integral_x = table_erf_x[i_x]
+        voxel_integral_z = table_erf_z[i_z, 1]
+        voxel_integral_y = table_erf_y[i_y, 1]
+        voxel_integral_x = table_erf_x[i_x, 1]
 
     # compute erf value
     else:
@@ -236,16 +236,15 @@ def precompute_erf(resolution_z, resolution_yx, sigma_z, sigma_yx,
 
 # ### Spot parameter ###
 
-def build_reference_spot(image, spots, radius, method="median"):
-    """Build a
+def build_reference_spot_3d(image, spots, radius, method="median"):
+    """Build a median or mean spot volume/surface as reference.
 
     Parameters
     ----------
     image : np.ndarray,
-        Image with shape (z, y, x) or (y, x).
+        Image with shape (z, y, x).
     spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
-        for 3-d or 2-d images respectively.
+        Coordinate of the spots with shape (nb_spots, 3).
     radius : Tuple[float]
         Radius of the detected peaks, one for each dimension.
     method : str
@@ -254,13 +253,12 @@ def build_reference_spot(image, spots, radius, method="median"):
     Returns
     -------
     reference_spot : np.ndarray
-        Reference spot with shape (2*radius_z+1, 2*radius_y+1, 2*radius_x+1) or
-        (2*radius_y+1, 2*radius_x+1).
+        Reference spot with shape (2*radius_z+1, 2*radius_y+1, 2*radius_x+1).
 
     """
     # check parameters
     stack.check_array(image,
-                      ndim=[2, 3],
+                      ndim=3,
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
                       allow_nan=False)
     stack.check_array(spots,
@@ -273,52 +271,36 @@ def build_reference_spot(image, spots, radius, method="median"):
         raise ValueError("'{0}' is not a valid value for parameter 'method'. "
                          "Use 'mean' or 'median' instead.".format(method))
 
-    # process a 3-d image
-    if image.ndim == 3:
-        # get a rounded radius for each dimension
-        radius_z = int(radius[0]) + 1
-        radius_yx = int(radius[1]) + 1
-        z_shape = radius_z * 2 + 1
-        yx_shape = radius_yx * 2 + 1
+    # get a rounded radius for each dimension
+    radius_z = int(radius[0]) + 1
+    radius_yx = int(radius[1]) + 1
+    z_shape = radius_z * 2 + 1
+    yx_shape = radius_yx * 2 + 1
+    # randomly choose some spots to aggregate
+    indices = [i for i in range(spots.shape[0])]
+    np.random.shuffle(indices)
+    indices = indices[:min(2000, spots.shape[0])]
+    candidate_spots = spots[indices, :]
+    # TODO add a warning if not enough spots are detected
 
-        # collect area around each spot
-        l_reference_spot = []
-        for i_spot in range(spots.shape[0]):
+    # collect area around each spot
+    l_reference_spot = []
+    nb_spots = 0
+    for i_spot in range(candidate_spots.shape[0]):
 
-            # get spot coordinates
-            spot_z, spot_y, spot_x = spots[i_spot, :]
+        # get spot coordinates
+        spot_z, spot_y, spot_x = candidate_spots[i_spot, :]
 
-            # get the volume of the spot
-            image_spot = get_spot_volume(image, spot_z, spot_y, spot_x,
-                                         radius_z, radius_yx)
+        # get the volume of the spot
+        image_spot = get_spot_volume(image, spot_z, spot_y, spot_x,
+                                     radius_z, radius_yx)
 
-            # remove the cropped images
-            if image_spot.shape != (z_shape, yx_shape, yx_shape):
-                continue
-
-            l_reference_spot.append(image_spot)
-
-    # process a 2-d image
-    else:
-        # get a rounded radius for each dimension
-        radius_yx = int(radius[1]) + 1
-        yx_shape = radius_yx * 2 + 1
-
-        # collect area around each spot
-        l_reference_spot = []
-        for i_spot in range(spots.shape[0]):
-
-            # get spot coordinates
-            spot_y, spot_x = spots[i_spot, :]
-
-            # get the surface of the spot
-            image_spot = get_spot_surface(image, spot_y, spot_x, radius_yx)
-
-            # remove the cropped images
-            if image_spot.shape != (yx_shape, yx_shape):
-                continue
-
-            l_reference_spot.append(image_spot)
+        # remove the cropped images
+        if image_spot.shape != (z_shape, yx_shape, yx_shape):
+            continue
+        else:
+            nb_spots += 1
+        l_reference_spot.append(image_spot)
 
     # if no spot where detected
     if len(l_reference_spot) == 0:
@@ -330,6 +312,7 @@ def build_reference_spot(image, spots, radius, method="median"):
         reference_spot = np.mean(l_reference_spot, axis=0)
     else:
         reference_spot = np.median(l_reference_spot, axis=0)
+    reference_spot = reference_spot.astype(image.dtype)
 
     return reference_spot
 
@@ -347,9 +330,9 @@ def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
         Coordinate of the detected spot along the y axis.
     spot_x : np.int64
         Coordinate of the detected spot along the x axis.
-    radius_z : float
+    radius_z : float or int
         Estimated radius of the spot along the z-dimension.
-    radius_yx : float
+    radius_yx : float or int
         Estimated radius of the spot on the yx-plan.
 
     Returns
@@ -362,12 +345,12 @@ def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     stack.check_array(image,
                       ndim=3,
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_parameter(spot_z=np.int64,
                           spot_y=np.int64,
                           spot_x=np.int64,
-                          radius_z=np.int64,
-                          radius_yx=np.int64)
+                          radius_z=(float, int),
+                          radius_yx=(float, int))
 
     # get boundaries of the volume surrounding the spot
     z_spot_min = max(0, int(spot_z - radius_z))
@@ -409,7 +392,7 @@ def get_spot_surface(image, spot_y, spot_x, radius_yx):
     stack.check_array(image,
                       ndim=2,
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_parameter(spot_y=np.int64,
                           spot_x=np.int64,
                           radius_yx=np.int64)
@@ -507,7 +490,7 @@ def initialize_spot_parameter_3d(image, spot_z, spot_y, spot_x, psf_z=400,
         return_centroid=True)
 
     # compute amplitude and background values
-    psf_amplitude, psf_background = _compute_background_amplitude(image_spot)
+    psf_amplitude, psf_background = compute_background_amplitude(image_spot)
 
     return (image_spot, grid, center_z, center_y, center_x, psf_amplitude,
             psf_background)
@@ -544,7 +527,7 @@ def initialize_grid_3d(image_spot, resolution_z, resolution_yx,
     stack.check_array(image_spot,
                       ndim=3,
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_parameter(resolution_z=(float, int),
                           resolution_yx=(float, int),
                           return_centroid=bool)
@@ -581,7 +564,7 @@ def initialize_grid_3d(image_spot, resolution_z, resolution_yx,
         return grid
 
 
-def _compute_background_amplitude(image_spot):
+def compute_background_amplitude(image_spot):
     """Compute amplitude of a spot and background minimum value.
 
     Parameters
@@ -640,9 +623,9 @@ def objective_function(resolution_z=300, resolution_yx=103, sigma_z=400,
     # check parameters
     stack.check_parameter(resolution_z=(float, int),
                           resolution_yx=(float, int),
-                          sigma_z=(float, int),
-                          sigma_yx=(float, int),
-                          psf_amplitude=(float, int))
+                          sigma_z=(float, int, type(None)),
+                          sigma_yx=(float, int, type(None)),
+                          psf_amplitude=(float, int, type(None)))
 
     # sigma is known, we fit mu, amplitude and background
     if (sigma_z is not None
@@ -752,7 +735,7 @@ def fit_gaussian_3d(f, grid, image_spot, p0, lower_bound=None,
     """
     # check parameters
     stack.check_array(grid,
-                      ndim=3,
+                      ndim=2,
                       dtype=np.float32,
                       allow_nan=False)
     stack.check_array(image_spot,
@@ -801,10 +784,10 @@ def simulate_fitted_gaussian_3d(f, grid, popt, original_shape=None):
     """
     # check parameters
     stack.check_array(grid,
-                      ndim=3,
+                      ndim=2,
                       dtype=np.float32,
                       allow_nan=False)
-    stack.check_parameter(popt=list,
+    stack.check_parameter(popt=np.ndarray,
                           original_shape=(tuple, type(None)))
 
     # compute gaussian values
@@ -815,3 +798,270 @@ def simulate_fitted_gaussian_3d(f, grid, popt, original_shape=None):
         values = np.reshape(values, original_shape).astype(np.float32)
 
     return values
+
+
+def fit_gaussian_mixture(image, region, resolution_z, resolution_yx, sigma_z,
+                         sigma_yx, amplitude, background,
+                         precomputed_gaussian):
+    """Fit a mixture of gaussian to a potential foci region.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint
+        A 3-d image with detected spot and shape (z, y, x).
+    region : skimage.measure._regionprops._RegionProperties
+        Properties of a foci region.
+    resolution_z : int or float
+        Height of a voxel, along the z axis, in nanometer.
+    resolution_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    sigma_z : int or float
+        Theoretical height of the spot PSF along the z axis, in nanometer.
+    sigma_yx : int or float
+        Theoretical diameter of the spot PSF on the yx plan, in nanometer.
+    amplitude : int or float
+        Amplitude of the spot.
+    background : int of float
+        Background intensity level of the spot.
+    precomputed_gaussian : List[np.ndarray] or Tuple[np.ndarray]
+        Precomputed tables values of erf for the different axis.
+
+    Returns
+    -------
+    image_region : np.ndarray, np.uint
+        A 3-d image with detected spot and shape (z, y, x).
+    best_simulation : np.ndarray, np.uint
+        A 3-d image with detected spot and shape (z, y, x).
+    positions_gaussian : List[List]
+        List of positions (as a list [z, y, x]) for the different gaussian
+        simulations used in the mixture.
+
+    """
+    # TODO improve documentation
+    # TODO make this function consistent
+    # check parameters
+    stack.check_array(image,
+                      ndim=3,
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=True)
+    stack.check_parameter(resolution_z=(float, int),
+                          resolution_yx=(float, int),
+                          sigma_z=(float, int),
+                          sigma_yx=(float, int),
+                          amplitude=(float, int),
+                          background=(float, int),
+                          precomputed_gaussian=(list, tuple))
+
+    # get an image of the region
+    box = tuple(region.bbox)
+    image_region = image[box[0]:box[3], box[1]:box[4], box[2]:box[5]]
+    image_region_raw = np.reshape(image_region, image_region.size)
+
+    # build a grid to represent this image
+    grid = initialize_grid_3d(image_region, resolution_z, resolution_yx)
+
+    # add a gaussian for each local maximum while the RSS decreases
+    simulation = np.zeros(image_region_raw.shape, dtype=np.float64)
+    residual = image_region_raw - simulation
+    ssr = np.sum(residual ** 2)
+    diff_ssr = -1
+    nb_gaussian = 0
+    best_simulation = simulation.copy()
+    positions_gaussian = []
+    while diff_ssr < 0 or nb_gaussian == 1000:
+        position_gaussian = np.argmax(residual)
+        positions_gaussian.append(list(grid[:, position_gaussian]))
+        simulation += gaussian_3d(grid=grid,
+                                  mu_z=float(positions_gaussian[-1][0]),
+                                  mu_y=float(positions_gaussian[-1][1]),
+                                  mu_x=float(positions_gaussian[-1][2]),
+                                  sigma_z=sigma_z,
+                                  sigma_yx=sigma_yx,
+                                  resolution_z=resolution_z,
+                                  resolution_yx=resolution_yx,
+                                  psf_amplitude=amplitude,
+                                  psf_background=background,
+                                  precomputed=precomputed_gaussian)
+        residual = image_region_raw - simulation
+        new_ssr = np.sum(residual ** 2)
+        diff_ssr = new_ssr - ssr
+        ssr = new_ssr
+        nb_gaussian += 1
+        background = 0
+        # print("NB spots {0} | Difference SSR {1} | SSR {2}"
+        #       .format(nb_gaussian, int(diff_ssr), int(ssr)))
+
+        if diff_ssr < 0:
+            best_simulation = simulation.copy()
+
+    if 1 < nb_gaussian < 1000:
+        positions_gaussian.pop(-1)
+
+    best_simulation = np.reshape(best_simulation, image_region.shape)
+    best_simulation = best_simulation.astype(image_region_raw.dtype)
+
+    return image_region, best_simulation, positions_gaussian
+
+
+# ### Foci decomposition ###
+
+
+def foci_decomposition(image_filtered_log, image_filtered_background,
+                       threshold_spot, spots, radius, min_area, min_nb_spots,
+                       min_intensity_factor, resolution_z=300,
+                       resolution_yx=103, psf_z=400, psf_yx=200):
+    """Detect regions with clustered spots (foci) and fit a mixture of
+    gaussian to them.
+
+    Parameters
+    ----------
+    image_filtered_log
+    image_filtered_background
+    threshold_spot
+    spots
+    radius
+    min_area
+    min_nb_spots
+    min_intensity_factor
+    resolution_z
+    resolution_yx
+    psf_z
+    psf_yx
+
+    Returns
+    -------
+    spots_out_foci
+    spots_in_foci
+    foci
+    reference_spot
+
+    """
+    # check parameters
+    stack.check_array(image_filtered_log,
+                      ndim=3,
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_array(image_filtered_background,
+                      ndim=3,
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
+                      allow_nan=False)
+    stack.check_array(spots,
+                      ndim=2,
+                      dtype=[np.int64],
+                      allow_nan=False)
+    stack.check_parameter(threshold_spot=(float, int),
+                          radius=(tuple, list),
+                          min_area=(float, int),
+                          min_nb_spots=(float, int),
+                          min_intensity_factor=(float, int),
+                          resolution_z=(float, int),
+                          resolution_yx=(float, int),
+                          psf_z=(float, int),
+                          psf_yx=(float, int))
+
+    # case where no spot were detected
+    if spots.size == 0:
+        foci = []
+        radius_z = int(radius[0]) + 1
+        radius_yx = int(radius[1]) + 1
+        z_shape = radius_z * 2 + 1
+        yx_shape = radius_yx * 2 + 1
+        reference_spot = np.zeros((z_shape, yx_shape, yx_shape),
+                                  dtype=image_filtered_background.dtype)
+
+        return spots, spots, foci, reference_spot
+
+    # build a reference median spot
+    reference_spot = build_reference_spot_3d(
+        image_filtered_background,
+        spots,
+        radius,
+        method="median")
+
+    # initialize a grid representing the reference spot
+    grid, centroid_z, centroid_y, centroid_x = initialize_grid_3d(
+        image_spot=reference_spot,
+        resolution_z=resolution_z,
+        resolution_yx=resolution_yx,
+        return_centroid=True)
+
+    # compute amplitude and background of the reference spot
+    amplitude, background = compute_background_amplitude(reference_spot)
+
+    # TODO initialize the function multiple times
+    # fit a 3-d gaussian function on this reference spot
+    f = objective_function(
+        resolution_z=resolution_z,
+        resolution_yx=resolution_yx,
+        sigma_z=None,
+        sigma_yx=None,
+        psf_amplitude=None)
+    p0 = [centroid_z, centroid_y, centroid_x, psf_z, psf_yx, amplitude,
+          background]
+    popt, pcov = fit_gaussian_3d(f, grid, reference_spot, p0)
+
+    # get reference parameters
+    sigma_z = popt[3]
+    sigma_yx = popt[4]
+    amplitude = popt[5]
+    background = popt[6]
+
+    # use connected components to detect potential foci
+    cc = get_cc(image_filtered_log, threshold_spot)
+    regions_filtered, spots_out_foci = filter_cc(
+        image_filtered_background,
+        cc,
+        spots,
+        min_area=min_area,
+        min_nb_spots=min_nb_spots,
+        min_intensity_factor=min_intensity_factor)
+
+    # case where no foci where detected
+    if regions_filtered.size == 0:
+        spots_in_foci = np.array([], dtype=np.int64).reshape((0, 2))
+        foci = []
+        return spots, spots_in_foci, foci, reference_spot
+
+    # precompute gaussian function values
+    table_erf_z, table_erf_y, table_erf_x = precompute_erf(
+        resolution_z,
+        resolution_yx,
+        sigma_z,
+        sigma_yx,
+        max_grid=200)
+    precomputed_gaussian = (table_erf_z, table_erf_y, table_erf_x)
+
+    # fit gaussian mixtures in the foci regions
+    spots_in_foci = []
+    foci = []
+    for region in regions_filtered:
+        (image_region,
+         best_simulation,
+         pos_gaussian) = fit_gaussian_mixture(
+            image_filtered_background,
+            region,
+            resolution_z,
+            resolution_yx,
+            sigma_z,
+            sigma_yx,
+            amplitude,
+            background,
+            precomputed_gaussian)
+
+        # get coordinates of spots and foci in the original image
+        foci_diameter = region.equivalent_diameter
+        box = region.bbox
+        (min_z, min_y, min_x, _, _, _) = box
+        pos_gaussian = np.array(pos_gaussian, dtype=np.float64)
+        pos_gaussian[:, 0] = (pos_gaussian[:, 0] / resolution_z) + min_z
+        pos_gaussian[:, 1] = (pos_gaussian[:, 1] / resolution_yx) + min_y
+        pos_gaussian[:, 2] = (pos_gaussian[:, 2] / resolution_yx) + min_x
+        pos_gaussian = pos_gaussian.astype(np.int64)
+        centroid_region = tuple(pos_gaussian[0])
+        nb_rna_foci = pos_gaussian.shape[0]
+        foci.append((centroid_region, nb_rna_foci, foci_diameter / 2))
+        spots_in_foci.append(pos_gaussian)
+
+    spots_in_foci = np.concatenate(spots_in_foci, axis=0)
+
+    return spots_out_foci, spots_in_foci, foci, reference_spot

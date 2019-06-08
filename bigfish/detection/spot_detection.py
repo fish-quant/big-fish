@@ -136,6 +136,7 @@ def spots_thresholding(image, sigma, mask_lm, threshold):
         Mask with shape (z, y, x) or (y, x) indicating the spots.
 
     """
+    # TODO make 'radius' output more consistent
     # check parameters
     stack.check_array(image,
                       ndim=[2, 3],
@@ -224,7 +225,7 @@ def get_cc(image, threshold):
     stack.check_array(image,
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_parameter(threshold=(float, int))
 
     # Compute binary mask of the filtered image
@@ -246,8 +247,7 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
     cc : np.ndarray, np.int64
         Image labelled with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
-        for 3-d or 2-d images respectively.
+        Coordinate of the spots with shape (nb_spots, 3).
     min_area : int
         Minimum number of pixels in the connected region.
     min_nb_spots : int
@@ -260,8 +260,8 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
     -------
     regions_filtered : np.ndarray
         Array with filtered skimage.measure._regionprops._RegionProperties.
-    cc_filtered : np.ndarray, np.int64
-        Image labelled with shape (z, y, x) or (y, x).
+    spots_out_region : np.ndarray, np.int64
+        Coordinate of the spots outside the regions with shape (nb_spots, 3).
 
     """
     # TODO manage the difference between 2-d and 3-d data
@@ -270,19 +270,18 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
     stack.check_array(image,
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_array(cc,
                       ndim=[2, 3],
                       dtype=[np.int64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_array(spots,
                       ndim=2,
                       dtype=[np.int64],
-                      allow_nan=False)
+                      allow_nan=True)
     stack.check_parameter(min_area=int,
                           min_nb_spots=int,
-                          min_intensity_factor=(float, int),
-                          return_cc=bool)
+                          min_intensity_factor=(float, int))
 
     # get properties of the different connected regions
     regions = regionprops(cc, intensity_image=image, cache=True)
@@ -291,53 +290,75 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
     area = []
     intensity = []
     bbox = []
-    label = []
     for i, region in enumerate(regions):
         area.append(region.area)
         intensity.append(region.max_intensity)
         bbox.append(region.bbox)
-        label.append(region.label)
     regions = np.array(regions)
     area = np.array(area)
     intensity = np.array(intensity)
     bbox = np.array(bbox)
-    label = np.array(label)
 
-    # TODO make this part faster
-    # keep regions with a minimum number of spots
+    # keep regions with a minimum size
+    big_area = area > min_area
+    regions = regions[big_area]
+    intensity = intensity[big_area]
+    bbox = bbox[big_area]
+
+    # case where no region big enough were detected
+    if regions.size == 0:
+        regions_filtered = np.array([])
+        spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
+        return regions_filtered, spots_out_region
+
+    # TODO remove copy()?
+    # count spots in the regions
     nb_spots_in = []
     for box in bbox:
         (min_z, min_y, min_x, max_z, max_y, max_x) = box
+        mask_spots_in = spots[:, 0] <= max_z
+        mask_spots_in = (mask_spots_in & (spots[:, 1] <= max_y))
+        mask_spots_in = (mask_spots_in & (spots[:, 2] <= max_x))
+        mask_spots_in = (mask_spots_in & (min_z <= spots[:, 0]))
+        mask_spots_in = (mask_spots_in & (min_y <= spots[:, 1]))
+        mask_spots_in = (mask_spots_in & (min_x <= spots[:, 2]))
         spots_in = spots.copy()
-        spots_in = spots_in[spots_in[:, 0] <= max_z]
-        spots_in = spots_in[spots_in[:, 1] <= max_y]
-        spots_in = spots_in[spots_in[:, 2] <= max_x]
-        spots_in = spots_in[min_z <= spots_in[:, 0]]
-        spots_in = spots_in[min_y <= spots_in[:, 1]]
-        spots_in = spots_in[min_x <= spots_in[:, 2]]
+        spots_in = spots_in[mask_spots_in]
         nb_spots_in.append(spots_in.shape[0])
+
+    # keep regions with a minimum number of spots
     nb_spots_in = np.array(nb_spots_in)
     multiple_spots = nb_spots_in > min_nb_spots
 
     # keep regions which reach a minimum intensity value
     high_intensity = intensity > np.median(intensity) * min_intensity_factor
 
-    # keep regions with a minimum size
-    big_area = area > min_area
-
     # filter regions and labels
-    mask = (multiple_spots + high_intensity) * big_area
+    mask = multiple_spots | high_intensity
     regions_filtered = regions[mask]
-    labels_filtered = label[mask]
+    bbox = bbox[mask]
 
-    # filter the cc image
-    mask_cc = np.zeros_like(cc).astype(bool)
-    for i in labels_filtered:
-        mask_cc = (mask_cc | (cc == i))
-    cc_filtered = cc.copy()
-    cc_filtered[~mask_cc] = 0
+    # case where no foci were detected
+    if regions.size == 0:
+        spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
+        return regions_filtered, spots_out_region
 
-    return regions_filtered, cc_filtered
+    # TODO make it in a separate function
+    # count spots outside the regions
+    mask_spots_out = np.ones(spots[:, 0].shape, dtype=bool)
+    for box in bbox:
+        (min_z, min_y, min_x, max_z, max_y, max_x) = box
+        mask_spots_in = spots[:, 0] <= max_z
+        mask_spots_in = (mask_spots_in & (spots[:, 1] <= max_y))
+        mask_spots_in = (mask_spots_in & (spots[:, 2] <= max_x))
+        mask_spots_in = (mask_spots_in & (min_z <= spots[:, 0]))
+        mask_spots_in = (mask_spots_in & (min_y <= spots[:, 1]))
+        mask_spots_in = (mask_spots_in & (min_x <= spots[:, 2]))
+        mask_spots_out = mask_spots_out & (~mask_spots_in)
+    spots_out_region = spots.copy()
+    spots_out_region = spots_out_region[mask_spots_out]
+
+    return regions_filtered, spots_out_region
 
 
 # ### Signal-to-Noise ratio ###
