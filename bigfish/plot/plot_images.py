@@ -622,8 +622,9 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
         A 2-d tensor with shape (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3).
-    foci : List[tuple]
-        Coordinate of the foci with shape (nb_spots, 3).
+    foci : np.ndarray, np.int64
+        Array with shape (nb_foci, 5). One coordinate per dimension (zyx
+        coordinates), number of RNAs in the foci and index of the foci.
     radius_spots_yx : float or int
         Radius yx of the detected spots.
     rescale : bool
@@ -645,6 +646,7 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
 
     """
     # TODO check coordinates shape
+    # TODO allow a plot for a specific z-slice
     # check parameters
     stack.check_array(tensor,
                       ndim=2,
@@ -655,8 +657,11 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
                       ndim=2,
                       dtype=[np.int64],
                       allow_nan=False)
-    stack.check_parameter(foci=list,
-                          radius_spots_yx=(float, int),
+    stack.check_array(foci,
+                      ndim=2,
+                      dtype=[np.int64],
+                      allow_nan=False)
+    stack.check_parameter(radius_spots_yx=(float, int),
                           rescale=bool,
                           title=(str, type(None)),
                           framesize=tuple,
@@ -687,16 +692,14 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
         ax[1].imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         ax[1].imshow(tensor)
-    for spot_coordinate in spots:
-        _, y, x = spot_coordinate
+    for (_, y, x) in spots:
         c = plt.Circle((x, y), radius_spots_yx,
                        color="red",
                        linewidth=1,
                        fill=False)
         ax[1].add_patch(c)
-    for (foci_coordinates, nb_rna, radius_foci) in foci:
-        _, y, x = foci_coordinates
-        c = plt.Circle((x, y), radius_foci,
+    for (_, y, x, _, _) in foci:
+        c = plt.Circle((x, y), radius_spots_yx * 2,
                        color="blue",
                        linewidth=2,
                        fill=False)
