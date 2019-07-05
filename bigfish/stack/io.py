@@ -21,7 +21,7 @@ def read_image(path):
     """Read an image with the .png, .tif or .tiff extension.
 
     The input image should be in 2-d or 3-d, with unsigned integer 8 or 16
-    bits.
+    bits, integer
 
     Parameters
     ----------
@@ -30,15 +30,18 @@ def read_image(path):
 
     Returns
     -------
-    tensor : ndarray, np.uint
+    tensor : ndarray, np.uint or np.int
         A 2-d or 3-d tensor with spatial dimensions.
 
     """
+    # TODO allow more input dtype
     # read image
     tensor = io.imread(path)
 
     # check the image is in unsigned integer 16 bits with 2 or 3 dimensions
-    check_array(tensor, dtype=[np.uint8, np.uint16], ndim=[2, 3])
+    check_array(tensor,
+                dtype=[np.uint8, np.uint16, np.int64],
+                ndim=[2, 3])
 
     return tensor
 
