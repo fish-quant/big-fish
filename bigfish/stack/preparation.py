@@ -23,6 +23,7 @@ from sklearn.preprocessing import LabelEncoder
 # TODO define the requirements for 'data'
 # TODO add logging
 # TODO generalize the use of 'get_offset_value'
+# TODO move the script to the classification submodule
 
 # ### Split data ###
 
@@ -243,7 +244,7 @@ def get_gene_encoder(genes_str):
     return encoder_gene
 
 
-# ### Build images ###
+# ### Build images from coordinates ###
 
 def build_image(data, id_cell, image_shape=None, coord_refinement=True,
                 method="normal", augmentation=False):
@@ -440,24 +441,22 @@ def get_distance_layers(cyt, nuc):
     Parameters
     ----------
     cyt : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
+        A 2-d binary image with shape (y, x).
     nuc : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
+        A 2-d binary image with shape (y, x).
 
     Returns
     -------
     distance_cyt : np.ndarray, np.float32
-        A 2-d tensor with shape (x, y) showing distance to the cytoplasm
+        A 2-d tensor with shape (y, x) showing distance to the cytoplasm
         border.
     distance_nuc : np.ndarray, np.float32
-        A 2-d tensor with shape (x, y) showing distance to the nucleus border.
+        A 2-d tensor with shape (y, x) showing distance to the nucleus border.
 
     """
     # TODO can return NaN
     # compute surfaces from cytoplasm and nucleus
-    mask_cyt, mask_nuc = get_surface_layers(cyt, nuc)
-    mask_cyt = mask_cyt.astype(np.bool)
-    mask_nuc = mask_nuc.astype(np.bool)
+    mask_cyt, mask_nuc = get_surface_layers(cyt, nuc, cast_float=False)
 
     # compute distances from cytoplasm and nucleus
     distance_cyt = ndi.distance_transform_edt(mask_cyt)
@@ -471,7 +470,7 @@ def get_distance_layers(cyt, nuc):
     return distance_cyt, distance_nuc
 
 
-def get_surface_layers(cyt, nuc):
+def get_surface_layers(cyt, nuc, cast_float=True):
     """Compute plain surface layers as input for the model.
 
     Sometimes the border is too fragmented to compute the surface. In this
@@ -481,17 +480,19 @@ def get_surface_layers(cyt, nuc):
     Parameters
     ----------
     cyt : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
+        A 2-d binary image with shape (y, x).
     nuc : np.ndarray, np.float32
-        A 2-d binary image with shape (x, y).
+        A 2-d binary image with shape (y, x).
+    cast_float : bool
+        Cast output in np.float32.
 
     Returns
     -------
     surface_cyt : np.ndarray, np.float32
-        A 2-d binary tensor with shape (x, y) showing cytoplasm surface.
+        A 2-d binary tensor with shape (y, x) showing cytoplasm surface.
         border.
     surface_nuc : np.ndarray, np.float32
-        A 2-d binary tensor with shape (x, y) showing nucleus surface.
+        A 2-d binary tensor with shape (y, x) showing nucleus surface.
 
         """
     # compute surface from cytoplasm and nucleus
@@ -499,8 +500,9 @@ def get_surface_layers(cyt, nuc):
     surface_nuc = ndi.binary_fill_holes(nuc)
 
     # cast to np.float32
-    surface_cyt = cast_img_float32(surface_cyt)
-    surface_nuc = cast_img_float32(surface_nuc)
+    if cast_float:
+        surface_cyt = cast_img_float32(surface_cyt)
+        surface_nuc = cast_img_float32(surface_nuc)
 
     return surface_cyt, surface_nuc
 
@@ -890,7 +892,7 @@ def _label_experimental_num_to_str_(label_num):
     return label_str
 
 
-def remove_transcription_site(data, threshold):
+def remove_transcription_site_bis(data, threshold):
     # TODO add documentation
     # TODO vectorize it
     data_corrected = data.copy(deep=True)
