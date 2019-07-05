@@ -241,7 +241,7 @@ def build_reference_spot_3d(image, spots, radius, method="median"):
 
     Parameters
     ----------
-    image : np.ndarray,
+    image : np.ndarray
         Image with shape (z, y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3).
@@ -915,25 +915,48 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
 
     Parameters
     ----------
-    image_filtered_log
-    image_filtered_background
-    threshold_spot
-    spots
-    radius
-    min_area
-    min_nb_spots
-    min_intensity_factor
-    resolution_z
-    resolution_yx
-    psf_z
-    psf_yx
+    image_filtered_log : np.ndarray
+        Image with shape (z, y, x) and filter with LoG operator.
+    image_filtered_background : np.ndarray
+        Image with shape (z, y, x) and filter with gaussian operator to
+        estimate then remove background.
+    threshold_spot : float or int
+        A threshold to detect spots.
+    spots : np.ndarray, np.int64
+        Coordinate of the spots with shape (nb_spots, 3).
+    radius : Tuple[float]
+        Radius of the detected peaks, one for each dimension.
+    min_area : int
+        Minimum number of pixels in the connected region.
+    min_nb_spots : int
+        Minimum number of spot detected in this region.
+    min_intensity_factor : int or float
+        Minimum pixel intensity in the connected region is equal to
+        median(intensity) * min_intensity_factor.
+    resolution_z : int or float
+        Height of a voxel, along the z axis, in nanometer.
+    resolution_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float
+        Theoretical height of the spot PSF along the z axis, in nanometer.
+    psf_yx : int or float
+        Theoretical diameter of the spot PSF on the yx plan, in nanometer.
 
     Returns
     -------
-    spots_out_foci
-    spots_in_foci
-    foci
-    reference_spot
+    spots_out_foci : np.ndarray, np.int64
+        Coordinate of the spots detected out of foci, with shape (nb_spots, 3).
+        One coordinate per dimension (zyx coordinates).
+    spots_in_foci : np.ndarray, np.int64
+        Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
+        One coordinate per dimension (zyx coordinates) plus the index of the
+        foci.
+    foci : np.ndarray, np.int64
+        Array with shape (nb_foci, 5). One coordinate per dimension for the
+        foci centroid (zyx coordinates), the number of RNAs detected in the
+        foci and its index.
+    reference_spot : np.ndarray
+        Reference spot with shape (2*radius_z+1, 2*radius_y+1, 2*radius_x+1).
 
     """
     # check parameters
@@ -961,7 +984,9 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
 
     # case where no spot were detected
     if spots.size == 0:
-        foci = []
+        spots_out_foci = np.array([], dtype=np.int64).reshape((0, 3))
+        spots_in_foci = np.array([], dtype=np.int64).reshape((0, 4))
+        foci = np.array([], dtype=np.float32).reshape((0, 5))
         radius_z = int(radius[0]) + 1
         radius_yx = int(radius[1]) + 1
         z_shape = radius_z * 2 + 1
@@ -969,7 +994,7 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
         reference_spot = np.zeros((z_shape, yx_shape, yx_shape),
                                   dtype=image_filtered_background.dtype)
 
-        return spots, spots, foci, reference_spot
+        return spots_out_foci, spots_in_foci, foci, reference_spot
 
     # build a reference median spot
     reference_spot = build_reference_spot_3d(
@@ -1018,8 +1043,8 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
 
     # case where no foci where detected
     if regions_filtered.size == 0:
-        spots_in_foci = np.array([], dtype=np.int64).reshape((0, 2))
-        foci = []
+        spots_in_foci = np.array([], dtype=np.int64).reshape((0, 4))
+        foci = np.array([], dtype=np.float32).reshape((0, 5))
         return spots, spots_in_foci, foci, reference_spot
 
     # precompute gaussian function values
@@ -1034,7 +1059,7 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
     # fit gaussian mixtures in the foci regions
     spots_in_foci = []
     foci = []
-    for region in regions_filtered:
+    for i_foci, region in enumerate(regions_filtered):
         (image_region,
          best_simulation,
          pos_gaussian) = fit_gaussian_mixture(
@@ -1049,19 +1074,21 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
             precomputed_gaussian)
 
         # get coordinates of spots and foci in the original image
-        foci_diameter = region.equivalent_diameter
         box = region.bbox
         (min_z, min_y, min_x, _, _, _) = box
         pos_gaussian = np.array(pos_gaussian, dtype=np.float64)
         pos_gaussian[:, 0] = (pos_gaussian[:, 0] / resolution_z) + min_z
         pos_gaussian[:, 1] = (pos_gaussian[:, 1] / resolution_yx) + min_y
         pos_gaussian[:, 2] = (pos_gaussian[:, 2] / resolution_yx) + min_x
-        pos_gaussian = pos_gaussian.astype(np.int64)
-        centroid_region = tuple(pos_gaussian[0])
+        spots_in_foci_ = np.zeros((pos_gaussian.shape[0], 4), dtype=np.int64)
+        spots_in_foci_[:, :3] = pos_gaussian
+        spots_in_foci_[:, 3] = i_foci
+        spots_in_foci.append(spots_in_foci_)
+        foci_z, foci_y, foci_x = tuple(pos_gaussian[0])
         nb_rna_foci = pos_gaussian.shape[0]
-        foci.append((centroid_region, nb_rna_foci, foci_diameter / 2))
-        spots_in_foci.append(pos_gaussian)
+        foci.append([foci_z, foci_y, foci_x, nb_rna_foci, i_foci])
 
     spots_in_foci = np.concatenate(spots_in_foci, axis=0)
+    foci = np.array(foci, dtype=np.int64)
 
     return spots_out_foci, spots_in_foci, foci, reference_spot
