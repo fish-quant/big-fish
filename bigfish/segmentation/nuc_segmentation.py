@@ -51,9 +51,9 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
 
     """
     # remove background noise from image
-    image = stack.remove_background(image,
-                                    kernel_shape=kernel_shape,
-                                    kernel_size=kernel_size)
+    image = stack.remove_background_mean(image,
+                                         kernel_shape=kernel_shape,
+                                         kernel_size=kernel_size)
 
     # discriminate nuclei from background, applying a threshold.
     image_segmented = image >= threshold
@@ -77,7 +77,7 @@ def remove_segmented_nuc(image, mask, nuclei_size=2000):
     background pixels remain unchanged. However, pixels from the missing
     nuclei are partially reconstructed by the dilatation. This reconstructed
     image only differs from the original one where the nuclei have been missed.
-    3) We substract the reconstructed image from the original one.
+    3) We subtract the reconstructed image from the original one.
     4) From the few pixels kept and restored from the missing nuclei, we build
     a binary mask (dilatation, small object removal).
     5) We apply this mask to the original image to get the original pixel
@@ -103,6 +103,7 @@ def remove_segmented_nuc(image, mask, nuclei_size=2000):
     # TODO fix the dtype of the mask
     # TODO start from the original image to manage the potential rescaling
     # TODO improve the threshold
+    # TODO correct the word dilatation -> dilation
     # check parameters
     stack.check_array(image,
                       ndim=2,
@@ -128,7 +129,7 @@ def remove_segmented_nuc(image, mask, nuclei_size=2000):
     diff = image.copy()
     diff[dilated_mask == 0] = 0
 
-    # reconstruct the missing nuclei by dilatation
+    # reconstruct the missing nuclei by dilation
     s = disk(1)
     image_reconstructed = reconstruction(diff, image, selem=s)
     image_reconstructed = image_reconstructed.astype(original_dtype)
