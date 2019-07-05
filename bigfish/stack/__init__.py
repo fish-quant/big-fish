@@ -17,19 +17,21 @@ from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
                          deconstruct_image, reconstruct_image)
 from .filter import (log_filter, mean_filter, median_filter, maximum_filter,
                      minimum_filter, gaussian_filter, remove_background_mean,
-                     remove_background_gaussian)
+                     remove_background_gaussian, dilation)
 from .projection import (maximum_projection, mean_projection,
                          median_projection, in_focus_selection,
                          focus_measurement, get_in_focus_indices,
                          focus_projection, focus_projection_fast)
 from .illumination import (compute_illumination_surface,
                            correct_illumination_surface)
+from .postprocess import (remove_transcription_site, extract_spots,
+                          extract_coordinates_image)
 from .preparation import (split_from_background, build_image, get_coordinates,
                           get_distance_layers, get_surface_layers, build_batch,
                           get_label, Generator, encode_labels, get_map_label,
                           format_experimental_data, get_label_encoder,
-                          remove_transcription_site, filter_data, balance_data,
-                          get_gene_encoder)
+                          remove_transcription_site_bis, filter_data,
+                          balance_data, get_gene_encoder)
 from .augmentation import augment
 
 
@@ -48,7 +50,7 @@ _preprocess = ["build_simulated_dataset", "build_stacks", "build_stack",
 
 _filter = ["log_filter", "mean_filter", "median_filter", "maximum_filter",
            "minimum_filter", "gaussian_filter", "remove_background_mean",
-           "remove_background_gaussian"]
+           "remove_background_gaussian", "dilation"]
 
 _projection = ["maximum_projection", "mean_projection", "median_projection",
                "in_focus_selection", "focus_measurement",
@@ -58,15 +60,18 @@ _projection = ["maximum_projection", "mean_projection", "median_projection",
 _illumination = ["compute_illumination_surface",
                  "correct_illumination_surface"]
 
+_postprocess = ["remove_transcription_site", "extract_spots",
+                "extract_coordinates_image"]
+
 _augmentation = ["augment"]
 
 _preparation = ["split_from_background", "build_image", "get_coordinates",
                 "get_distance_layers", "get_surface_layers", "build_batch",
                 "get_label", "Generator", "encode_labels", "get_map_label",
                 "format_experimental_data", "get_label_encoder",
-                "remove_transcription_site", "filter_data", "balance_data",
+                "remove_transcription_site_bis", "filter_data", "balance_data",
                 "get_gene_encoder"]
 
-__all__ = (_utils + _io + _preprocess +
+__all__ = (_utils + _io + _preprocess + _postprocess +
            _filter + _projection + _illumination +
            _augmentation + _preparation)
