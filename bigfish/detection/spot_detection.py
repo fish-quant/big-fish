@@ -513,6 +513,7 @@ def get_sigma(resolution_z=300, resolution_yx=103, psf_z=400, psf_yx=200):
     sigma_xy : float
         Standard deviation of the PSF, along the yx plan, in pixel.
     """
+    # TODO rename "resolution"
     # compute sigma
     sigma_z = psf_z / resolution_z
     sigma_yx = psf_yx / resolution_yx
