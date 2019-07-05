@@ -539,6 +539,8 @@ def complete_coordinates_2d(list_coord):
 
     Returns
     -------
+    list_coord_completed : List[np.array]
+        List of the completed coordinates arrays, with shape (nb_points, 2).
 
     """
     # TODO improve documentation
@@ -576,6 +578,7 @@ def from_coord_to_image(coord, image_shape=None):
         Binary matrix plotting the coordinates values.
 
     """
+    # TODO improve integration with the segmentation/detection part
     # build matrices
     if image_shape is None:
         max_x = coord[:, 0].max() + 5
