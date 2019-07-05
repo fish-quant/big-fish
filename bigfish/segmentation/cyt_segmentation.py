@@ -153,7 +153,7 @@ def cyt_watershed(relief, nuc_labelled, mask):
     ----------
     relief : np.ndarray, np.uint
         Relief image of the cytoplasm with shape (y, x).
-    nuc_labelled : np.ndarray
+    nuc_labelled : np.ndarray, np.int64
         Result of the nuclei segmentation with shape (y, x).
     mask : np.ndarray, bool
         Binary mask of the cytoplasm with shape (y, x).
@@ -165,6 +165,7 @@ def cyt_watershed(relief, nuc_labelled, mask):
         (y, x).
 
     """
+    # TODO how to be sure nucleus label corresponds to cell label?
     # check parameters
     stack.check_array(relief,
                       ndim=2,
@@ -172,7 +173,7 @@ def cyt_watershed(relief, nuc_labelled, mask):
                       allow_nan=False)
     stack.check_array(nuc_labelled,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
+                      dtype=[np.uint8, np.uint16, np.int64],
                       allow_nan=False)
     stack.check_array(mask,
                       ndim=2,
