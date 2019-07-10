@@ -300,6 +300,7 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
     bbox = np.array(bbox)
 
     # keep regions with a minimum size
+    # TODO convert '>' in '>='
     big_area = area > min_area
     regions = regions[big_area]
     intensity = intensity[big_area]
@@ -315,6 +316,7 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
     # count spots in the regions
     nb_spots_in = []
     for box in bbox:
+        # TODO convert '<=' in '<'
         (min_z, min_y, min_x, max_z, max_y, max_x) = box
         mask_spots_in = spots[:, 0] <= max_z
         mask_spots_in = (mask_spots_in & (spots[:, 1] <= max_y))
@@ -327,10 +329,12 @@ def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
         nb_spots_in.append(spots_in.shape[0])
 
     # keep regions with a minimum number of spots
+    # TODO convert '>' in '>='
     nb_spots_in = np.array(nb_spots_in)
     multiple_spots = nb_spots_in > min_nb_spots
 
     # keep regions which reach a minimum intensity value
+    # TODO convert '>' in '>='
     high_intensity = intensity > np.median(intensity) * min_intensity_factor
 
     # filter regions and labels
