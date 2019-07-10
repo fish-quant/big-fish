@@ -16,6 +16,7 @@ REQUIRES = [
       'scikit-learn',
       'scikit-image',
       'scipy',
+      'pandas',
       'tensorflow',
       'matplotlib',
       'joblib'

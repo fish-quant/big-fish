@@ -355,6 +355,7 @@ def feature_dispersion(cyt_coord, rna_coord, centroid_rna):
     """
     # TODO add sanity check functions
     # TODO add documentation
+    # TODO correct the formula
     # compute dispersion index
     sigma_rna = np.sum((rna_coord - centroid_rna) ** 2, axis=0)
     sigma_rna = np.sum(sigma_rna / len(rna_coord))

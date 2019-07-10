@@ -12,6 +12,8 @@ from skimage.segmentation import find_boundaries
 from skimage.measure import regionprops
 
 
+# TODO use skimage.measure.find_contours
+
 # ### Transcription sites ###
 
 def remove_transcription_site(mask_nuc, spots_in_foci, foci):
