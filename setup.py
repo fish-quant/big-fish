@@ -12,14 +12,16 @@ DESCRIPTION = 'Toolbox for cell FISH images.'
 
 # Package abstract dependencies
 REQUIRES = [
-      'numpy',
-      'scikit-learn',
-      'scikit-image',
-      'scipy',
-      'pandas',
-      'tensorflow',
-      'matplotlib',
-      'joblib'
+      'numpy >= 1.16.0',
+      'pip >= 18.1',
+      'scikit-learn >= 0.20.2',
+      'scikit-image >= 0.14.2',
+      'scipy >= 1.2.0',
+      'tensorflow >= 1.12.0, < 2.0',
+      'matplotlib >= 3.0.2',
+      'pandas >= 0.24.0',
+      'numba >= 0.37.0',
+      'umap >= 0.1.1'
 ]
 
 # Long description of the package

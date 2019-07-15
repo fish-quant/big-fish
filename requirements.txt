@@ -11,4 +11,5 @@ scipy >= 1.2.0
 tensorflow >= 1.12.0, < 2.0
 matplotlib >= 3.0.2
 pandas >= 0.24.0
-joblib >= 0.13.2
+numba >= 0.37.0
+umap >= 0.1.1
