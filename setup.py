@@ -21,7 +21,7 @@ REQUIRES = [
       'matplotlib >= 3.0.2',
       'pandas >= 0.24.0',
       'numba >= 0.37.0',
-      'umap >= 0.1.1'
+      'umap-learn >= 0.3.9'
 ]
 
 # Long description of the package
