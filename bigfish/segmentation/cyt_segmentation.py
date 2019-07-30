@@ -35,8 +35,7 @@ def build_cyt_binary_mask(image_projected, threshold=None):
     # check parameters
     stack.check_array(image_projected,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16])
     stack.check_parameter(threshold=(int, type(None)))
 
     # get a threshold
@@ -85,16 +84,13 @@ def build_cyt_relief(image_projected, nuc_labelled, mask_cyt, alpha=0.8):
     # check parameters
     stack.check_array(image_projected,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16])
     stack.check_array(nuc_labelled,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_array(mask_cyt,
                       ndim=2,
-                      dtype=[bool],
-                      allow_nan=False)
+                      dtype=[bool])
     stack.check_parameter(alpha=(float, int))
 
     # use pixel intensity of the cytoplasm channel to compute the seed.
@@ -146,7 +142,7 @@ def build_cyt_relief(image_projected, nuc_labelled, mask_cyt, alpha=0.8):
     return relief
 
 
-def cyt_watershed(relief, nuc_labelled, mask):
+def cyt_watershed(relief, nuc_labelled, mask, smooth=None):
     """Apply watershed algorithm on the cytoplasm to segment cell instances.
 
     Parameters
@@ -157,6 +153,9 @@ def cyt_watershed(relief, nuc_labelled, mask):
         Result of the nuclei segmentation with shape (y, x).
     mask : np.ndarray, bool
         Binary mask of the cytoplasm with shape (y, x).
+    smooth : int
+        Smooth the final boundaries applying a median filter on the mask
+        (kernel_size=smooth).
 
     Returns
     -------
@@ -169,24 +168,30 @@ def cyt_watershed(relief, nuc_labelled, mask):
     # check parameters
     stack.check_array(relief,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16])
     stack.check_array(nuc_labelled,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64])
     stack.check_array(mask,
                       ndim=2,
-                      dtype=[bool],
-                      allow_nan=False)
+                      dtype=[bool])
+    stack.check_parameter(smooth=(int, type(None)))
 
     # get markers
     markers = np.zeros_like(relief)
     for r in regionprops(nuc_labelled):
         markers[tuple(map(int, r.centroid))] = r.label
+    markers = markers.astype(np.int64)
 
     # segment cytoplasm
     cyt_segmented = watershed(relief, markers, mask=mask)
-    cyt_segmented = cyt_segmented.astype(np.int64)
+
+    # smooth boundaries
+    if smooth is not None:
+        cyt_segmented = stack.median_filter(cyt_segmented.astype(np.uint16),
+                                            kernel_shape="disk",
+                                            kernel_size=smooth)
+        cyt_segmented = remove_small_objects(cyt_segmented, 3000)
+        cyt_segmented = cyt_segmented.astype(np.int64)
 
     return cyt_segmented
