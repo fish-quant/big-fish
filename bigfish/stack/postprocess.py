@@ -139,8 +139,8 @@ def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
     nuc_labelled : np.ndarray, np.uint or np.int
         Labelled nuclei image with shape (y, x).
     spots_out : np.ndarray, np.int64
-        Coordinate of the spots detected outside foci, with shape (nb_spots, 3).
-        One coordinate per dimension (zyx coordinates).
+        Coordinate of the spots detected outside foci, with shape
+        (nb_spots, 3). One coordinate per dimension (zyx coordinates).
     spots_in : np.ndarray, np.int64
         Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
         One coordinate per dimension (zyx coordinates) plus the index of the
@@ -165,8 +165,9 @@ def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
             Array with shape (nb_foci, 5). One coordinate per dimension for the
             foci centroid (zyx coordinates), the number of RNAs detected in the
             foci and its index.
-        - cell : skimage.measure._regionprops._RegionProperties
-            Various properties of the cell.
+        - cell : Tuple[int]
+            Box coordinate of the cell in the original image (min_y, min_x,
+            max_y and max_x).
 
     """
     # TODO implement several smaller functions
@@ -223,6 +224,7 @@ def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
             continue
 
         # get boundaries coordinates
+        # TODO replace by find_contour
         cyt_coord = find_boundaries(cyt, mode='inner')
         cyt_coord = np.nonzero(cyt_coord)
         cyt_coord = np.column_stack(cyt_coord)
@@ -266,6 +268,6 @@ def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
         cell_foci[:, 1] -= min_y
         cell_foci[:, 2] -= min_x
 
-        results.append((cyt_coord, nuc_coord, rna_coord, cell_foci, cell))
+        results.append((cyt_coord, nuc_coord, rna_coord, cell_foci, cell.bbox))
 
     return results
