@@ -340,12 +340,12 @@ def feature_polarization(distance_cyt, distance_cyt_centroid, centroid_rna):
     return feature
 
 
-def feature_dispersion(cyt_coord, rna_coord, centroid_rna):
+def feature_dispersion(mask_cyt, rna_coord, centroid_rna):
     """
 
     Parameters
     ----------
-    cyt_coord
+    mask_cyt
     rna_coord
     centroid_rna
 
@@ -356,11 +356,15 @@ def feature_dispersion(cyt_coord, rna_coord, centroid_rna):
     # TODO add sanity check functions
     # TODO add documentation
     # TODO correct the formula
+    # get coordinates of each pixel of the cell
+    mask_cyt_coord = np.nonzero(mask_cyt)
+    mask_cyt_coord = np.column_stack(mask_cyt_coord)
+
     # compute dispersion index
     sigma_rna = np.sum((rna_coord - centroid_rna) ** 2, axis=0)
     sigma_rna = np.sum(sigma_rna / len(rna_coord))
-    sigma_cell = np.sum((cyt_coord - centroid_rna) ** 2, axis=0)
-    sigma_cell = np.sum(sigma_cell / len(cyt_coord))
+    sigma_cell = np.sum((mask_cyt_coord - centroid_rna) ** 2, axis=0)
+    sigma_cell = np.sum(sigma_cell / len(mask_cyt_coord))
     feature = sigma_rna / sigma_cell
 
     return feature
@@ -414,7 +418,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord):
     radii = [r for r in range(40)]
     d = features_ripley(radii, cyt_coord, mask_cyt, rna_coord, mask_rna)
     e = feature_polarization(distance_cyt, distance_cyt_centroid, centroid_rna)
-    f = feature_dispersion(cyt_coord, rna_coord, centroid_rna)
+    f = feature_dispersion(mask_cyt, rna_coord, centroid_rna)
     features = np.array(a + [b] + c + d + [e] + [f], dtype=np.float32)
 
     return features
