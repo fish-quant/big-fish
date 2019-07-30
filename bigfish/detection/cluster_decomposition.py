@@ -294,8 +294,8 @@ def build_reference_spot_3d(image, spots, radius, method="median"):
         spot_z, spot_y, spot_x = candidate_spots[i_spot, :]
 
         # get the volume of the spot
-        image_spot = get_spot_volume(image, spot_z, spot_y, spot_x,
-                                     radius_z, radius_yx)
+        image_spot = _get_spot_volume(image, spot_z, spot_y, spot_x,
+                                      radius_z, radius_yx)
 
         # remove the cropped images
         if image_spot.shape != (z_shape, yx_shape, yx_shape):
@@ -320,7 +320,7 @@ def build_reference_spot_3d(image, spots, radius, method="median"):
     return reference_spot
 
 
-def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
+def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     """Get a subimage of a detected spot in 3-d.
 
     Parameters
@@ -371,7 +371,7 @@ def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     return image_spot
 
 
-def get_spot_surface(image, spot_y, spot_x, radius_yx):
+def _get_spot_surface(image, spot_y, spot_x, radius_yx):
     """Get a subimage of a detected spot from its supposed yx plan.
 
     Parameters
@@ -477,7 +477,7 @@ def initialize_spot_parameter_3d(image, spot_z, spot_y, spot_x, psf_z=400,
     radius_yx = np.sqrt(3) * sigma_yx
 
     # get subimage of the spot
-    image_spot = get_spot_volume(
+    image_spot = _get_spot_volume(
         image=image,
         spot_z=spot_z,
         spot_y=spot_y,
@@ -486,21 +486,21 @@ def initialize_spot_parameter_3d(image, spot_z, spot_y, spot_x, psf_z=400,
         radius_yx=radius_yx)
 
     # build a grid to fit the gaussian values
-    grid, center_z, center_y, center_x = initialize_grid_3d(
+    grid, center_z, center_y, center_x = _initialize_grid_3d(
         image_spot=image_spot,
         resolution_z=resolution_z,
         resolution_yx=resolution_yx,
         return_centroid=True)
 
     # compute amplitude and background values
-    psf_amplitude, psf_background = compute_background_amplitude(image_spot)
+    psf_amplitude, psf_background = _compute_background_amplitude(image_spot)
 
     return (image_spot, grid, center_z, center_y, center_x, psf_amplitude,
             psf_background)
 
 
-def initialize_grid_3d(image_spot, resolution_z, resolution_yx,
-                       return_centroid=False):
+def _initialize_grid_3d(image_spot, resolution_z, resolution_yx,
+                        return_centroid=False):
     """Build a grid in nanometer to compute gaussian function over a full
     volume.
 
@@ -567,7 +567,7 @@ def initialize_grid_3d(image_spot, resolution_z, resolution_yx,
         return grid
 
 
-def compute_background_amplitude(image_spot):
+def _compute_background_amplitude(image_spot):
     """Compute amplitude of a spot and background minimum value.
 
     Parameters
@@ -861,7 +861,7 @@ def fit_gaussian_mixture(image, region, resolution_z, resolution_yx, sigma_z,
     image_region_raw = np.reshape(image_region, image_region.size)
 
     # build a grid to represent this image
-    grid = initialize_grid_3d(image_region, resolution_z, resolution_yx)
+    grid = _initialize_grid_3d(image_region, resolution_z, resolution_yx)
 
     # add a gaussian for each local maximum while the RSS decreases
     simulation = np.zeros(image_region_raw.shape, dtype=np.float64)
@@ -1082,9 +1082,8 @@ def decompose_clusters(image, cluster_regions, resolution_z, resolution_yx,
     return spots_in_cluster, clusters
 
 
-def cluster_decomposition(image, spots, radius, min_area=2,
-                          resolution_z=300, resolution_yx=103, psf_z=400,
-                          psf_yx=200):
+def run_decomposition(image, spots, radius, min_area=2, resolution_z=300,
+                      resolution_yx=103, psf_z=400, psf_yx=200):
     """Detect regions with clustered spots and fit a mixture of gaussians to
     decompose them.
 
@@ -1094,11 +1093,11 @@ def cluster_decomposition(image, spots, radius, min_area=2,
         Image with shape (z, y, x) and filter with gaussian operator to
         estimate then remove background.
     spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3).
+        Coordinates of the detected spots with shape (nb_spots, 3).
     radius : Tuple[float]
-        Radius of the detected peaks, one for each dimension.
+        Radius of the detected spots, one for each dimension.
     min_area : int
-        Minimum number of pixels in the connected region.
+        Minimum number of pixels in a clustered region.
     resolution_z : int or float
         Height of a voxel, along the z axis, in nanometer.
     resolution_yx : int or float
@@ -1164,14 +1163,14 @@ def cluster_decomposition(image, spots, radius, min_area=2,
     threshold_cluster = int(reference_spot.max())
 
     # initialize a grid representing the reference spot
-    grid, centroid_z, centroid_y, centroid_x = initialize_grid_3d(
+    grid, centroid_z, centroid_y, centroid_x = _initialize_grid_3d(
         image_spot=reference_spot,
         resolution_z=resolution_z,
         resolution_yx=resolution_yx,
         return_centroid=True)
 
     # compute amplitude and background of the reference spot
-    amplitude, background = compute_background_amplitude(reference_spot)
+    amplitude, background = _compute_background_amplitude(reference_spot)
 
     # TODO initialize the function multiple times ?
     # fit a 3-d gaussian function on this reference spot

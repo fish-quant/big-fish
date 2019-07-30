@@ -9,7 +9,7 @@ from bigfish import stack
 import scipy.ndimage as ndi
 import numpy as np
 
-from skimage.measure import label, regionprops
+from skimage.measure import label
 
 
 # TODO complete documentation methods
@@ -237,134 +237,6 @@ def get_cc(image, threshold):
     return cc
 
 
-def filter_cc(image, cc, spots, min_area, min_nb_spots, min_intensity_factor):
-    """Filter connected regions.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (z, y, x) or (y, x).
-    cc : np.ndarray, np.int64
-        Image labelled with shape (z, y, x) or (y, x).
-    spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3).
-    min_area : int
-        Minimum number of pixels in the connected region.
-    min_nb_spots : int
-        Minimum number of spot detected in this region.
-    min_intensity_factor : int or float
-        Minimum pixel intensity in the connected region is equal to
-        median(intensity) * min_intensity_factor.
-
-    Returns
-    -------
-    regions_filtered : np.ndarray
-        Array with filtered skimage.measure._regionprops._RegionProperties.
-    spots_out_region : np.ndarray, np.int64
-        Coordinate of the spots outside the regions with shape (nb_spots, 3).
-
-    """
-    # TODO manage the difference between 2-d and 3-d data
-
-    # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=True)
-    stack.check_array(cc,
-                      ndim=[2, 3],
-                      dtype=[np.int64],
-                      allow_nan=True)
-    stack.check_array(spots,
-                      ndim=2,
-                      dtype=[np.int64],
-                      allow_nan=True)
-    stack.check_parameter(min_area=int,
-                          min_nb_spots=int,
-                          min_intensity_factor=(float, int))
-
-    # get properties of the different connected regions
-    regions = regionprops(cc, intensity_image=image, cache=True)
-
-    # get different features of the regions
-    area = []
-    intensity = []
-    bbox = []
-    for i, region in enumerate(regions):
-        area.append(region.area)
-        intensity.append(region.max_intensity)
-        bbox.append(region.bbox)
-    regions = np.array(regions)
-    area = np.array(area)
-    intensity = np.array(intensity)
-    bbox = np.array(bbox)
-
-    # keep regions with a minimum size
-    # TODO convert '>' in '>='
-    big_area = area > min_area
-    regions = regions[big_area]
-    intensity = intensity[big_area]
-    bbox = bbox[big_area]
-
-    # case where no region big enough were detected
-    if regions.size == 0:
-        regions_filtered = np.array([])
-        spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
-        return regions_filtered, spots_out_region
-
-    # TODO remove copy()?
-    # count spots in the regions
-    nb_spots_in = []
-    for box in bbox:
-        # TODO convert '<=' in '<'
-        (min_z, min_y, min_x, max_z, max_y, max_x) = box
-        mask_spots_in = spots[:, 0] <= max_z
-        mask_spots_in = (mask_spots_in & (spots[:, 1] <= max_y))
-        mask_spots_in = (mask_spots_in & (spots[:, 2] <= max_x))
-        mask_spots_in = (mask_spots_in & (min_z <= spots[:, 0]))
-        mask_spots_in = (mask_spots_in & (min_y <= spots[:, 1]))
-        mask_spots_in = (mask_spots_in & (min_x <= spots[:, 2]))
-        spots_in = spots.copy()
-        spots_in = spots_in[mask_spots_in]
-        nb_spots_in.append(spots_in.shape[0])
-
-    # keep regions with a minimum number of spots
-    # TODO convert '>' in '>='
-    nb_spots_in = np.array(nb_spots_in)
-    multiple_spots = nb_spots_in > min_nb_spots
-
-    # keep regions which reach a minimum intensity value
-    # TODO convert '>' in '>='
-    high_intensity = intensity > np.median(intensity) * min_intensity_factor
-
-    # filter regions and labels
-    mask = multiple_spots | high_intensity
-    regions_filtered = regions[mask]
-    bbox = bbox[mask]
-
-    # case where no foci were detected
-    if regions.size == 0:
-        spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
-        return regions_filtered, spots_out_region
-
-    # TODO make it in a separate function
-    # count spots outside the regions
-    mask_spots_out = np.ones(spots[:, 0].shape, dtype=bool)
-    for box in bbox:
-        (min_z, min_y, min_x, max_z, max_y, max_x) = box
-        mask_spots_in = spots[:, 0] <= max_z
-        mask_spots_in = (mask_spots_in & (spots[:, 1] <= max_y))
-        mask_spots_in = (mask_spots_in & (spots[:, 2] <= max_x))
-        mask_spots_in = (mask_spots_in & (min_z <= spots[:, 0]))
-        mask_spots_in = (mask_spots_in & (min_y <= spots[:, 1]))
-        mask_spots_in = (mask_spots_in & (min_x <= spots[:, 2]))
-        mask_spots_out = mask_spots_out & (~mask_spots_in)
-    spots_out_region = spots.copy()
-    spots_out_region = spots_out_region[mask_spots_out]
-
-    return regions_filtered, spots_out_region
-
-
 # ### Signal-to-Noise ratio ###
 
 def compute_snr(image, sigma, minimum_distance=1,
@@ -494,7 +366,7 @@ def from_threshold_to_snr(image, sigma, mask, threshold=2000,
 
 # ### Utils ###
 
-def get_sigma(resolution_z=300, resolution_yx=103, psf_z=400, psf_yx=200):
+def get_sigma(resolution_z=300, resolution_yx=103, psf_z=350, psf_yx=150):
     """Compute the standard deviation of the PSF of the spots.
 
     Parameters
