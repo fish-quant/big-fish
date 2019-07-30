@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Functions to fit gaussian functions to the detected RNA spots.
+Functions to fit gaussian functions to the detected RNA spots, especially in
+clustered regions.
 """
 
 import bigfish.stack as stack
-from .spot_detection import get_sigma, get_cc, filter_cc
+from .spot_detection import get_sigma, get_cc
 
 import numpy as np
 
 from scipy.special import erf
 from scipy.optimize import curve_fit
+from skimage.measure import regionprops
 
 
 # TODO complete documentation methods
@@ -234,7 +236,7 @@ def precompute_erf(resolution_z, resolution_yx, sigma_z, sigma_yx,
     return table_erf_z, table_erf_y, table_erf_x
 
 
-# ### Spot parameter ###
+# ### Spot parameters ###
 
 def build_reference_spot_3d(image, spots, radius, method="median"):
     """Build a median or mean spot volume/surface as reference.
@@ -307,6 +309,7 @@ def build_reference_spot_3d(image, spots, radius, method="median"):
         return None
 
     # project the different spot images
+    # TODO np.stack or np.concatenate?
     l_reference_spot = np.stack(l_reference_spot, axis=0)
     if method == "mean":
         reference_spot = np.mean(l_reference_spot, axis=0)
@@ -803,14 +806,14 @@ def simulate_fitted_gaussian_3d(f, grid, popt, original_shape=None):
 def fit_gaussian_mixture(image, region, resolution_z, resolution_yx, sigma_z,
                          sigma_yx, amplitude, background,
                          precomputed_gaussian):
-    """Fit a mixture of gaussian to a potential foci region.
+    """Fit a mixture of gaussian to a potential clustered region.
 
     Parameters
     ----------
     image : np.ndarray, np.uint
         A 3-d image with detected spot and shape (z, y, x).
     region : skimage.measure._regionprops._RegionProperties
-        Properties of a foci region.
+        Properties of a clustered region.
     resolution_z : int or float
         Height of a voxel, along the z axis, in nanometer.
     resolution_yx : int or float
@@ -903,36 +906,199 @@ def fit_gaussian_mixture(image, region, resolution_z, resolution_yx, sigma_z,
     return image_region, best_simulation, positions_gaussian
 
 
-# ### Foci decomposition ###
+# ### Cluster decomposition ###
 
-
-def foci_decomposition(image_filtered_log, image_filtered_background,
-                       threshold_spot, spots, radius, min_area, min_nb_spots,
-                       min_intensity_factor, resolution_z=300,
-                       resolution_yx=103, psf_z=400, psf_yx=200):
-    """Detect regions with clustered spots (foci) and fit a mixture of
-    gaussian to them.
+def filter_clusters(image, cc, spots, min_area=2):
+    """Filter clustered regions (defined as connected component regions).
 
     Parameters
     ----------
-    image_filtered_log : np.ndarray
-        Image with shape (z, y, x) and filter with LoG operator.
-    image_filtered_background : np.ndarray
+    image : np.ndarray
+        Image with shape (z, y, x) or (y, x).
+    cc : np.ndarray, np.int64
+        Image labelled with shape (z, y, x) or (y, x).
+    spots : np.ndarray, np.int64
+        Coordinate of the spots with shape (nb_spots, 3).
+    min_area : int
+        Minimum number of pixels in the connected region.
+
+    Returns
+    -------
+    regions_filtered : np.ndarray
+        Array with filtered skimage.measure._regionprops._RegionProperties.
+    spots_out_region : np.ndarray, np.int64
+        Coordinate of the spots outside the regions with shape (nb_spots, 3).
+    max_region_size : int
+        Maximum size of the regions.
+
+    """
+    # TODO manage the difference between 2-d and 3-d data
+    # get properties of the different connected regions
+    regions = regionprops(cc, intensity_image=image)
+
+    # get different features of the regions
+    area = []
+    intensity = []
+    bbox = []
+    for i, region in enumerate(regions):
+        area.append(region.area)
+        intensity.append(region.mean_intensity)
+        bbox.append(region.bbox)
+    regions = np.array(regions)
+    area = np.array(area)
+    intensity = np.array(intensity)
+    bbox = np.array(bbox)
+
+    # keep regions with a minimum size
+    big_area = area >= min_area
+    regions = regions[big_area]
+    intensity = intensity[big_area]
+    bbox = bbox[big_area]
+
+    # case where no region big enough were detected
+    if regions.size == 0:
+        regions_filtered = np.array([])
+        spots_out_region = np.array([], dtype=np.int64).reshape((0, 3))
+        return regions_filtered, spots_out_region
+
+    # TODO keep this step?
+    # keep the brightest regions
+    high_intensity = intensity >= np.median(intensity)
+    regions_filtered = regions[high_intensity]
+    bbox = bbox[high_intensity]
+
+    # case where no connected region were detected
+    if regions.size == 0:
+        spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
+        return regions_filtered, spots_out_region
+
+    # get information about regions
+    mask_spots_out = np.ones(spots[:, 0].shape, dtype=bool)
+    max_region_size = 0
+    for box in bbox:
+        (min_z, min_y, min_x, max_z, max_y, max_x) = box
+
+        # get the size of the biggest region
+        size_z = max_z - min_z
+        size_y = max_y - min_y
+        size_x = max_x - min_x
+        max_region_size = max(max_region_size, size_z, size_y, size_x)
+
+        # get coordinates of spots inside the region
+        mask_spots_in = spots[:, 0] < max_z
+        mask_spots_in = (mask_spots_in & (spots[:, 1] < max_y))
+        mask_spots_in = (mask_spots_in & (spots[:, 2] < max_x))
+        mask_spots_in = (mask_spots_in & (min_z <= spots[:, 0]))
+        mask_spots_in = (mask_spots_in & (min_y <= spots[:, 1]))
+        mask_spots_in = (mask_spots_in & (min_x <= spots[:, 2]))
+        mask_spots_out = mask_spots_out & (~mask_spots_in)
+
+    # keep apart spots inside a region
+    spots_out_region = spots.copy()
+    spots_out_region = spots_out_region[mask_spots_out]
+
+    return regions_filtered, spots_out_region, max_region_size
+
+
+def decompose_clusters(image, cluster_regions, resolution_z, resolution_yx,
+                       sigma_z, sigma_yx, amplitude, background,
+                       precomputed_gaussian):
+    """
+    Decompose clustered regions by fitting mixture of gaussians.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x).
+    cluster_regions : np.ndarray
+        Array with filtered skimage.measure._regionprops._RegionProperties.
+    resolution_z : int or float
+        Height of a voxel, along the z axis, in nanometer.
+    resolution_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    sigma_z : int or float
+        Theoretical height of the spot PSF along the z axis, in nanometer.
+    sigma_yx : int or float
+        Theoretical diameter of the spot PSF on the yx plan, in nanometer.
+    amplitude : int or float
+        Amplitude of the spot.
+    background : int of float
+        Background intensity level of the spot.
+    precomputed_gaussian : List[np.ndarray] or Tuple[np.ndarray]
+        Precomputed tables values of erf for the different axis.
+
+    Returns
+    -------
+    spots_in_cluster : np.ndarray, np.int64
+        Coordinate of the spots detected inside cluster, with shape
+        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
+        index of the cluster.
+    clusters : np.ndarray, np.int64
+        Array with shape (nb_cluster, 7). One coordinate per dimension for the
+        cluster centroid (zyx coordinates), the number of RNAs detected in the
+        cluster, the area of the cluster region, its average intensity value
+        and its index.
+
+    """
+    # fit gaussian mixtures in the cluster regions
+    spots_in_cluster = []
+    clusters = []
+    for i_cluster, region in enumerate(cluster_regions):
+        (image_region,
+         best_simulation,
+         pos_gaussian) = fit_gaussian_mixture(
+            image,
+            region,
+            resolution_z,
+            resolution_yx,
+            sigma_z,
+            sigma_yx,
+            amplitude,
+            background,
+            precomputed_gaussian)
+
+        # get coordinates of spots and clusters in the original image
+        box = region.bbox
+        (min_z, min_y, min_x, _, _, _) = box
+        pos_gaussian = np.array(pos_gaussian, dtype=np.float64)
+        pos_gaussian[:, 0] = (pos_gaussian[:, 0] / resolution_z) + min_z
+        pos_gaussian[:, 1] = (pos_gaussian[:, 1] / resolution_yx) + min_y
+        pos_gaussian[:, 2] = (pos_gaussian[:, 2] / resolution_yx) + min_x
+        spots_in_cluster_ = np.zeros((pos_gaussian.shape[0], 4),
+                                     dtype=np.int64)
+        spots_in_cluster_[:, :3] = pos_gaussian
+        spots_in_cluster_[:, 3] = i_cluster
+        spots_in_cluster.append(spots_in_cluster_)
+        cluster_z, cluster_y, cluster_x = tuple(pos_gaussian[0])
+        nb_rna_cluster = pos_gaussian.shape[0]
+        cluster_area = region.area
+        cluster_intensity = region.mean_intensity
+        clusters.append([cluster_z, cluster_y, cluster_x, nb_rna_cluster,
+                         cluster_area, cluster_intensity, i_cluster])
+
+    spots_in_cluster = np.concatenate(spots_in_cluster, axis=0)
+    clusters = np.array(clusters, dtype=np.int64)
+
+    return spots_in_cluster, clusters
+
+
+def cluster_decomposition(image, spots, radius, min_area=2,
+                          resolution_z=300, resolution_yx=103, psf_z=400,
+                          psf_yx=200):
+    """Detect regions with clustered spots and fit a mixture of gaussians to
+    decompose them.
+
+    Parameters
+    ----------
+    image : np.ndarray
         Image with shape (z, y, x) and filter with gaussian operator to
         estimate then remove background.
-    threshold_spot : float or int
-        A threshold to detect spots.
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3).
     radius : Tuple[float]
         Radius of the detected peaks, one for each dimension.
     min_area : int
         Minimum number of pixels in the connected region.
-    min_nb_spots : int
-        Minimum number of spot detected in this region.
-    min_intensity_factor : int or float
-        Minimum pixel intensity in the connected region is equal to
-        median(intensity) * min_intensity_factor.
     resolution_z : int or float
         Height of a voxel, along the z axis, in nanometer.
     resolution_yx : int or float
@@ -944,27 +1110,24 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
 
     Returns
     -------
-    spots_out_foci : np.ndarray, np.int64
-        Coordinate of the spots detected out of foci, with shape (nb_spots, 3).
-        One coordinate per dimension (zyx coordinates).
-    spots_in_foci : np.ndarray, np.int64
-        Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
-        One coordinate per dimension (zyx coordinates) plus the index of the
-        foci.
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension for the
-        foci centroid (zyx coordinates), the number of RNAs detected in the
-        foci and its index.
+    spots_out_cluster : np.ndarray, np.int64
+        Coordinate of the spots detected out of cluster, with shape
+        (nb_spots, 3). One coordinate per dimension (zyx coordinates).
+    spots_in_cluster : np.ndarray, np.int64
+        Coordinate of the spots detected inside cluster, with shape
+        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
+        index of the cluster.
+    clusters : np.ndarray, np.int64
+        Array with shape (nb_cluster, 7). One coordinate per dimension for the
+        cluster centroid (zyx coordinates), the number of RNAs detected in the
+        cluster, the area of the cluster region, its average intensity value
+        and its index.
     reference_spot : np.ndarray
         Reference spot with shape (2*radius_z+1, 2*radius_y+1, 2*radius_x+1).
 
     """
     # check parameters
-    stack.check_array(image_filtered_log,
-                      ndim=3,
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
-    stack.check_array(image_filtered_background,
+    stack.check_array(image,
                       ndim=3,
                       dtype=[np.uint8, np.uint16, np.float32, np.float64],
                       allow_nan=False)
@@ -972,11 +1135,7 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
                       ndim=2,
                       dtype=[np.int64],
                       allow_nan=False)
-    stack.check_parameter(threshold_spot=(float, int),
-                          radius=(tuple, list),
-                          min_area=(float, int),
-                          min_nb_spots=(float, int),
-                          min_intensity_factor=(float, int),
+    stack.check_parameter(radius=(tuple, list),
                           resolution_z=(float, int),
                           resolution_yx=(float, int),
                           psf_z=(float, int),
@@ -984,24 +1143,25 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
 
     # case where no spot were detected
     if spots.size == 0:
-        spots_out_foci = np.array([], dtype=np.int64).reshape((0, 3))
-        spots_in_foci = np.array([], dtype=np.int64).reshape((0, 4))
-        foci = np.array([], dtype=np.float32).reshape((0, 5))
+        spots_out_cluster = np.array([], dtype=np.int64).reshape((0, 3))
+        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, 4))
+        cluster = np.array([], dtype=np.int64).reshape((0, 5))
         radius_z = int(radius[0]) + 1
         radius_yx = int(radius[1]) + 1
         z_shape = radius_z * 2 + 1
         yx_shape = radius_yx * 2 + 1
         reference_spot = np.zeros((z_shape, yx_shape, yx_shape),
-                                  dtype=image_filtered_background.dtype)
+                                  dtype=image.dtype)
 
-        return spots_out_foci, spots_in_foci, foci, reference_spot
+        return spots_out_cluster, spots_in_cluster, cluster, reference_spot
 
     # build a reference median spot
     reference_spot = build_reference_spot_3d(
-        image_filtered_background,
+        image,
         spots,
         radius,
         method="median")
+    threshold_cluster = int(reference_spot.max())
 
     # initialize a grid representing the reference spot
     grid, centroid_z, centroid_y, centroid_x = initialize_grid_3d(
@@ -1013,7 +1173,7 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
     # compute amplitude and background of the reference spot
     amplitude, background = compute_background_amplitude(reference_spot)
 
-    # TODO initialize the function multiple times
+    # TODO initialize the function multiple times ?
     # fit a 3-d gaussian function on this reference spot
     f = objective_function(
         resolution_z=resolution_z,
@@ -1031,64 +1191,40 @@ def foci_decomposition(image_filtered_log, image_filtered_background,
     amplitude = popt[5]
     background = popt[6]
 
-    # use connected components to detect potential foci
-    cc = get_cc(image_filtered_log, threshold_spot)
-    regions_filtered, spots_out_foci = filter_cc(
-        image_filtered_background,
-        cc,
-        spots,
-        min_area=min_area,
-        min_nb_spots=min_nb_spots,
-        min_intensity_factor=min_intensity_factor)
+    # use connected components to detect potential clusters
+    cc = get_cc(image, threshold_cluster)
+    regions_filtered, spots_out_cluster, max_region_size = filter_clusters(
+        image=image,
+        cc=cc,
+        spots=spots,
+        min_area=min_area)
 
-    # case where no foci where detected
+    # case where no cluster where detected
     if regions_filtered.size == 0:
-        spots_in_foci = np.array([], dtype=np.int64).reshape((0, 4))
-        foci = np.array([], dtype=np.float32).reshape((0, 5))
-        return spots, spots_in_foci, foci, reference_spot
+        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, 4))
+        cluster = np.array([], dtype=np.int64).reshape((0, 5))
+        return spots, spots_in_cluster, cluster, reference_spot
 
     # precompute gaussian function values
+    max_grid = max(200, max_region_size + 1)
     table_erf_z, table_erf_y, table_erf_x = precompute_erf(
         resolution_z,
         resolution_yx,
         sigma_z,
         sigma_yx,
-        max_grid=200)
+        max_grid=max_grid)
     precomputed_gaussian = (table_erf_z, table_erf_y, table_erf_x)
 
-    # fit gaussian mixtures in the foci regions
-    spots_in_foci = []
-    foci = []
-    for i_foci, region in enumerate(regions_filtered):
-        (image_region,
-         best_simulation,
-         pos_gaussian) = fit_gaussian_mixture(
-            image_filtered_background,
-            region,
-            resolution_z,
-            resolution_yx,
-            sigma_z,
-            sigma_yx,
-            amplitude,
-            background,
-            precomputed_gaussian)
+    # fit gaussian mixtures in the cluster regions
+    spots_in_cluster, clusters = decompose_clusters(
+        image=image,
+        cluster_regions=regions_filtered,
+        resolution_z=resolution_z,
+        resolution_yx=resolution_yx,
+        sigma_z=sigma_z,
+        sigma_yx=sigma_yx,
+        amplitude=amplitude,
+        background=background,
+        precomputed_gaussian=precomputed_gaussian)
 
-        # get coordinates of spots and foci in the original image
-        box = region.bbox
-        (min_z, min_y, min_x, _, _, _) = box
-        pos_gaussian = np.array(pos_gaussian, dtype=np.float64)
-        pos_gaussian[:, 0] = (pos_gaussian[:, 0] / resolution_z) + min_z
-        pos_gaussian[:, 1] = (pos_gaussian[:, 1] / resolution_yx) + min_y
-        pos_gaussian[:, 2] = (pos_gaussian[:, 2] / resolution_yx) + min_x
-        spots_in_foci_ = np.zeros((pos_gaussian.shape[0], 4), dtype=np.int64)
-        spots_in_foci_[:, :3] = pos_gaussian
-        spots_in_foci_[:, 3] = i_foci
-        spots_in_foci.append(spots_in_foci_)
-        foci_z, foci_y, foci_x = tuple(pos_gaussian[0])
-        nb_rna_foci = pos_gaussian.shape[0]
-        foci.append([foci_z, foci_y, foci_x, nb_rna_foci, i_foci])
-
-    spots_in_foci = np.concatenate(spots_in_foci, axis=0)
-    foci = np.array(foci, dtype=np.int64)
-
-    return spots_out_foci, spots_in_foci, foci, reference_spot
+    return spots_out_cluster, spots_in_cluster, clusters, reference_spot
