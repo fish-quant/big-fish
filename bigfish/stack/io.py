@@ -41,7 +41,8 @@ def read_image(path):
     # check the image is in unsigned integer 16 bits with 2 or 3 dimensions
     check_array(tensor,
                 dtype=[np.uint8, np.uint16, np.int64],
-                ndim=[2, 3])
+                ndim=[2, 3],
+                allow_nan=False)
 
     return tensor
 
@@ -157,5 +158,9 @@ def save_image(image, path):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         io.imsave(path, image)
+
+    # import warnings
+    # warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+    # warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
     return
