@@ -107,12 +107,10 @@ def remove_segmented_nuc(image, mask, nuclei_size=2000):
     # check parameters
     stack.check_array(image,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16])
     stack.check_array(mask,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # cast mask in np.int64 if it is binary
     if mask.dtype == bool or mask.dtype == np.uint16:

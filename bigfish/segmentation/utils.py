@@ -34,7 +34,9 @@ def label_instances(mask):
 
     """
     # check parameters
-    stack.check_array(mask, ndim=2, dtype=bool, allow_nan=False)
+    stack.check_array(mask,
+                      ndim=2,
+                      dtype=bool)
 
     # get labels
     image_label, nb_labels = label(mask, return_num=True)
@@ -61,8 +63,7 @@ def compute_mean_size_object(image_labelled):
     # check parameters
     stack.check_array(image_labelled,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented object
     props = regionprops(image_labelled)
@@ -97,12 +98,10 @@ def merge_labels(label_1, label_2):
     # check parameters
     stack.check_array(label_1,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64])
     stack.check_array(label_2,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64])
 
     # count number of label
     nb_label_1 = label_1.max()
@@ -130,7 +129,7 @@ def merge_labels(label_1, label_2):
 
 
 def get_boundaries(mask):
-    """Get the boundaries coordinates of a mask
+    """Get the boundaries coordinates of a mask (not sorted).
 
     Parameters
     ----------
@@ -143,11 +142,11 @@ def get_boundaries(mask):
         Coordinate of the boundaries with shape (nb_points, 2).
 
     """
+    # TODO sort boundaries coordinates with find_contours
     # check parameters
     stack.check_array(mask,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # get boundaries mask
     boundary_mask = find_boundaries(mask, mode='inner')
