@@ -241,7 +241,8 @@ def plot_layers_coordinates(layers, titles=None, framesize=(5, 10),
 
 
 def plot_extraction_image(results, remove_frame=False, title=None,
-                          framesize=None, path_output=None, ext="png"):
+                          framesize=None, path_output=None, ext="png",
+                          show=True):
     """Plot or subplot of 2-d coordinates extracted from an image.
 
     Parameters
@@ -256,11 +257,13 @@ def plot_extraction_image(results, remove_frame=False, title=None,
             coordinate per dimension (yx dimension), plus the index of a
             potential foci.
         - cell_foci : np.ndarray, np.int64
-            Array with shape (nb_foci, 5). One coordinate per dimension for the
+            Array with shape (nb_foci, 7). One coordinate per dimension for the
             foci centroid (zyx coordinates), the number of RNAs detected in the
-            foci and its index.
-        - cell : skimage.measure._regionprops._RegionProperties
-            Various properties of the cell.
+            foci, its index, the area of the foci region and its maximum
+            intensity value.
+        - cell : Tuple[int]
+            Box coordinate of the cell in the original image (min_y, min_x,
+            max_y and max_x).
     remove_frame : bool
         Remove axes and frame.
     title : str
@@ -272,6 +275,8 @@ def plot_extraction_image(results, remove_frame=False, title=None,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -294,7 +299,7 @@ def plot_extraction_image(results, remove_frame=False, title=None,
     # plot one image
     marge = stack.get_offset_value()
     if len(results) == 1:
-        cyt, nuc, rna, foci, cell = results[0]
+        cyt, nuc, rna, foci, _ = results[0]
         if remove_frame:
             fig = plt.figure(figsize=(8, 8), frameon=False)
             ax = fig.add_axes([0, 0, 1, 1])
@@ -316,7 +321,10 @@ def plot_extraction_image(results, remove_frame=False, title=None,
             plt.tight_layout()
         if path_output is not None:
             save_plot(path_output, ext)
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
         return
 
@@ -325,7 +333,7 @@ def plot_extraction_image(results, remove_frame=False, title=None,
 
     # one row
     if len(results) in [2, 3]:
-        for i, (cyt, nuc, rna, foci, cell) in enumerate(results):
+        for i, (cyt, nuc, rna, foci, _) in enumerate(results):
             if remove_frame:
                 ax[i].axis("off")
             ax[i].set_xlim(-marge, max(cyt[:, 1]) + marge)
@@ -345,8 +353,8 @@ def plot_extraction_image(results, remove_frame=False, title=None,
     else:
         # we complete the row with empty frames
         r = nrow * 3 - len(results)
-        results_completed = [(cyt, nuc, rna, foci, cell)
-                             for (cyt, nuc, rna, foci, cell) in results]
+        results_completed = [(cyt, nuc, rna, foci, _)
+                             for (cyt, nuc, rna, foci, _) in results]
         results_completed += [None] * r
         for i, result in enumerate(results_completed):
             row = i // 3
@@ -377,7 +385,10 @@ def plot_extraction_image(results, remove_frame=False, title=None,
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
@@ -385,7 +396,7 @@ def plot_extraction_image(results, remove_frame=False, title=None,
 def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
               image_cyt=None, mask_cyt=None, mask_nuc=None, count_rna=False,
               title=None, remove_frame=False, rescale=False,
-              framesize=(15, 10), path_output=None, ext="png"):
+              framesize=(15, 10), path_output=None, ext="png", show=True):
     """
 
     Parameters
@@ -423,6 +434,8 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -431,38 +444,31 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     # check parameters
     stack.check_array(cyt_coord,
                       ndim=2,
-                      dtype=[np.int64],
-                      allow_nan=False)
+                      dtype=[np.int64])
     if nuc_coord is not None:
         stack.check_array(nuc_coord,
                           ndim=2,
-                          dtype=[np.int64],
-                          allow_nan=False)
+                          dtype=[np.int64])
     if rna_coord is not None:
         stack.check_array(rna_coord,
                           ndim=2,
-                          dtype=[np.int64],
-                          allow_nan=False)
+                          dtype=[np.int64])
     if foci_coord is not None:
         stack.check_array(foci_coord,
                           ndim=2,
-                          dtype=[np.int64],
-                          allow_nan=False)
+                          dtype=[np.int64])
     if image_cyt is not None:
         stack.check_array(image_cyt,
                           ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64],
-                          allow_nan=True)
+                          dtype=[np.uint8, np.uint16, np.int64])
     if mask_cyt is not None:
         stack.check_array(mask_cyt,
                           ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool],
-                          allow_nan=True)
+                          dtype=[np.uint8, np.uint16, np.int64, bool])
     if mask_nuc is not None:
         stack.check_array(mask_nuc,
                           ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool],
-                          allow_nan=True)
+                          dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(count_rna=bool,
                           title=(str, type(None)),
                           remove_frame=bool,
@@ -493,13 +499,13 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     rna = np.zeros(image_shape, dtype=bool)
     if rna_coord is not None:
         rna[rna_coord[:, 0], rna_coord[:, 1]] = True
-        rna = stack.dilation(rna, kernel_shape="square", kernel_size=3)
+        rna = stack.dilation_filter(rna, kernel_shape="square", kernel_size=3)
 
     # get foci layer
     foci = np.zeros(image_shape, dtype=bool)
     if foci_coord is not None:
         foci[foci_coord[:, 1], foci_coord[:, 2]] = True
-        foci = stack.dilation(foci, kernel_shape="square", kernel_size=6)
+        foci = stack.dilation_filter(foci, kernel_shape="square", kernel_size=6)
 
     # build image coordinate
     image_coord = np.ones((max_y, max_x, 3), dtype=np.float32)
@@ -565,6 +571,9 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
 
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return

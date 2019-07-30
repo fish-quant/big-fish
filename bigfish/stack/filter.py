@@ -75,7 +75,9 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8, np.uint16])
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
@@ -111,7 +113,9 @@ def median_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8, np.uint16])
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
@@ -147,7 +151,9 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8, np.uint16])
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
@@ -183,7 +189,9 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8, np.uint16])
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
@@ -225,8 +233,7 @@ def log_filter(image, sigma, keep_dtype=False):
     # check parameters
     check_array(image,
                 ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                allow_nan=False)
+                dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(sigma=(float, int, tuple, list))
 
     # we cast the data in np.float to allow negative values
@@ -287,8 +294,7 @@ def gaussian_filter(image, sigma, allow_negative=False, keep_dtype=False):
     # check parameters
     check_array(image,
                 ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                allow_nan=False)
+                dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(sigma=(float, int, tuple, list),
                     allow_negative=bool)
 
@@ -340,7 +346,10 @@ def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
 
     """
     # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8], allow_nan=False)
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8])
+    # TODO allow np.uint16 ?
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
@@ -380,8 +389,7 @@ def remove_background_gaussian(image, sigma):
     # check parameters
     check_array(image,
                 ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                allow_nan=False)
+                dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(sigma=(float, int, tuple, list))
 
     # apply a gaussian filter
@@ -399,7 +407,7 @@ def remove_background_gaussian(image, sigma):
     return image_no_background
 
 
-def dilation(image, kernel_shape=None, kernel_size=None):
+def dilation_filter(image, kernel_shape=None, kernel_size=None):
     """Apply a dilation to a 2-d image.
 
     Parameters
@@ -423,8 +431,7 @@ def dilation(image, kernel_shape=None, kernel_size=None):
     # check parameters
     check_array(image,
                 ndim=2,
-                dtype=[np.uint8, np.uint16, bool],
-                allow_nan=False)
+                dtype=[np.uint8, np.uint16, bool])
     check_parameter(kernel_shape=(str, type(None)),
                     kernel_size=(int, tuple, list, type(None)))
 

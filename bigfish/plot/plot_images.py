@@ -15,6 +15,8 @@ from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap
 
 
+# TODO add parameter to show the figure
+
 def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
             framesize=(8, 8), remove_frame=False, path_output=None,
             ext="png"):
@@ -54,8 +56,7 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
                       ndim=[2, 3, 5],
                       dtype=[np.uint8, np.uint16,
                              np.float32, np.float64,
-                             bool],
-                      allow_nan=False)
+                             bool])
     stack.check_parameter(r=int, c=int, z=int,
                           rescale=bool,
                           title=(str, type(None)),
@@ -143,8 +144,7 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
                           ndim=2,
                           dtype=[np.uint8, np.uint16, np.int64,
                                  np.float32, np.float64,
-                                 bool],
-                          allow_nan=False)
+                                 bool])
 
     # we plot 3 images by row maximum
     nrow = int(np.ceil(len(tensors)/3))
@@ -248,8 +248,7 @@ def plot_channels_2d(tensor, r=0, z=0, rescale=False, titles=None,
     # check parameters
     stack.check_array(tensor,
                       ndim=5,
-                      dtype=[np.uint8, np.uint16],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16])
     stack.check_parameter(r=int,
                           z=int,
                           rescale=bool,
@@ -317,7 +316,8 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     # TODO add title in the plot and remove axes
     # TODO add parameter for vmin and vmax
     # check tensor
-    stack.check_array(illumination_surface, ndim=4,
+    stack.check_array(illumination_surface,
+                      ndim=4,
                       dtype=[np.float32, np.float64])
 
     # get the number of channels
@@ -370,12 +370,10 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
                       ndim=2,
                       dtype=[np.uint8, np.uint16,
                              np.float32, np.float64,
-                             bool],
-                      allow_nan=False)
+                             bool])
     stack.check_array(mask,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(rescale=bool,
                           title=(str, type(None)),
                           framesize=tuple,
@@ -465,16 +463,13 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
                       ndim=2,
                       dtype=[np.uint8, np.uint16,
                              np.float32, np.float64,
-                             bool],
-                      allow_nan=False)
+                             bool])
     stack.check_array(mask_nuc,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_array(mask_cyt,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(rescale=bool,
                           title=(str, type(None)),
                           framesize=tuple,
@@ -554,12 +549,10 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
     stack.check_array(tensor,
                       ndim=2,
                       dtype=[np.uint8, np.uint16,
-                             np.float32, np.float64],
-                      allow_nan=False)
+                             np.float32, np.float64])
     stack.check_array(spots,
                       ndim=2,
-                      dtype=[np.int64],
-                      allow_nan=False)
+                      dtype=[np.int64])
     stack.check_parameter(radius_yx=(float, int),
                           rescale=bool,
                           title=(str, type(None)),
@@ -651,16 +644,13 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
     stack.check_array(tensor,
                       ndim=2,
                       dtype=[np.uint8, np.uint16,
-                             np.float32, np.float64],
-                      allow_nan=False)
+                             np.float32, np.float64])
     stack.check_array(spots,
                       ndim=2,
-                      dtype=[np.int64],
-                      allow_nan=False)
+                      dtype=[np.int64])
     stack.check_array(foci,
                       ndim=2,
-                      dtype=[np.int64],
-                      allow_nan=False)
+                      dtype=[np.int64])
     stack.check_parameter(radius_spots_yx=(float, int),
                           rescale=bool,
                           title=(str, type(None)),
