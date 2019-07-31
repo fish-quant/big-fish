@@ -52,8 +52,7 @@ def log_lm(image, sigma, threshold, minimum_distance=1):
     # check parameters
     stack.check_array(image,
                       ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_parameter(sigma=(float, int, tuple),
                           minimum_distance=(float, int),
                           threshold=(float, int))
@@ -93,8 +92,7 @@ def local_maximum_detection(image, minimum_distance):
     # check parameters
     stack.check_array(image,
                       ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_parameter(minimum_distance=(float, int))
 
     # compute the kernel size (centered around our pixel because it is uneven)
@@ -140,12 +138,10 @@ def spots_thresholding(image, sigma, mask_lm, threshold):
     # check parameters
     stack.check_array(image,
                       ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_array(mask_lm,
                       ndim=[2, 3],
-                      dtype=[bool],
-                      allow_nan=False)
+                      dtype=[bool])
     stack.check_parameter(sigma=(float, int, tuple),
                           threshold=(float, int))
 
@@ -189,8 +185,7 @@ def log_cc(image, sigma, threshold):
     # check parameters
     stack.check_array(image,
                       ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=False)
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_parameter(sigma=(float, int, tuple),
                           threshold=(float, int))
 
@@ -224,8 +219,7 @@ def get_cc(image, threshold):
     # check parameters
     stack.check_array(image,
                       ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                      allow_nan=True)
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_parameter(threshold=(float, int))
 
     # Compute binary mask of the filtered image
