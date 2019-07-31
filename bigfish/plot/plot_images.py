@@ -707,7 +707,7 @@ def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
                            linewidth=1,
                            fill=False)
             ax[1].add_patch(c)
-            title_ = "Detected spots and foci"
+        title_ = "Detected spots and foci"
     else:
         title_ = "Detected foci"
     for (_, y, x, _, _) in foci:
