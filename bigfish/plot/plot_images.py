@@ -429,7 +429,7 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
 def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
                                title=None, framesize=(10, 10),
                                remove_frame=False, path_output=None,
-                               ext="png"):
+                               ext="png", show=True):
     """Plot the boundary of the segmented objects.
 
     Parameters
@@ -453,6 +453,8 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -475,7 +477,8 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
                           framesize=tuple,
                           remove_frame=bool,
                           path_output=(str, type(None)),
-                          ext=(str, list))
+                          ext=(str, list),
+                          show=bool)
 
     # get minimum and maximum value of the image
     vmin, vmax = None, None
@@ -507,14 +510,17 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
         plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
 
 def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
                         title=None, framesize=(15, 5), remove_frame=False,
-                        path_output=None, ext="png"):
+                        path_output=None, ext="png", show=True):
     """Plot detected spot on a 2-d image.
 
     Parameters
@@ -539,6 +545,8 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -559,7 +567,8 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
                           framesize=tuple,
                           remove_frame=bool,
                           path_output=(str, type(None)),
-                          ext=(str, list))
+                          ext=(str, list),
+                          show=bool)
 
     # get minimum and maximum value of the image
     vmin, vmax = None, None
@@ -599,14 +608,18 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
 
-def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
-                            rescale=False, title=None, framesize=(15, 10),
-                            remove_frame=False, path_output=None, ext="png"):
+def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
+                        rescale=False, title=None, framesize=(15, 10),
+                        remove_frame=False, path_output=None, ext="png",
+                        show=True):
     """Plot detected spots and foci on a 2-d image.
 
     Parameters
@@ -633,6 +646,8 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -645,19 +660,22 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
                       ndim=2,
                       dtype=[np.uint8, np.uint16,
                              np.float32, np.float64])
-    stack.check_array(spots,
-                      ndim=2,
-                      dtype=[np.int64])
     stack.check_array(foci,
                       ndim=2,
                       dtype=[np.int64])
-    stack.check_parameter(radius_spots_yx=(float, int),
+    stack.check_parameter(spots=(np.ndarray, type(None)),
+                          radius_spots_yx=(float, int),
                           rescale=bool,
                           title=(str, type(None)),
                           framesize=tuple,
                           remove_frame=bool,
                           path_output=(str, type(None)),
-                          ext=(str, list))
+                          ext=(str, list),
+                          show=bool)
+    if spots is not None:
+        stack.check_array(spots,
+                          ndim=2,
+                          dtype=[np.int64])
 
     # get minimum and maximum value of the image
     vmin, vmax = None, None
@@ -682,12 +700,16 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
         ax[1].imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         ax[1].imshow(tensor)
-    for (_, y, x) in spots:
-        c = plt.Circle((x, y), radius_spots_yx,
-                       color="red",
-                       linewidth=1,
-                       fill=False)
-        ax[1].add_patch(c)
+    if spots is not None:
+        for (_, y, x) in spots:
+            c = plt.Circle((x, y), radius_spots_yx,
+                           color="red",
+                           linewidth=1,
+                           fill=False)
+            ax[1].add_patch(c)
+            title_ = "Detected spots and foci"
+    else:
+        title_ = "Detected foci"
     for (_, y, x, _, _) in foci:
         c = plt.Circle((x, y), radius_spots_yx * 2,
                        color="blue",
@@ -695,7 +717,7 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
                        fill=False)
         ax[1].add_patch(c)
     if title is not None:
-        ax[1].set_title("Detected spots and foci",
+        ax[1].set_title(title_,
                         fontweight="bold",
                         fontsize=10)
     if remove_frame:
@@ -704,6 +726,9 @@ def plot_foci_decomposition(tensor, spots, foci, radius_spots_yx,
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
