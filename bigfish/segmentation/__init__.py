@@ -10,13 +10,13 @@ from .utils import (label_instances, compute_mean_size_object, merge_labels,
 from .nuc_segmentation import (filtered_threshold, remove_segmented_nuc)
 from .cyt_segmentation import (build_cyt_relief, build_cyt_binary_mask,
                                cyt_watershed)
-from .unet import get_input_size_unet
+# from .unet import get_input_size_unet
 
 _nuc = ["filtered_threshold", "remove_segmented_nuc"]
 
 _cyt = ["build_cyt_relief", "build_cyt_binary_mask", cyt_watershed]
 
-_unet = ["get_input_size_unet"]
+# _unet = ["get_input_size_unet"]
 
 _utils = ["label_instances", "compute_mean_size_object", "merge_labels",
           "get_boundaries"]
