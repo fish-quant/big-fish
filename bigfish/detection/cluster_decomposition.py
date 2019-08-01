@@ -959,7 +959,7 @@ def filter_clusters(image, cc, spots, min_area=2):
     if regions.size == 0:
         regions_filtered = np.array([])
         spots_out_region = np.array([], dtype=np.int64).reshape((0, 3))
-        return regions_filtered, spots_out_region
+        return regions_filtered, spots_out_region, 0
 
     # TODO keep this step?
     # keep the brightest regions
@@ -970,7 +970,7 @@ def filter_clusters(image, cc, spots, min_area=2):
     # case where no connected region were detected
     if regions.size == 0:
         spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
-        return regions_filtered, spots_out_region
+        return regions_filtered, spots_out_region, 0
 
     # get information about regions
     mask_spots_out = np.ones(spots[:, 0].shape, dtype=bool)
