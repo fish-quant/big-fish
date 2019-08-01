@@ -168,6 +168,7 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7,
         A 2-d tensor with shape (y, x).
 
     """
+    # TODO case where proportion = {0, 1}
     # check parameters
     check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16], allow_nan=False)
     check_parameter(proportion=(float, int),
