@@ -109,6 +109,9 @@ def extract_foci(clustered_spots):
     """
     # get foci labels
     labels_foci = np.unique(clustered_spots[clustered_spots[:, 3] != -1, 3])
+    if labels_foci.size == 0:
+        foci = np.array([], dtype=np.int64).reshape((0, 5))
+        return foci
 
     # get foci's information
     foci = []
