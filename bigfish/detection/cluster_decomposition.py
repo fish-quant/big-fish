@@ -958,8 +958,7 @@ def filter_clusters(image, cc, spots, min_area=2):
     # case where no region big enough were detected
     if regions.size == 0:
         regions_filtered = np.array([])
-        spots_out_region = np.array([], dtype=np.int64).reshape((0, 3))
-        return regions_filtered, spots_out_region, 0
+        return regions_filtered, spots, 0
 
     # TODO keep this step?
     # keep the brightest regions
@@ -967,10 +966,9 @@ def filter_clusters(image, cc, spots, min_area=2):
     regions_filtered = regions[high_intensity]
     bbox = bbox[high_intensity]
 
-    # case where no connected region were detected
-    if regions.size == 0:
-        spots_out_region = np.array([], dtype=np.int64).reshape((0, 2))
-        return regions_filtered, spots_out_region, 0
+    # case where no region bright enough were detected
+    if regions_filtered.size == 0:
+        return regions_filtered, spots, 0
 
     # get information about regions
     mask_spots_out = np.ones(spots[:, 0].shape, dtype=bool)
@@ -997,7 +995,7 @@ def filter_clusters(image, cc, spots, min_area=2):
     spots_out_region = spots.copy()
     spots_out_region = spots_out_region[mask_spots_out]
 
-    return regions_filtered, spots_out_region, max_region_size
+    return regions_filtered, spots_out_region, int(max_region_size)
 
 
 def decompose_clusters(image, cluster_regions, resolution_z, resolution_yx,
