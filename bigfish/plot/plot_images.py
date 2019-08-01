@@ -15,11 +15,12 @@ from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap
 
 
+# TODO clean this script (remove useless functions)
 # TODO add parameter to show the figure
 
 def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
             framesize=(8, 8), remove_frame=False, path_output=None,
-            ext="png"):
+            ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
     Parameters
@@ -46,6 +47,8 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -96,13 +99,16 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
         plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
 
 def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
-                remove_frame=False, path_output=None, ext="png"):
+                remove_frame=False, path_output=None, ext="png", show=True):
     """Plot or subplot of 2-d images.
 
     Parameters
@@ -122,6 +128,8 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -138,7 +146,8 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
                           framesize=tuple,
                           remove_frame=bool,
                           path_output=(str, type(None)),
-                          ext=(str, list))
+                          ext=(str, list),
+                          show=bool)
     for tensor in tensors:
         stack.check_array(tensor,
                           ndim=2,
@@ -162,7 +171,8 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
                 framesize=framesize,
                 remove_frame=remove_frame,
                 path_output=path_output,
-                ext=ext)
+                ext=ext,
+                show=show)
 
         return
 
@@ -208,7 +218,10 @@ def plot_images(tensors, rescale=False, titles=None, framesize=(15, 5),
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
