@@ -149,7 +149,7 @@ def features_distance(mask_rna, distance_cyt, distance_nuc,
     return features
 
 
-def feature_in_out_nucleus(mask_nuc, distance_nuc, mask_rna):
+def feature_in_out_nucleus(mask_nuc, mask_rna):
     """
 
     Parameters
@@ -166,8 +166,8 @@ def feature_in_out_nucleus(mask_nuc, distance_nuc, mask_rna):
     # TODO add documentation
     # compute the ratio between rna in and out nucleus
     rna_in = mask_rna[mask_nuc].sum()
-    rna_out = mask_rna[distance_nuc > 0].sum()
-    feature = rna_in / rna_out
+    nb_rna = mask_rna.sum()
+    feature = rna_in / nb_rna
 
     return feature
 
@@ -370,6 +370,33 @@ def feature_dispersion(mask_cyt, rna_coord, centroid_rna):
     return feature
 
 
+def feature_area(mask_cyt, mask_nuc):
+    """
+
+    Parameters
+    ----------
+    mask_cyt
+    mask_nuc
+
+    Returns
+    -------
+
+    """
+    # TODO add sanity check functions
+    # TODO add documentation
+    # get area of the cytoplasm and the nucleus
+    area_cyt = mask_cyt.sum()
+    area_nuc = mask_nuc.sum()
+
+    # compute relative area of the nucleus
+    relative_area_nuc = area_nuc / area_cyt
+
+    # return features
+    features = [relative_area_nuc, area_cyt, area_nuc]
+
+    return features
+
+
 def get_features(cyt_coord, nuc_coord, rna_coord):
     """Compute cell features.
 
@@ -412,14 +439,15 @@ def get_features(cyt_coord, nuc_coord, rna_coord):
     # compute features
     a = features_distance(mask_rna, distance_cyt, distance_nuc,
                           distance_cyt_centroid, distance_nuc_centroid)
-    b = feature_in_out_nucleus(mask_nuc, distance_nuc, mask_rna)
+    b = feature_in_out_nucleus(mask_nuc, mask_rna)
     opening_sizes = [15, 30, 45, 60]
     c = features_opening(opening_sizes, mask_cyt, mask_rna)
     radii = [r for r in range(40)]
     d = features_ripley(radii, cyt_coord, mask_cyt, rna_coord, mask_rna)
     e = feature_polarization(distance_cyt, distance_cyt_centroid, centroid_rna)
     f = feature_dispersion(mask_cyt, rna_coord, centroid_rna)
-    features = np.array(a + [b] + c + d + [e] + [f], dtype=np.float32)
+    g = feature_area(mask_cyt, mask_nuc)
+    features = np.array(a + [b] + c + d + [e] + [f] + g, dtype=np.float32)
 
     return features
 
@@ -440,10 +468,11 @@ def get_features_name():
                      "quantile_10_dist_cyt", "quantile_20_dist_cyt",
                      "quantile_50_dist_cyt", "average_dist_cyt_centroid",
                      "average_dist_nuc", "average_dist_nuc_centroid",
-                     "ratio_in_out_nuc", "diff_opening_15", "diff_opening_30",
+                     "ratio_in_nuc", "diff_opening_15", "diff_opening_30",
                      "diff_opening_45", "diff_opening_60", "ripley_max",
                      "ripley_max_gradient", "ripley_min_gradient",
                      "ripley_monotony", "ripley_large", "polarization_index",
-                     "dispersion_index"]
+                     "dispersion_index", "ratio_area_nuc", "area_cyt",
+                     "area_nuc"]
 
     return features_name
