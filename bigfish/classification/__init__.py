@@ -10,7 +10,7 @@ from .features import get_features, get_features_name
 
 # ### Load models ###
 
-_features = ["get_features", "get_features_name"]
+_features = ["get_features", "get_features_name", "get_features_aubin"]
 
 # _squeezenet = ["SqueezeNet0"]
 

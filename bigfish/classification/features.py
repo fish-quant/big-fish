@@ -115,6 +115,63 @@ def features_distance(mask_rna, distance_cyt, distance_nuc,
     """
     # TODO add sanity check functions
     # TODO add documentation
+    # get rna outside nucleus
+    mask_rna_out = mask_rna.copy()
+    mask_rna_out[distance_nuc == 0] = 0
+
+    # compute average distances to cytoplasm and quantiles
+    factor = distance_cyt[distance_nuc > 0].mean()
+    mean_distance_cyt = distance_cyt[mask_rna_out].mean() / factor
+    quantile_5_distance_cyt = np.percentile(distance_cyt[mask_rna_out], 5)
+    quantile_5_distance_cyt /= factor
+    quantile_10_distance_cyt = np.percentile(distance_cyt[mask_rna_out], 10)
+    quantile_10_distance_cyt /= factor
+    quantile_20_distance_cyt = np.percentile(distance_cyt[mask_rna_out], 20)
+    quantile_20_distance_cyt /= factor
+    quantile_50_distance_cyt = np.percentile(distance_cyt[mask_rna_out], 50)
+    quantile_50_distance_cyt /= factor
+
+    # compute average distances to cytoplasm centroid
+    factor = distance_cyt_centroid[distance_nuc > 0].mean()
+    mean_distance_cyt_centroid = distance_cyt_centroid[mask_rna_out].mean()
+    mean_distance_cyt_centroid /= factor
+
+    # compute average distances to nucleus
+    factor = distance_nuc[distance_nuc > 0].mean()
+    mean_distance_nuc = distance_nuc[mask_rna_out].mean() / factor
+
+    # compute average distances to nucleus centroid
+    factor = distance_nuc_centroid[distance_nuc > 0].mean()
+    mean_distance_nuc_centroid = distance_nuc_centroid[mask_rna_out].mean()
+    mean_distance_nuc_centroid /= factor
+
+    features = [mean_distance_cyt, quantile_5_distance_cyt,
+                quantile_10_distance_cyt, quantile_20_distance_cyt,
+                quantile_50_distance_cyt, mean_distance_cyt_centroid,
+                mean_distance_nuc, mean_distance_nuc_centroid]
+
+    return features
+
+
+def features_distance_aubin(mask_rna, distance_cyt, distance_nuc,
+                            distance_cyt_centroid, distance_nuc_centroid):
+    """
+
+    Parameters
+    ----------
+    mask_rna
+    distance_cyt
+    distance_nuc
+    distance_cyt_centroid
+    distance_nuc_centroid
+
+    Returns
+    -------
+
+    """
+    # TODO add sanity check functions
+    # TODO add documentation
+
     # compute average distances to cytoplasm and quantiles
     factor = distance_cyt[distance_cyt > 0].mean()
     mean_distance_cyt = distance_cyt[mask_rna].mean() / factor
@@ -155,6 +212,28 @@ def feature_in_out_nucleus(mask_nuc, mask_rna):
     Parameters
     ----------
     mask_nuc
+    mask_rna
+
+    Returns
+    -------
+
+    """
+    # TODO add sanity check functions
+    # TODO add documentation
+    # compute the proportion of rna in the nucleus
+    rna_in = mask_rna[mask_nuc].sum()
+    nb_rna = mask_rna.sum()
+    feature = rna_in / nb_rna
+
+    return feature
+
+
+def feature_in_out_nucleus_aubin(mask_nuc, mask_rna, distance_nuc):
+    """
+
+    Parameters
+    ----------
+    mask_nuc
     distance_nuc
     mask_rna
 
@@ -166,8 +245,8 @@ def feature_in_out_nucleus(mask_nuc, mask_rna):
     # TODO add documentation
     # compute the ratio between rna in and out nucleus
     rna_in = mask_rna[mask_nuc].sum()
-    nb_rna = mask_rna.sum()
-    feature = rna_in / nb_rna
+    rna_out = mask_rna[distance_nuc > 0].sum()
+    feature = rna_in / rna_out
 
     return feature
 
@@ -297,6 +376,7 @@ def features_ripley(radii, cyt_coord, mask_cyt, rna_coord, mask_rna):
 
     # compute features
     index_max = np.argmax(smoothed_values)
+    max_radius = radii[index_max]
     max_value = smoothed_values[index_max]
     if index_max == 0:
         max_gradient = gradients[0]
@@ -311,7 +391,8 @@ def features_ripley(radii, cyt_coord, mask_cyt, rna_coord, mask_rna):
     max_size_cell = np.max(distances_cell)
     big_radius = int(max_size_cell / 4)
     big_value = ripley_values([big_radius], mask_cyt, rna_coord, mask_rna)[0]
-    features = [max_value, max_gradient, min_gradient, monotony, big_value]
+    features = [max_value, max_gradient, min_gradient, monotony, big_value,
+                max_radius]
 
     return features
 
@@ -397,6 +478,10 @@ def feature_area(mask_cyt, mask_nuc):
     return features
 
 
+def feature_height():
+    return
+
+
 def get_features(cyt_coord, nuc_coord, rna_coord):
     """Compute cell features.
 
@@ -446,8 +531,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord):
     d = features_ripley(radii, cyt_coord, mask_cyt, rna_coord, mask_rna)
     e = feature_polarization(distance_cyt, distance_cyt_centroid, centroid_rna)
     f = feature_dispersion(mask_cyt, rna_coord, centroid_rna)
-    g = feature_area(mask_cyt, mask_nuc)
-    features = np.array(a + [b] + c + d + [e] + [f] + g, dtype=np.float32)
+    features = np.array(a + [b] + c + d + [e] + [f], dtype=np.float32)
 
     return features
 
@@ -471,8 +555,61 @@ def get_features_name():
                      "ratio_in_nuc", "diff_opening_15", "diff_opening_30",
                      "diff_opening_45", "diff_opening_60", "ripley_max",
                      "ripley_max_gradient", "ripley_min_gradient",
-                     "ripley_monotony", "ripley_large", "polarization_index",
-                     "dispersion_index", "ratio_area_nuc", "area_cyt",
-                     "area_nuc"]
+                     "ripley_monotony", "ripley_large", "ripley_radius_max",
+                     "polarization_index", "dispersion_index"]
 
     return features_name
+
+
+def get_features_aubin(cyt_coord, nuc_coord, rna_coord):
+    """Compute cell features.
+
+    Parameters
+    ----------
+    cyt_coord : np.ndarray, np.int64
+        Coordinate yx of the cytoplasm boundary with shape (nb_points, 2).
+    nuc_coord : np.ndarray, np.int64
+        Coordinate yx of the cytoplasm boundary with shape (nb_points, 2).
+    rna_coord : np.ndarray, np.int64
+        Coordinate yx of the detected rna with shape (nb_rna, 2).
+
+    Returns
+    -------
+    features : List[float]
+        List of features (cf. features.get_features_name()).
+
+    """
+    # TODO add sanity check functions
+    # TODO add documentation
+    # TODO filter features
+    # get a binary representation of the coordinates
+    cyt, nuc, mask_rna = from_coord_to_matrix(cyt_coord, nuc_coord, rna_coord)
+
+    # fill in masks
+    mask_cyt, mask_nuc = stack.get_surface_layers(cyt, nuc, cast_float=False)
+
+    # compute distance maps for the cytoplasm and the nucleus
+    distance_cyt, distance_nuc = stack.get_distance_layers(cyt, nuc)
+
+    # get centroids
+    centroid_cyt = get_centroid(mask_cyt)
+    centroid_nuc = get_centroid(mask_nuc)
+    centroid_rna = np.mean(rna_coord, axis=0, dtype=np.int64)
+
+    # get centroid distance maps
+    distance_cyt_centroid = get_centroid_distance_map(centroid_cyt, mask_cyt)
+    distance_nuc_centroid = get_centroid_distance_map(centroid_nuc, mask_cyt)
+
+    # compute features
+    a = features_distance_aubin(mask_rna, distance_cyt, distance_nuc,
+                                distance_cyt_centroid, distance_nuc_centroid)
+    b = feature_in_out_nucleus_aubin(mask_nuc, mask_rna, distance_nuc)
+    opening_sizes = [15, 30, 45, 60]
+    c = features_opening(opening_sizes, mask_cyt, mask_rna)
+    radii = [r for r in range(40)]
+    d = features_ripley(radii, cyt_coord, mask_cyt, rna_coord, mask_rna)
+    e = feature_polarization(distance_cyt, distance_cyt_centroid, centroid_rna)
+    f = feature_dispersion(mask_cyt, rna_coord, centroid_rna)
+    features = np.array(a + [b] + c + d + [e] + [f], dtype=np.float32)
+
+    return features
