@@ -6,7 +6,7 @@ patterns of the RNA.
 """
 
 # from .squeezenet import SqueezeNet0
-from .features import get_features, get_features_name
+from .features import get_features, get_features_name, get_features_aubin
 
 # ### Load models ###
 
