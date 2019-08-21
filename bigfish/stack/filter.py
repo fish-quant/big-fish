@@ -9,7 +9,8 @@ from .preprocess import (cast_img_float32, cast_img_float64, cast_img_uint8,
                          cast_img_uint16)
 
 from skimage.morphology.selem import square, diamond, rectangle, disk
-from skimage.morphology import binary_dilation, dilation
+from skimage.morphology import (binary_dilation, dilation, binary_erosion,
+                                erosion)
 from skimage.filters import rank, gaussian
 
 from scipy.ndimage import gaussian_laplace
@@ -448,5 +449,50 @@ def dilation_filter(image, kernel_shape=None, kernel_size=None):
         image_filtered = binary_dilation(image, kernel)
     else:
         image_filtered = dilation(image, kernel)
+
+    return image_filtered
+
+
+def erosion_filter(image, kernel_shape=None, kernel_size=None):
+    """Apply an erosion to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (y, x).
+    kernel_shape : str
+        Shape of the kernel used to compute the filter ('diamond', 'disk',
+        'rectangle' or 'square').
+    kernel_size : int or Tuple(int)
+        The size of the kernel. For the rectangle we expect two integers
+        (width, height).
+
+    Returns
+    -------
+    image_filtered : np.ndarray, np.uint
+        Filtered 2-d image with shape (y, x).
+
+    """
+    # TODO check dtype
+    # check parameters
+    check_array(image,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, bool])
+    check_parameter(kernel_shape=(str, type(None)),
+                    kernel_size=(int, tuple, list, type(None)))
+
+    # get kernel
+    if kernel_shape is None or kernel_size is None:
+        kernel = None
+    else:
+        kernel = _define_kernel(shape=kernel_shape,
+                                size=kernel_size,
+                                dtype=image.dtype)
+
+    # apply filter
+    if image.dtype == bool:
+        image_filtered = binary_erosion(image, kernel)
+    else:
+        image_filtered = erosion(image, kernel)
 
     return image_filtered

@@ -351,7 +351,7 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
 
 def plot_segmentation(tensor, mask, rescale=False, title=None,
                       framesize=(15, 5), remove_frame=False,
-                      path_output=None, ext="png"):
+                      path_output=None, ext="png", show=True):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
     Parameters
@@ -373,6 +373,8 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
@@ -434,13 +436,16 @@ def plot_segmentation(tensor, mask, rescale=False, title=None,
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
 
-def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
-                               title=None, framesize=(10, 10),
+def plot_segmentation_boundary(tensor, mask_nuc=None, mask_cyt=None,
+                               rescale=False, title=None, framesize=(10, 10),
                                remove_frame=False, path_output=None,
                                ext="png", show=True):
     """Plot the boundary of the segmented objects.
@@ -479,12 +484,14 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
                       dtype=[np.uint8, np.uint16,
                              np.float32, np.float64,
                              bool])
-    stack.check_array(mask_nuc,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
-    stack.check_array(mask_cyt,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    if mask_nuc is not None:
+        stack.check_array(mask_nuc,
+                          ndim=2,
+                          dtype=[np.uint8, np.uint16, np.int64, bool])
+    if mask_cyt is not None:
+        stack.check_array(mask_cyt,
+                          ndim=2,
+                          dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(rescale=bool,
                           title=(str, type(None)),
                           framesize=tuple,
@@ -499,10 +506,16 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
         vmin, vmax = get_minmax_values(tensor)
 
     # get boundaries
-    boundaries_nuc = find_boundaries(mask_nuc, mode='inner')
-    boundaries_nuc = np.ma.masked_where(boundaries_nuc == 0, boundaries_nuc)
-    boundaries_cyt = find_boundaries(mask_cyt, mode='inner')
-    boundaries_cyt = np.ma.masked_where(boundaries_cyt == 0, boundaries_cyt)
+    boundaries_nuc = None
+    boundaries_cyt = None
+    if mask_nuc is not None:
+        boundaries_nuc = find_boundaries(mask_nuc, mode='inner')
+        boundaries_nuc = np.ma.masked_where(boundaries_nuc == 0,
+                                            boundaries_nuc)
+    if mask_cyt is not None:
+        boundaries_cyt = find_boundaries(mask_cyt, mode='inner')
+        boundaries_cyt = np.ma.masked_where(boundaries_cyt == 0,
+                                            boundaries_cyt)
 
     # plot
     if remove_frame:
@@ -515,8 +528,10 @@ def plot_segmentation_boundary(tensor, mask_nuc, mask_cyt, rescale=False,
         plt.imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         plt.imshow(tensor)
-    plt.imshow(boundaries_nuc, cmap=ListedColormap(['blue']))
-    plt.imshow(boundaries_cyt, cmap=ListedColormap(['red']))
+    if mask_nuc is not None:
+        plt.imshow(boundaries_nuc, cmap=ListedColormap(['blue']))
+    if mask_cyt is not None:
+        plt.imshow(boundaries_cyt, cmap=ListedColormap(['red']))
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
     if not remove_frame:

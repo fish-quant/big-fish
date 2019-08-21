@@ -17,7 +17,8 @@ from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
                          deconstruct_image, reconstruct_image)
 from .filter import (log_filter, mean_filter, median_filter, maximum_filter,
                      minimum_filter, gaussian_filter, remove_background_mean,
-                     remove_background_gaussian, dilation_filter)
+                     remove_background_gaussian, dilation_filter,
+                     erosion_filter)
 from .projection import (maximum_projection, mean_projection,
                          median_projection, in_focus_selection,
                          focus_measurement, get_in_focus_indices,
@@ -50,7 +51,7 @@ _preprocess = ["build_simulated_dataset", "build_stacks", "build_stack",
 
 _filter = ["log_filter", "mean_filter", "median_filter", "maximum_filter",
            "minimum_filter", "gaussian_filter", "remove_background_mean",
-           "remove_background_gaussian", "dilation_filter"]
+           "remove_background_gaussian", "dilation_filter", "erosion_filter"]
 
 _projection = ["maximum_projection", "mean_projection", "median_projection",
                "in_focus_selection", "focus_measurement",
