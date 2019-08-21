@@ -323,8 +323,7 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
     if check:
         check_array(tensor,
                     ndim=5,
-                    dtype=[np.uint8, np.uint16],
-                    allow_nan=False)
+                    dtype=[np.uint8, np.uint16])
 
     # rescale data and improve contrast
     if normalize:
