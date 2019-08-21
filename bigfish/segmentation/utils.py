@@ -91,7 +91,7 @@ def merge_labels(label_1, label_2):
 
     Returns
     -------
-    label : np.ndarray, np.int64
+    final_label : np.ndarray, np.int64
         Labelled image with shape (y, x).
 
     """
@@ -125,7 +125,47 @@ def merge_labels(label_1, label_2):
     label_2[label_2 > 0] += nb_label_1
     label = np.maximum(label_1, label_2)
 
-    return label
+    # postprocess label
+    label_dilated = stack.dilation_filter(label,
+                                          kernel_shape="disk",
+                                          kernel_size=1)
+    label_eroded = stack.erosion_filter(label,
+                                        kernel_shape="disk",
+                                        kernel_size=1)
+    final_label = label_dilated - label_eroded
+
+    return final_label
+
+
+def dilate_erode_labels(label):
+    """Substract an eroded label to a dilated one in order to prevent
+    boundaries contact.
+
+    Parameters
+    ----------
+    label : np.ndarray, np.uint or np.int
+        Labelled image with shape (y, x).
+
+    Returns
+    -------
+    label_final : np.ndarray, np.int64
+        Labelled image with shape (y, x).
+
+    """
+    # check parameters
+    stack.check_array(label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+
+    # erode-dilate mask
+    label_dilated = stack.dilation_filter(label, "disk", 2)
+    label_eroded = stack.erosion_filter(label, "disk", 2)
+    borders = label_dilated - label_eroded
+    label_final = label.copy()
+    label_final[borders > 0] = 0
+    label_final = label_final.astype(np.int64)
+
+    return label_final
 
 
 def get_boundaries(mask):
