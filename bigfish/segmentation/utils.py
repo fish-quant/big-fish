@@ -91,7 +91,7 @@ def merge_labels(label_1, label_2):
 
     Returns
     -------
-    final_label : np.ndarray, np.int64
+    label : np.ndarray, np.int64
         Labelled image with shape (y, x).
 
     """
@@ -125,16 +125,7 @@ def merge_labels(label_1, label_2):
     label_2[label_2 > 0] += nb_label_1
     label = np.maximum(label_1, label_2)
 
-    # postprocess label
-    label_dilated = stack.dilation_filter(label,
-                                          kernel_shape="disk",
-                                          kernel_size=1)
-    label_eroded = stack.erosion_filter(label,
-                                        kernel_shape="disk",
-                                        kernel_size=1)
-    final_label = label_dilated - label_eroded
-
-    return final_label
+    return label
 
 
 def dilate_erode_labels(label):
@@ -156,6 +147,10 @@ def dilate_erode_labels(label):
     stack.check_array(label,
                       ndim=2,
                       dtype=[np.uint8, np.uint16, np.int64])
+
+    # handle 64 bit integer
+    if label.dtype == np.int64:
+        label = label.astype(np.uint16)
 
     # erode-dilate mask
     label_dilated = stack.dilation_filter(label, "disk", 2)
