@@ -382,6 +382,11 @@ def _extract_foci(foci, spots_in_foci, cell_cyt_mask):
     """
     # filter foci
     mask_foci_cell = cell_cyt_mask[foci[:, 1], foci[:, 2]]
+    if mask_foci_cell.sum() == 0:
+        foci_cell = np.array([], dtype=np.int64).reshape((0, 5))
+        spots_in_foci_cell = np.array([], dtype=np.int64).reshape((0, 4))
+        return foci_cell, spots_in_foci_cell
+
     foci_cell = foci[mask_foci_cell]
 
     # filter spots in foci
