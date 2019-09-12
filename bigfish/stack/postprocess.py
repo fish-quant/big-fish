@@ -226,6 +226,7 @@ def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
 
         # get rna coordinates
         spots_out_foci_cell = _extract_spots_outside_foci(cyt, spots_out)
+        print(spots_out_foci_cell.shape, spots_in_foci_cell.shape, foci_cell.shape)
         rna_coord = np.concatenate([spots_out_foci_cell, spots_in_foci_cell],
                                    axis=0)
 
