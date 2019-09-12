@@ -483,23 +483,24 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
         title = " ({0})".format(title)
 
     # get shape of image built from coordinates
-    max_y = cyt_coord[:, 0].max() + 1
-    max_x = cyt_coord[:, 1].max() + 1
+    marge = stack.get_offset_value()
+    max_y = cyt_coord[:, 0].max() + 2 * marge + 1
+    max_x = cyt_coord[:, 1].max() + 2 * marge + 1
     image_shape = (max_y, max_x)
 
     # get cytoplasm layer
     cyt = np.zeros(image_shape, dtype=bool)
-    cyt[cyt_coord[:, 0], cyt_coord[:, 1]] = True
+    cyt[cyt_coord[:, 0] + marge, cyt_coord[:, 1] + marge] = True
 
     # get nucleus layer
     nuc = np.zeros(image_shape, dtype=bool)
     if nuc_coord is not None:
-        nuc[nuc_coord[:, 0], nuc_coord[:, 1]] = True
+        nuc[nuc_coord[:, 0] + marge, nuc_coord[:, 1] + marge] = True
 
     # get rna layer
     rna = np.zeros(image_shape, dtype=bool)
     if rna_coord is not None:
-        rna[rna_coord[:, 1], rna_coord[:, 2]] = True
+        rna[rna_coord[:, 1] + marge, rna_coord[:, 2] + marge] = True
         rna = stack.dilation_filter(rna,
                                     kernel_shape="square",
                                     kernel_size=3)
@@ -508,7 +509,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     foci = np.zeros(image_shape, dtype=bool)
     if foci_coord is not None:
         rna_in_foci_coord = rna_coord[rna_coord[:, 3] != -1, :].copy()
-        foci[rna_in_foci_coord[:, 1], rna_in_foci_coord[:, 2]] = True
+        foci[rna_in_foci_coord[:, 1] + marge, rna_in_foci_coord[:, 2] + marge] = True
         foci = stack.dilation_filter(foci,
                                      kernel_shape="square",
                                      kernel_size=3)
