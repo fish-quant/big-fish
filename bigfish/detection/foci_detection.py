@@ -43,6 +43,7 @@ def convert_spot_coordinates(spots, resolution_z, resolution_yx):
 
 def cluster_spots(spots, resolution_z, resolution_yx, radius, nb_min_spots):
     """
+    Assign a cluster to each spot.
 
     Parameters
     ----------
