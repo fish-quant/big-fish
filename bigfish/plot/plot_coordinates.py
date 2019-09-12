@@ -398,6 +398,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
               title=None, remove_frame=False, rescale=False,
               framesize=(15, 10), path_output=None, ext="png", show=True):
     """
+    Plot image and coordinates extracted for a specific cell.
 
     Parameters
     ----------
@@ -406,8 +407,8 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     nuc_coord : np.ndarray, np.int64
         Coordinates of the nuclei border with shape (nb_points, 2).
     rna_coord : np.ndarray, np.int64
-        Coordinates of the RNA spots with shape (nb_spots, 3). One
-        coordinate per dimension (yx dimension), plus the index of a
+        Coordinates of the RNA spots with shape (nb_spots, 4). One
+        coordinate per dimension (zyx dimension), plus the index of a
         potential foci.
     foci_coord : np.ndarray, np.int64
         Array with shape (nb_foci, 5). One coordinate per dimension for the
@@ -498,14 +499,19 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     # get rna layer
     rna = np.zeros(image_shape, dtype=bool)
     if rna_coord is not None:
-        rna[rna_coord[:, 0], rna_coord[:, 1]] = True
-        rna = stack.dilation_filter(rna, kernel_shape="square", kernel_size=3)
+        rna[rna_coord[:, 1], rna_coord[:, 2]] = True
+        rna = stack.dilation_filter(rna,
+                                    kernel_shape="square",
+                                    kernel_size=3)
 
     # get foci layer
     foci = np.zeros(image_shape, dtype=bool)
     if foci_coord is not None:
-        foci[foci_coord[:, 1], foci_coord[:, 2]] = True
-        foci = stack.dilation_filter(foci, kernel_shape="square", kernel_size=6)
+        rna_in_foci_coord = rna_coord[rna_coord[:, 3] != -1, :].copy()
+        foci[rna_in_foci_coord[:, 1], rna_in_foci_coord[:, 2]] = True
+        foci = stack.dilation_filter(foci,
+                                     kernel_shape="square",
+                                     kernel_size=3)
 
     # build image coordinate
     image_coord = np.ones((max_y, max_x, 3), dtype=np.float32)
