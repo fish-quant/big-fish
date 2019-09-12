@@ -8,7 +8,7 @@ import numpy as np
 
 import bigfish.stack as stack
 
-from skimage.morphology import remove_small_objects, remove_small_holes
+from skimage.morphology import remove_small_objects, remove_small_holes, label
 from skimage.morphology import watershed
 from skimage.filters import threshold_otsu
 from skimage.measure import regionprops
@@ -159,7 +159,7 @@ def cyt_watershed(relief, nuc_labelled, mask, smooth=None):
 
     Returns
     -------
-    cyt_segmented : np.ndarray, np.int64
+    cyt_segmented_final : np.ndarray, np.int64
         Segmentation of the cytoplasm with instance differentiation and shape
         (y, x).
 
@@ -194,4 +194,27 @@ def cyt_watershed(relief, nuc_labelled, mask, smooth=None):
         cyt_segmented = remove_small_objects(cyt_segmented, 3000)
         cyt_segmented = cyt_segmented.astype(np.int64)
 
-    return cyt_segmented
+    # be sure to remove potential small disjoint part of the mask
+    cyt_segmented_final = np.zeros_like(cyt_segmented)
+    for id_cell in range(1, cyt_segmented.max() + 1):
+        cell = cyt_segmented == id_cell
+        cell_cc = label(cell)
+
+        # one mask for the cell
+        if cell_cc.max() == 1:
+            mask = cell
+
+        # multiple masks for the cell - we keep the larger one
+        else:
+            cell_properties = regionprops(cell_cc)
+            m = 0
+            mask = np.zeros_like(cyt_segmented).astype(bool)
+            for cell_properties_ in cell_properties:
+                area = cell_properties_.area
+                if area > m:
+                    m = area
+                    mask = cell_cc == cell_properties_.label
+
+        cyt_segmented_final[mask] = id_cell
+
+    return cyt_segmented_final
