@@ -49,7 +49,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
 
     # get a binary representation of the coordinates
     cyt, nuc = from_coord_to_matrix(cyt_coord, nuc_coord)
-    rna_coord = rna_coord + 1
+    rna_coord = rna_coord + stack.get_offset_value()
 
     # fill in masks
     mask_cyt, mask_nuc = stack.get_surface_layers(cyt, nuc, cast_float=False)
@@ -219,17 +219,19 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
 
 def from_coord_to_matrix(cyt_coord, nuc_coord):
     # get size of the frame
-    max_y = cyt_coord[:, 0].max() + 3
-    max_x = cyt_coord[:, 1].max() + 3
+    max_y = cyt_coord[:, 0].max() + stack.get_offset_value() * 2
+    max_x = cyt_coord[:, 1].max() + stack.get_offset_value() * 2
     image_shape = (max_y, max_x)
 
     # cytoplasm
     cyt = np.zeros(image_shape, dtype=bool)
-    cyt[cyt_coord[:, 0] + 1, cyt_coord[:, 1] + 1] = True
+    cyt[cyt_coord[:, 0] + stack.get_offset_value(),
+        cyt_coord[:, 1] + stack.get_offset_value()] = True
 
     # nucleus
     nuc = np.zeros(image_shape, dtype=bool)
-    nuc[nuc_coord[:, 0] + 1, nuc_coord[:, 1] + 1] = True
+    nuc[nuc_coord[:, 0] + stack.get_offset_value(),
+        nuc_coord[:, 1] + stack.get_offset_value()] = True
 
     return cyt, nuc
 
