@@ -6,11 +6,11 @@ patterns of the RNA.
 """
 
 # from .squeezenet import SqueezeNet0
-from .features import get_features, get_features_name, get_features_aubin
+from .features import get_features, get_features_name
 
 # ### Load models ###
 
-_features = ["get_features", "get_features_name", "get_features_aubin"]
+_features = ["get_features", "get_features_name"]
 
 # _squeezenet = ["SqueezeNet0"]
 
