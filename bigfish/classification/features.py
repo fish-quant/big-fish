@@ -188,7 +188,7 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                            "ripley_max_gradient",
                            "ripley_min_gradient",
                            "ripley_monotony",
-                           "aubin_ripley_max_radius",
+                           "ripley_max_radius",
                            "polarization_score",
                            "polarization_score_normalized",
                            "dispersion_index",
