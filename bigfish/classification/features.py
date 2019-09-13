@@ -106,7 +106,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
         radii = [r for r in range(40)]
         dd = features_ripley(radii, rna_coord_out, mask_cyt)
         ee = feature_polarization(centroid_rna_out, centroid_cyt,
-                                  distance_cyt_centroid, mask_cyt)
+                                  distance_cyt_centroid)
         ff = feature_dispersion(rna_coord_out, distance_rna_out_centroid,
                                 mask_cyt)
         gg = feature_peripheral_dispersion(rna_coord_out,
@@ -118,7 +118,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
         jj = feature_area(mask_cyt, mask_nuc)
 
         # gather features
-        features_to_add = aa + [bb] + cc + dd + [ee] + [ff] + [gg] + hh + ii + jj
+        features_to_add = aa + [bb] + cc + dd + ee + [ff] + [gg] + hh + ii + jj
         features += features_to_add
 
     features = np.array(features, dtype=np.float32)
@@ -189,7 +189,8 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                            "ripley_min_gradient",
                            "ripley_monotony",
                            "aubin_ripley_max_radius",
-                           "polarization_index",
+                           "polarization_score",
+                           "polarization_score_normalized",
                            "dispersion_index",
                            "peripheral_dispersion_index",
                            "rna_nuc_edge",
@@ -593,14 +594,15 @@ def _ripley_values_3d(radii, rna_coord_out, mask_cyt):
     return values_corrected
 
 
-def feature_polarization(centroid_rna_out, centroid_cyt, distance_cyt_centroid,
-                         mask_cyt):
+def feature_polarization(centroid_rna_out, centroid_cyt,
+                         distance_cyt_centroid):
     centroid_rna_out_2d = centroid_rna_out[1:]
 
     # compute polarization index
-    a = np.linalg.norm(centroid_rna_out_2d - centroid_cyt)
-    b = np.sqrt(np.mean(np.square(distance_cyt_centroid[mask_cyt > 0])))
-    feature = a / b
+    polarization_index = np.linalg.norm(centroid_rna_out_2d - centroid_cyt)
+    factor = distance_cyt_centroid.max()
+    polarization_index_normalized = polarization_index / factor
+    feature = [polarization_index, polarization_index_normalized]
 
     return feature
 
