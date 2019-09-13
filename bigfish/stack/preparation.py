@@ -449,9 +449,10 @@ def get_distance_layers(cyt, nuc):
     -------
     distance_cyt : np.ndarray, np.float32
         A 2-d tensor with shape (y, x) showing distance to the cytoplasm
-        border.
+        border. Normalize between 0 and 1.
     distance_nuc : np.ndarray, np.float32
         A 2-d tensor with shape (y, x) showing distance to the nucleus border.
+        Normalize between 0 and 1.
 
     """
     # TODO can return NaN
