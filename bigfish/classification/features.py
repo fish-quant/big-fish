@@ -604,6 +604,9 @@ def feature_polarization(centroid_rna_out, centroid_cyt, distance_cyt_centroid,
 
 
 def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt):
+    if len(rna_coord_out) == 0:
+        return 1.
+
     # get coordinates of each pixel of the cell
     all_cell_coord = np.nonzero(mask_cyt)
     all_cell_coord = np.column_stack(all_cell_coord)
@@ -618,6 +621,9 @@ def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt):
 
 def feature_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
                                   mask_cyt):
+    if len(rna_coord_out) == 0:
+        return 1.
+
     # get coordinates of each pixel of the cell
     all_cell_coord = np.nonzero(mask_cyt)
     all_cell_coord = np.column_stack(all_cell_coord)
@@ -705,6 +711,9 @@ def features_topography(rna_coord, mask_cyt, mask_nuc):
 
 def features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt,
                   mask_nuc):
+    if len(rna_coord_out) == 0:
+        return [0., 1., 1., 1., 1., 1., 1., 1., 1.]
+
     # detect low density foci
     clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
                                               resolution_z=300,
