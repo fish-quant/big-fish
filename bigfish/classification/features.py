@@ -110,10 +110,10 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
         ee = feature_polarization(centroid_rna_out, centroid_cyt,
                                   distance_cyt_centroid)
         ff = feature_dispersion(rna_coord_out, distance_rna_out_centroid,
-                                mask_cyt)
+                                mask_cyt, mask_nuc)
         gg = feature_peripheral_dispersion(rna_coord_out,
                                            distance_cyt_centroid,
-                                           mask_cyt)
+                                           mask_cyt, mask_nuc)
         hh = features_topography(rna_coord, mask_cyt, mask_nuc)
         ii = features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt,
                            mask_nuc)
@@ -274,7 +274,6 @@ def get_centroid_distance_map(centroid_coordinate, mask_cyt):
     # compute distance map
     distance_map = ndi.distance_transform_edt(~mask_centroid)
     distance_map[mask_cyt == 0] = 0
-    distance_map /= distance_map.max()
     distance_map = distance_map.astype(np.float32)
 
     return distance_map
@@ -614,6 +613,7 @@ def _ripley_values_3d(radii, rna_coord_out, mask_cyt):
 def feature_polarization(centroid_rna_out, centroid_cyt,
                          distance_cyt_centroid):
     centroid_rna_out_2d = centroid_rna_out[1:]
+    # TODO compute the index with a cytoplasm centroid without the nuc area
 
     # compute polarization index
     polarization_index = np.linalg.norm(centroid_rna_out_2d - centroid_cyt)
@@ -624,34 +624,49 @@ def feature_polarization(centroid_rna_out, centroid_cyt,
     return feature
 
 
-def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt):
+def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt,
+                       mask_nuc):
     if len(rna_coord_out) == 0:
         return 1.
 
+    # get number of rna outside nucleus and cell area
+    mask_cyt_no_nuc = mask_cyt.copy()
+    mask_cyt_no_nuc[mask_nuc > 0] = 0.
+    if mask_cyt_no_nuc.sum() == 0:
+        return 1.
+
     # get coordinates of each pixel of the cell
-    all_cell_coord = np.nonzero(mask_cyt)
-    all_cell_coord = np.column_stack(all_cell_coord)
+    cell_outside_nuc_coord = np.nonzero(mask_cyt_no_nuc)
+    cell_outside_nuc_coord = np.column_stack(cell_outside_nuc_coord)
 
     # compute dispersion index
     a = distance_rna_centroid[rna_coord_out[:, 1], rna_coord_out[:, 2]]
-    b = distance_rna_centroid[all_cell_coord[:, 0], all_cell_coord[:, 1]]
+    b = distance_rna_centroid[cell_outside_nuc_coord[:, 0],
+                              cell_outside_nuc_coord[:, 1]]
     feature = a.mean() / b.mean()
 
     return feature
 
 
 def feature_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
-                                  mask_cyt):
+                                  mask_cyt, mask_nuc):
     if len(rna_coord_out) == 0:
         return 1.
 
+    # get number of rna outside nucleus and cell area
+    mask_cyt_no_nuc = mask_cyt.copy()
+    mask_cyt_no_nuc[mask_nuc > 0] = 0.
+    if mask_cyt_no_nuc.sum() == 0:
+        return 1.
+
     # get coordinates of each pixel of the cell
-    all_cell_coord = np.nonzero(mask_cyt)
-    all_cell_coord = np.column_stack(all_cell_coord)
+    cell_outside_nuc_coord = np.nonzero(mask_cyt_no_nuc)
+    cell_outside_nuc_coord = np.column_stack(cell_outside_nuc_coord)
 
     # compute dispersion index
     a = distance_cyt_centroid[rna_coord_out[:, 1], rna_coord_out[:, 2]]
-    b = distance_cyt_centroid[all_cell_coord[:, 0], all_cell_coord[:, 1]]
+    b = distance_cyt_centroid[cell_outside_nuc_coord[:, 0],
+                              cell_outside_nuc_coord[:, 1]]
     feature = a.mean() / b.mean()
 
     return feature
@@ -744,6 +759,7 @@ def features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt,
                   mask_nuc):
     if len(rna_coord_out) == 0:
         return [0., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1.]
+    # TODO use a non normalized distance map
 
     # detect low density foci
     clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
