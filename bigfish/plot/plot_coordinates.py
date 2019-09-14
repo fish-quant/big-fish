@@ -550,7 +550,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
         if remove_frame:
             ax[1].axis("off")
         ax[1].imshow(image_coord)
-        if count_rna:
+        if count_rna and foci_coord is not None:
             for (_, y, x, nb_rna, _) in foci_coord:
                 ax[1].text(x+5, y-5, str(nb_rna), color="#66CC00", size=20)
         ax[1].set_title("Coordinate image" + title,
@@ -569,7 +569,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
             plt.title("Coordinate image" + title,
                       fontweight="bold", fontsize=25)
         plt.imshow(image_coord)
-        if count_rna:
+        if count_rna and foci_coord is not None:
             for (_, y, x, nb_rna, _) in foci_coord:
                 plt.text(x+5, y-5, str(nb_rna), color="#66CC00", size=20)
 
