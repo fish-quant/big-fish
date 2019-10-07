@@ -191,13 +191,12 @@ def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
                 allow_nan=False)
 
     # initialize results
-    # TODO fix mask that do not touch the border
     results = []
     borders = np.zeros(cyt_labelled.shape, dtype=bool)
-    borders[:, :3] = True
-    borders[:3, :] = True
-    borders[:, cyt_labelled.shape[1] - 3:] = True
-    borders[cyt_labelled.shape[0] - 3:, :] = True
+    borders[:, 0] = True
+    borders[0, :] = True
+    borders[:, cyt_labelled.shape[1] - 1] = True
+    borders[cyt_labelled.shape[0] - 1, :] = True
     cells = regionprops(cyt_labelled)
     for cell in cells:
 
