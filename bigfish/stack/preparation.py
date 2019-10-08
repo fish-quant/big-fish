@@ -435,7 +435,7 @@ def _resize_coord(coord, factor):
     return coord
 
 
-def get_distance_layers(cyt, nuc):
+def get_distance_layers(cyt, nuc, normalized=True):
     """Compute distance layers as input for the model.
 
     Parameters
@@ -444,15 +444,17 @@ def get_distance_layers(cyt, nuc):
         A 2-d binary image with shape (y, x).
     nuc : np.ndarray, np.float32
         A 2-d binary image with shape (y, x).
+    normalized : bool
+        Normalized it between 0 and 1.
 
     Returns
     -------
     distance_cyt : np.ndarray, np.float32
         A 2-d tensor with shape (y, x) showing distance to the cytoplasm
-        border. Normalize between 0 and 1.
+        border. Normalize between 0 and 1 if 'normalized' True.
     distance_nuc : np.ndarray, np.float32
         A 2-d tensor with shape (y, x) showing distance to the nucleus border.
-        Normalize between 0 and 1.
+        Normalize between 0 and 1 if 'normalized' True.
 
     """
     # TODO can return NaN
@@ -464,11 +466,12 @@ def get_distance_layers(cyt, nuc):
     distance_nuc_ = ndi.distance_transform_edt(~mask_nuc)
     distance_nuc = mask_cyt * distance_nuc_
 
-    # cast to np.float32 and normalize it between 0 and 1
-    distance_cyt = cast_img_float32(distance_cyt / distance_cyt.max())
-    distance_nuc = cast_img_float32(distance_nuc / distance_nuc.max())
+    if normalized:
+        # cast to np.float32 and normalize it between 0 and 1
+        distance_cyt = cast_img_float32(distance_cyt / distance_cyt.max())
+        distance_nuc = cast_img_float32(distance_nuc / distance_nuc.max())
 
-    return distance_cyt, distance_nuc
+    return distance_cyt.astype(np.float32), distance_nuc.astype(np.float32)
 
 
 def get_surface_layers(cyt, nuc, cast_float=True):
