@@ -784,7 +784,8 @@ def features_topography(rna_coord, mask_cyt, mask_nuc):
 def features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt,
                   mask_nuc):
     if len(rna_coord_out) == 0:
-        return [0., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1.]
+        return [0., 0., 0., 0., 0., 0., 0., 0.,
+                0., 0., 0., 0., 1., 1., 1., 1., 1., 1.]
 
     # detect foci (radius 650nm, 5 spots minimum)
     clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
