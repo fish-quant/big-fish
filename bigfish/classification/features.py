@@ -22,8 +22,15 @@ from scipy.stats import spearmanr
 # TODO check centroid cyt has a yx format
 
 
-def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
-                 features_no_aubin=False):
+def get_features(cyt_coord, nuc_coord, rna_coord,
+                 compute_aubin=False,
+                 compute_distance=True,
+                 compute_intranuclear=True,
+                 compute_protrusion=True,
+                 compute_dispersion=True,
+                 compute_topography=True,
+                 compute_foci=True,
+                 compute_area=True):
     """Compute cell features.
 
     Parameters
@@ -35,10 +42,23 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
     rna_coord : np.ndarray, np.int64
         Coordinate zyx of the detected rna, plus the index of a potential foci.
         Shape (nb_rna, 4).
-    features_aubin : bool
+    compute_aubin : bool
         Compute features from Aubin paper.
-    features_no_aubin : bool
-        Compute features that are not present in Aubin paper.
+    compute_distance : bool
+        Compute features related to distances from nucleus or cytoplasmic
+        membrane.
+    compute_intranuclear : bool
+        Compute features related to intranuclear pattern.
+    compute_protrusion : bool
+        Compute features related to protrusion pattern.
+    compute_dispersion : bool
+        Compute features to quantify mRNAs dispersion within the cell.
+    compute_topography : bool
+        Compute topographic features of the cell.
+    compute_foci : bool
+        Compute features related to foci pattern.
+    compute_area : bool
+        Compute features related to area of the cell.
 
     Returns
     -------
@@ -60,10 +80,8 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
                                                           nuc_coord,
                                                           rna_coord)
 
-    # Aubin's features
-    if features_aubin:
-
-        # compute features
+    # features from Aubin's paper
+    if compute_aubin:
         a = features_distance_aubin(rna_coord,
                                     distance_cyt_normalized,
                                     distance_nuc_normalized,
@@ -79,69 +97,106 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
                                        centroid_rna)
         f = feature_dispersion_aubin(rna_coord, mask_cyt, centroid_rna)
 
-        # gather features
-        features_to_add = a + [b] + c + d + [e] + [f]
-        features += features_to_add
+        features += a + [b] + c + d + [e] + [f]
 
-    # other features
-    if features_no_aubin:
-
-        # compute features
+    # distances related features
+    if compute_distance:
         aa = features_distance(rna_coord_out,
                                distance_cyt,
                                distance_nuc,
                                mask_cyt_out)
 
+        features += aa
+
+    # intranuclear related features
+    if compute_intranuclear:
         bb = feature_in_out_nucleus(rna_coord,
                                     mask_nuc)
 
+        features += [bb]
+
+    # intranuclear related features
+    if compute_protrusion:
         cc = features_protrusion(rna_coord_out,
                                  mask_cyt,
                                  mask_nuc,
                                  mask_cyt_out)
 
+        features += cc
+
+    # dispersion measures
+    if compute_dispersion:
         dd = feature_polarization(centroid_rna_out,
                                   centroid_cyt,
                                   centroid_nuc,
                                   distance_cyt_centroid,
                                   distance_nuc_centroid)
-
         ee = feature_dispersion(rna_coord_out,
                                 distance_rna_out_centroid,
                                 mask_cyt_out)
-
         ff = feature_peripheral_dispersion(rna_coord_out,
                                            distance_cyt_centroid,
                                            mask_cyt_out)
 
+        features += dd + ee + ff
+
+    # topographic features
+    if compute_topography:
         gg = features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
                                  mask_cyt_out)
 
+        features += gg
+
+    # foci related features
+    if compute_foci:
         hh = features_foci(rna_coord_out,
                            distance_cyt,
                            distance_nuc,
                            mask_cyt_out)
 
+        features += hh
+
+    # area related features
+    if compute_area:
         ii = feature_area(mask_cyt, mask_nuc, mask_cyt_out)
 
-        # gather features
-        features_to_add = aa + [bb] + cc + dd + ee + ff + gg + hh + ii
-        features += features_to_add
+        features += ii
 
     features = np.array(features, dtype=np.float32)
 
     return features
 
 
-def get_features_name(features_aubin=True, features_no_aubin=False):
+def get_features_name(names_features_aubin=False,
+                      names_features_distance=True,
+                      names_features_intranuclear=True,
+                      names_features_protrusion=True,
+                      names_features_dispersion=True,
+                      names_features_topography=True,
+                      names_features_foci=True,
+                      names_features_area=True):
     """Return the current list of features names.
 
     Parameters
     ----------
-    features_aubin : bool
-        Compute features from Aubin paper.
-    features_no_aubin : bool
-        Compute features that are not present in Aubin paper.
+    names_features_aubin : bool
+        Return names of features from Aubin paper.
+    names_features_distance : bool
+        Return names of features related to distances from nucleus or
+        cytoplasmic membrane.
+    names_features_intranuclear : bool
+        Return names of features related to intranuclear pattern.
+    names_features_protrusion : bool
+        Return names of features related to protrusion pattern.
+    names_features_dispersion : bool
+        Return names of features used to quantify mRNAs dispersion within the
+        cell.
+    names_features_topography : bool
+        Return names of topographic features of the cell.
+    names_features_foci : bool
+        Return names of features related to foci pattern.
+    names_features_area : bool
+        Return names of features related to area of the cell.
 
     Returns
     -------
@@ -151,8 +206,7 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
     """
     features_name = []
 
-    if features_aubin:
-        # features Aubin
+    if names_features_aubin:
         features_name += ["aubin_average_dist_cyt",
                           "aubin_quantile_5_dist_cyt",
                           "aubin_quantile_10_dist_cyt",
@@ -175,8 +229,7 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                           "aubin_polarization_index",
                           "aubin_dispersion_index"]
 
-    if features_no_aubin:
-        # features distance
+    if names_features_distance:
         features_name += ["index_mean_distance_cyt",
                           "log2_index_mean_distance_cyt",
                           "index_median_distance_cyt",
@@ -190,15 +243,15 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                           "index_std_distance_nuc",
                           "log2_index_std_distance_nuc"]
 
-        # feature intranuclear
+    if names_features_intranuclear:
         features_name += ["proportion_in_nuc"]
 
-        # features protrusion
+    if names_features_protrusion:
         features_name += ["index_rna_opening_30",
                           "log2_index_rna_opening_30",
                           "proportion_rna_opening_30"]
 
-        # features RDI
+    if names_features_dispersion:
         features_name += ["score_polarization_cyt",
                           "score_polarization_nuc",
                           "index_dispersion",
@@ -206,7 +259,7 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                           "index_peripheral_dispersion",
                           "log2_index_peripheral_dispersion"]
 
-        # features topography
+    if names_features_topography:
         features_name += ["index_rna_nuc_edge",
                           "log2_index_rna_nuc_edge",
                           "proportion_rna_nuc_edge"]
@@ -225,7 +278,7 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                               "log2_index_rna_cyt_radius_{0}".format(a),
                               "proportion_rna_cyt_radius_{0}".format(a)]
 
-        # features foci
+    if names_features_foci:
         for a in [50, 150, 250, 350, 450, 550, 650, 750]:
             for b in [2, 3, 4, 5, 6, 7, 8]:
                 features_name += ["nb_foci_{0}nm_{1}".format(a, b),
@@ -251,7 +304,7 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
                           "index_foci_std_distance_nuc",
                           "log2_index_foci_std_distance_nuc"]
 
-        # features area
+    if names_features_area:
         features_name += ["proportion_nuc_area",
                           "area_cyt",
                           "area_nuc",
