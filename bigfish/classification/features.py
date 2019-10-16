@@ -48,41 +48,18 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
     """
     features = []
 
-    # get a binary representation of the coordinates
-    cyt, nuc = from_coord_to_matrix(cyt_coord, nuc_coord)
-    rna_coord[:, 1:3] += stack.get_offset_value()
+    # prepare input data
+    (mask_cyt, mask_nuc, mask_cyt_out,
+     distance_cyt, distance_nuc,
+     distance_cyt_normalized, distance_nuc_normalized,
+     rna_coord_out,
+     centroid_cyt, centroid_nuc,
+     centroid_rna, centroid_rna_out,
+     distance_cyt_centroid, distance_nuc_centroid,
+     distance_rna_out_centroid) = prepare_coordinate_data(cyt_coord,
+                                                          nuc_coord,
+                                                          rna_coord)
 
-    # fill in masks
-    mask_cyt, mask_nuc = stack.get_surface_layers(cyt, nuc, cast_float=False)
-
-    # compute distance maps for the cytoplasm and the nucleus
-    distance_cyt, distance_nuc = stack.get_distance_layers(cyt, nuc,
-                                                           normalized=False)
-
-    # normalize distance maps between 0 and 1
-    distance_cyt_normalized = distance_cyt / distance_cyt.max()
-    distance_cyt_normalized = stack.cast_img_float32(distance_cyt_normalized)
-    distance_nuc_normalized = distance_nuc / distance_nuc.max()
-    distance_nuc_normalized = stack.cast_img_float32(distance_nuc_normalized)
-
-    # get rna outside nucleus
-    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
-    rna_coord_out = rna_coord[~mask_rna_in]
-
-    # get centroids
-    centroid_cyt = get_centroid_surface(mask_cyt)
-    centroid_nuc = get_centroid_surface(mask_nuc)
-    centroid_rna = get_centroid_rna(rna_coord)
-    if len(rna_coord_out) == 0:
-        centroid_rna_out = centroid_cyt.copy()
-    else:
-        centroid_rna_out = get_centroid_rna(rna_coord_out)
-
-    # get centroid distance maps
-    distance_cyt_centroid = get_centroid_distance_map(centroid_cyt, mask_cyt)
-    distance_nuc_centroid = get_centroid_distance_map(centroid_nuc, mask_cyt)
-    distance_rna_out_centroid = get_centroid_distance_map(centroid_rna_out,
-                                                          mask_cyt)
     # Aubin's features
     if features_aubin:
 
@@ -110,36 +87,45 @@ def get_features(cyt_coord, nuc_coord, rna_coord, features_aubin=True,
     if features_no_aubin:
 
         # compute features
-        aa = features_distance(rna_coord_out, distance_cyt, distance_nuc)
-        bb = feature_in_out_nucleus(rna_coord, mask_nuc)
-        opening_sizes = [15, 30, 45, 60]
-        cc = features_protrusion(opening_sizes,
-                                 rna_coord_out,
+        aa = features_distance(rna_coord_out,
+                               distance_cyt,
+                               distance_nuc,
+                               mask_cyt_out)
+
+        bb = feature_in_out_nucleus(rna_coord,
+                                    mask_nuc)
+
+        cc = features_protrusion(rna_coord_out,
                                  mask_cyt,
-                                 mask_nuc)
-        radii = [r for r in range(40)]
-        dd = features_ripley(radii, rna_coord_out, mask_cyt)
-        ee = feature_polarization(centroid_rna_out,
+                                 mask_nuc,
+                                 mask_cyt_out)
+
+        dd = feature_polarization(centroid_rna_out,
                                   centroid_cyt,
-                                  distance_cyt_centroid)
-        ff = feature_dispersion(rna_coord_out,
+                                  centroid_nuc,
+                                  distance_cyt_centroid,
+                                  distance_nuc_centroid)
+
+        ee = feature_dispersion(rna_coord_out,
                                 distance_rna_out_centroid,
-                                mask_cyt,
-                                mask_nuc)
-        gg = feature_peripheral_dispersion(rna_coord_out,
+                                mask_cyt_out)
+
+        ff = feature_peripheral_dispersion(rna_coord_out,
                                            distance_cyt_centroid,
-                                           mask_cyt,
-                                           mask_nuc)
-        hh = features_topography(rna_coord, mask_cyt, mask_nuc)
-        ii = features_foci(rna_coord_out,
+                                           mask_cyt_out)
+
+        gg = features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
+                                 mask_cyt_out)
+
+        hh = features_foci(rna_coord_out,
                            distance_cyt,
                            distance_nuc,
-                           mask_cyt,
-                           mask_nuc)
-        jj = feature_area(mask_cyt, mask_nuc)
+                           mask_cyt_out)
+
+        ii = feature_area(mask_cyt, mask_nuc, mask_cyt_out)
 
         # gather features
-        features_to_add = aa + [bb] + cc + dd + ee + [ff] + [gg] + hh + ii + jj
+        features_to_add = aa + [bb] + cc + dd + ee + ff + gg + hh + ii
         features += features_to_add
 
     features = np.array(features, dtype=np.float32)
@@ -164,90 +150,112 @@ def get_features_name(features_aubin=True, features_no_aubin=False):
 
     """
     features_name = []
+
     if features_aubin:
-        features_to_add = ["aubin_average_dist_cyt",
-                           "aubin_quantile_5_dist_cyt",
-                           "aubin_quantile_10_dist_cyt",
-                           "aubin_quantile_20_dist_cyt",
-                           "aubin_quantile_50_dist_cyt",
-                           "aubin_average_dist_cyt_centroid",
-                           "aubin_average_dist_nuc",
-                           "aubin_average_dist_nuc_centroid",
-                           "aubin_ratio_in_nuc",
-                           "aubin_diff_opening_15",
-                           "aubin_diff_opening_30",
-                           "aubin_diff_opening_45",
-                           "aubin_diff_opening_60",
-                           "aubin_ripley_max",
-                           "aubin_ripley_max_gradient",
-                           "aubin_ripley_min_gradient",
-                           "aubin_ripley_monotony",
-                           "aubin_ripley_mid_cell",
-                           "aubin_ripley_max_radius",
-                           "aubin_polarization_index",
-                           "aubin_dispersion_index"]
-        features_name += features_to_add
+        # features Aubin
+        features_name += ["aubin_average_dist_cyt",
+                          "aubin_quantile_5_dist_cyt",
+                          "aubin_quantile_10_dist_cyt",
+                          "aubin_quantile_20_dist_cyt",
+                          "aubin_quantile_50_dist_cyt",
+                          "aubin_average_dist_cyt_centroid",
+                          "aubin_average_dist_nuc",
+                          "aubin_average_dist_nuc_centroid",
+                          "aubin_ratio_in_nuc",
+                          "aubin_diff_opening_15",
+                          "aubin_diff_opening_30",
+                          "aubin_diff_opening_45",
+                          "aubin_diff_opening_60",
+                          "aubin_ripley_max",
+                          "aubin_ripley_max_gradient",
+                          "aubin_ripley_min_gradient",
+                          "aubin_ripley_monotony",
+                          "aubin_ripley_mid_cell",
+                          "aubin_ripley_max_radius",
+                          "aubin_polarization_index",
+                          "aubin_dispersion_index"]
 
     if features_no_aubin:
-        features_to_add = ["index_mean_distance_cyt",
-                           "index_median_distance_cyt",
-                           "index_std_distance_cyt",
-                           "index_mean_distance_nuc",
-                           "index_median_distance_nuc",
-                           "index_std_distance_nuc",
-                           "proportion_in_nuc",
-                           "index_rna_opening_15",
-                           "index_rna_opening_30",
-                           "index_rna_opening_45",
-                           "index_rna_opening_60",
-                           "proportion_rna_opening_15",
-                           "proportion_rna_opening_30",
-                           "proportion_rna_opening_45",
-                           "proportion_rna_opening_60",
-                           "ripley_max",
-                           "ripley_min",
-                           "ripley_max_gradient",
-                           "ripley_min_gradient",
-                           "ripley_monotony",
-                           "ripley_max_radius",
-                           "polarization_score",
-                           "polarization_score_normalized",
-                           "dispersion_index",
-                           "peripheral_dispersion_index",
-                           "index_rna_nuc_edge",
-                           "index_rna_nuc_5_15",
-                           "index_rna_nuc_15_25",
-                           "index_rna_cyt_0_10",
-                           "index_rna_cyt_10_20",
-                           "index_rna_cyt_20_30",
-                           "proportion_rna_nuc_edge",
-                           "proportion_rna_nuc_5_15",
-                           "proportion_rna_nuc_15_25",
-                           "proportion_rna_cyt_0_10",
-                           "proportion_rna_cyt_10_20",
-                           "proportion_rna_cyt_20_30",
-                           "nb_foci_650nm_5",
-                           "nb_foci_200nm_5",
-                           "nb_foci_350nm_10",
-                           "nb_foci_350nm_3",
-                           "proportion_rna_foci_650nm_5",
-                           "proportion_rna_foci_200nm_5",
-                           "proportion_rna_foci_350nm_10",
-                           "proportion_rna_foci_350nm_3",
-                           "index_rna_foci_0_10",
-                           "index_rna_foci_10_20",
-                           "proportion_rna_foci_0_10",
-                           "proportion_rna_foci_10_20",
-                           "foci_mean_distance_cyt",
-                           "foci_median_distance_cyt",
-                           "foci_std_distance_cyt",
-                           "foci_mean_distance_nuc",
-                           "foci_median_distance_nuc",
-                           "foci_std_distance_nuc",
-                           "relative_area_nuc",
-                           "area_cyt",
-                           "area_nuc"]
-        features_name += features_to_add
+        # features distance
+        features_name += ["index_mean_distance_cyt",
+                          "log2_index_mean_distance_cyt",
+                          "index_median_distance_cyt",
+                          "log2_index_median_distance_cyt",
+                          "index_std_distance_cyt",
+                          "log2_index_std_distance_cyt",
+                          "index_mean_distance_nuc",
+                          "log2_index_mean_distance_nuc",
+                          "index_median_distance_nuc",
+                          "log2_index_median_distance_nuc",
+                          "index_std_distance_nuc",
+                          "log2_index_std_distance_nuc"]
+
+        # feature intranuclear
+        features_name += ["proportion_in_nuc"]
+
+        # features protrusion
+        features_name += ["index_rna_opening_30",
+                          "log2_index_rna_opening_30",
+                          "proportion_rna_opening_30"]
+
+        # features RDI
+        features_name += ["score_polarization_cyt",
+                          "score_polarization_nuc",
+                          "index_dispersion",
+                          "log2_index_dispersion",
+                          "index_peripheral_dispersion",
+                          "log2_index_peripheral_dispersion"]
+
+        # features topography
+        features_name += ["index_rna_nuc_edge",
+                          "log2_index_rna_nuc_edge",
+                          "proportion_rna_nuc_edge"]
+
+        for a in range(1, 31):
+            features_name += ["nb_rna_nuc_radius_{0}".format(a),
+                              "area_nuc_radius_{0}".format(a),
+                              "index_rna_nuc_radius_{0}".format(a),
+                              "log2_index_rna_nuc_radius_{0}".format(a),
+                              "proportion_rna_nuc_radius_{0}".format(a)]
+
+        for a in range(1, 31):
+            features_name += ["nb_rna_cyt_radius_{0}".format(a),
+                              "area_cyt_radius_{0}".format(a),
+                              "index_rna_cyt_radius_{0}".format(a),
+                              "log2_index_rna_cyt_radius_{0}".format(a),
+                              "proportion_rna_cyt_radius_{0}".format(a)]
+
+        # features foci
+        for a in [50, 150, 250, 350, 450, 550, 650, 750]:
+            for b in [2, 3, 4, 5, 6, 7, 8]:
+                features_name += ["nb_foci_{0}nm_{1}".format(a, b),
+                                  "proportion_rna_foci_{0}nm_{1}".format(a, b)]
+
+        for a in range(1, 21):
+            features_name += ["nb_rna_foci_neighbor_radius_{0}".format(a),
+                              "area_foci_neighbor_radius_{0}".format(a),
+                              "index_rna_foci_radius_{0}".format(a),
+                              "log2_index_rna_foci_radius_{0}".format(a),
+                              "proportion_rna_foci_radius_{0}".format(a)]
+
+        features_name += ["index_foci_mean_distance_cyt",
+                          "log2_index_foci_mean_distance_cyt",
+                          "index_foci_median_distance_cyt",
+                          "log2_index_foci_median_distance_cyt",
+                          "index_foci_std_distance_cyt",
+                          "log2_index_foci_std_distance_cyt",
+                          "index_foci_mean_distance_nuc",
+                          "log2_index_foci_mean_distance_nuc",
+                          "index_foci_median_distance_nuc",
+                          "log2_index_foci_median_distance_nuc",
+                          "index_foci_std_distance_nuc",
+                          "log2_index_foci_std_distance_nuc"]
+
+        # features area
+        features_name += ["proportion_nuc_area",
+                          "area_cyt",
+                          "area_nuc",
+                          "area_cyt_out"]
 
     return features_name
 
@@ -303,6 +311,59 @@ def get_centroid_distance_map(centroid_coordinate, mask_cyt):
     distance_map = distance_map.astype(np.float32)
 
     return distance_map
+
+
+def prepare_coordinate_data(cyt_coord, nuc_coord, rna_coord):
+    # get a binary representation of the coordinates
+    cyt, nuc = from_coord_to_matrix(cyt_coord, nuc_coord)
+    rna_coord[:, 1:3] += stack.get_offset_value()
+
+    # fill in masks
+    mask_cyt, mask_nuc = stack.get_surface_layers(cyt, nuc, cast_float=False)
+
+    # get mask cytoplasm outside nucleus
+    mask_cyt_out = mask_cyt.copy()
+    mask_cyt_out[mask_nuc] = False
+
+    # compute distance maps for the cytoplasm and the nucleus
+    distance_cyt, distance_nuc = stack.get_distance_layers(cyt, nuc,
+                                                           normalized=False)
+
+    # normalize distance maps between 0 and 1
+    distance_cyt_normalized = distance_cyt / distance_cyt.max()
+    distance_cyt_normalized = stack.cast_img_float32(distance_cyt_normalized)
+    distance_nuc_normalized = distance_nuc / distance_nuc.max()
+    distance_nuc_normalized = stack.cast_img_float32(distance_nuc_normalized)
+
+    # get rna outside nucleus
+    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
+    rna_coord_out = rna_coord[~mask_rna_in]
+
+    # get centroids
+    centroid_cyt = get_centroid_surface(mask_cyt)
+    centroid_nuc = get_centroid_surface(mask_nuc)
+    centroid_rna = get_centroid_rna(rna_coord)
+    if len(rna_coord_out) == 0:
+        centroid_rna_out = centroid_cyt.copy()
+    else:
+        centroid_rna_out = get_centroid_rna(rna_coord_out)
+
+    # get centroid distance maps
+    distance_cyt_centroid = get_centroid_distance_map(centroid_cyt, mask_cyt)
+    distance_nuc_centroid = get_centroid_distance_map(centroid_nuc, mask_cyt)
+    distance_rna_out_centroid = get_centroid_distance_map(centroid_rna_out,
+                                                          mask_cyt)
+
+    prepared_inputs = (mask_cyt, mask_nuc, mask_cyt_out,
+                       distance_cyt, distance_nuc,
+                       distance_cyt_normalized, distance_nuc_normalized,
+                       rna_coord_out,
+                       centroid_cyt, centroid_nuc,
+                       centroid_rna, centroid_rna_out,
+                       distance_cyt_centroid, distance_nuc_centroid,
+                       distance_rna_out_centroid)
+
+    return prepared_inputs
 
 
 # ### Aubin's features ###
@@ -486,34 +547,54 @@ def feature_dispersion_aubin(rna_coord, mask_cyt, centroid_rna):
 
 # ### Other features ###
 
-def features_distance(rna_coord_out, distance_cyt, distance_nuc):
+def features_distance(rna_coord_out, distance_cyt, distance_nuc, mask_cyt_out):
     rna_coord_out_2d = rna_coord_out[:, 1:3]
-    if len(rna_coord_out_2d) == 0:
-        features = [1., 1., 1., 1., 1., 1.]
+    if len(rna_coord_out_2d) <= 10:
+        features = [1., 0., 1., 0., 1., 0.] * 2
         return features
+    features = []
 
     # compute statistics from distance to cytoplasm
     distance_rna_cyt = distance_cyt[rna_coord_out_2d[:, 0],
                                     rna_coord_out_2d[:, 1]]
-    factor = np.mean(distance_cyt[distance_nuc > 0])
-    mean_distance_cyt = np.mean(distance_rna_cyt) / factor
-    factor = np.median(distance_cyt[distance_nuc > 0])
-    median_distance_cyt = np.median(distance_rna_cyt) / factor
-    factor = np.std(distance_cyt[distance_nuc > 0])
-    std_distance_cyt = np.std(distance_rna_cyt) / factor
+    factor = np.mean(distance_cyt[mask_cyt_out])
+    index_mean_distance_cyt = np.mean(distance_rna_cyt) / factor
+    log2_index_mean_distance_cyt = np.log2(index_mean_distance_cyt + 0.0001)
+    factor = np.median(distance_cyt[mask_cyt_out])
+    index_median_distance_cyt = np.median(distance_rna_cyt) / factor
+    log2_index_median_distance_cyt = np.log2(
+        index_median_distance_cyt + 0.0001)
+    factor = np.std(distance_cyt[mask_cyt_out])
+    index_std_distance_cyt = np.std(distance_rna_cyt) / factor
+    log2_index_std_distance_cyt = np.log2(index_std_distance_cyt + 0.0001)
+
+    features += [np.round(index_mean_distance_cyt, decimals=2),
+                 np.round(log2_index_mean_distance_cyt, decimals=2),
+                 np.round(index_median_distance_cyt, decimals=2),
+                 np.round(log2_index_median_distance_cyt, decimals=2),
+                 np.round(index_std_distance_cyt, decimals=2),
+                 np.round(log2_index_std_distance_cyt, decimals=2)]
 
     # compute statistics from distance to nucleus
     distance_rna_nuc = distance_nuc[rna_coord_out_2d[:, 0],
                                     rna_coord_out_2d[:, 1]]
-    factor = np.mean(distance_nuc[distance_nuc > 0])
-    mean_distance_nuc = np.mean(distance_rna_nuc) / factor
-    factor = np.median(distance_nuc[distance_nuc > 0])
-    median_distance_nuc = np.median(distance_rna_nuc) / factor
-    factor = np.std(distance_nuc[distance_nuc > 0])
-    std_distance_nuc = np.std(distance_rna_nuc) / factor
+    factor = np.mean(distance_nuc[mask_cyt_out])
+    index_mean_distance_nuc = np.mean(distance_rna_nuc) / factor
+    log2_index_mean_distance_nuc = np.log2(index_mean_distance_nuc + 0.0001)
+    factor = np.median(distance_nuc[mask_cyt_out])
+    index_median_distance_nuc = np.median(distance_rna_nuc) / factor
+    log2_index_median_distance_nuc = np.log2(
+        index_median_distance_nuc + 0.0001)
+    factor = np.std(distance_nuc[mask_cyt_out])
+    index_std_distance_nuc = np.std(distance_rna_nuc) / factor
+    log2_index_std_distance_nuc = np.log2(index_std_distance_nuc + 0.0001)
 
-    features = [mean_distance_cyt, median_distance_cyt, std_distance_cyt,
-                mean_distance_nuc, median_distance_nuc, std_distance_nuc]
+    features += [np.round(index_mean_distance_nuc, decimals=2),
+                 np.round(log2_index_mean_distance_nuc, decimals=2),
+                 np.round(index_median_distance_nuc, decimals=2),
+                 np.round(log2_index_median_distance_nuc, decimals=2),
+                 np.round(index_std_distance_nuc, decimals=2),
+                 np.round(log2_index_std_distance_nuc, decimals=2)]
 
     return features
 
@@ -523,394 +604,330 @@ def feature_in_out_nucleus(rna_coord, mask_nuc):
     mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
     rna_in = rna_coord[mask_rna_in]
     feature = len(rna_in) / len(rna_coord)
+    feature = np.round(feature, decimals=2)
 
     return feature
 
 
-def features_protrusion(opening_sizes, rna_coord_out, mask_cyt, mask_nuc):
+def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
     # get number of rna outside nucleus and cell area
     nb_rna_out = len(rna_coord_out)
-    area_cell = mask_cyt.sum()
     area_nuc = mask_nuc.sum()
-    area_cell_no_nuc = area_cell - area_nuc
+    area_cyt_out = mask_cyt_out.sum()
 
     # case where we do not detect any rna outside the nucleus
-    if nb_rna_out == 0:
-        features = [0. for _ in opening_sizes] * 2
+    if nb_rna_out <= 10:
+        features = [1., 0., 0.]
         return features
 
     # apply opening operator and count the loss of rna outside the nucleus
-    features_index = []
-    features_proportion = []
-    for size in opening_sizes:
+    features = []
+    for size in [30]:
         s = disk(size, dtype=bool)
         mask_cyt_transformed = binary_opening(mask_cyt, selem=s)
         mask_cyt_transformed[mask_nuc] = True
-        new_area_cell_no_nuc = mask_cyt_transformed.sum() - area_nuc
-        area_diff = area_cell_no_nuc - new_area_cell_no_nuc
-        expected_rna_protrusion = (nb_rna_out * area_diff / area_cell_no_nuc)
-        mask_rna = mask_cyt_transformed[rna_coord_out[:, 1],
-                                        rna_coord_out[:, 2]]
-        rna_after_opening = rna_coord_out[mask_rna]
-        nb_rna_protrusion = nb_rna_out - len(rna_after_opening)
-        index_rna_opening = nb_rna_protrusion / expected_rna_protrusion
-        proportion_rna_opening = nb_rna_protrusion / nb_rna_out
-        features_index.append(index_rna_opening)
-        features_proportion.append(proportion_rna_opening)
+        new_area_cell_out = mask_cyt_transformed.sum() - area_nuc
+        area_protrusion = area_cyt_out - new_area_cell_out
+        if area_protrusion > 0:
+            factor = nb_rna_out * area_protrusion / area_cyt_out
+            mask_rna = mask_cyt_transformed[rna_coord_out[:, 1],
+                                            rna_coord_out[:, 2]]
+            rna_after_opening = rna_coord_out[mask_rna]
+            nb_rna_protrusion = nb_rna_out - len(rna_after_opening)
+            index_rna_opening = nb_rna_protrusion / factor
+            log2_index_rna_opening = np.log2(index_rna_opening + 0.0001)
+            proportion_rna_opening = nb_rna_protrusion / nb_rna_out
+
+            features += [np.round(index_rna_opening, decimals=2),
+                         np.round(log2_index_rna_opening, decimals=2),
+                         np.round(proportion_rna_opening, decimals=2)]
+        else:
+            features += [1., 0., 0.]
+
+    return features
+
+
+def feature_polarization(centroid_rna_out, centroid_cyt, centroid_nuc,
+                         distance_cyt_centroid, distance_nuc_centroid):
+    centroid_rna_out_2d = centroid_rna_out[1:]
+
+    # compute polarization index from cytoplasm centroid
+    polarization_distance = np.linalg.norm(centroid_rna_out_2d - centroid_cyt)
+    factor = distance_cyt_centroid.max()
+    feature_cyt = polarization_distance / factor
+
+    # compute polarization index from nucleus centroid
+    polarization_distance = np.linalg.norm(centroid_rna_out_2d - centroid_nuc)
+    factor = distance_nuc_centroid.max()
+    feature_nuc = polarization_distance / factor
 
     # gather features
-    features = features_index + features_proportion
-
-    return features
-
-
-def features_ripley(radii, rna_coord_out, mask_cyt):
-    # case where we do not detect any rna outside the nucleus
-    if len(rna_coord_out) == 0:
-        features = [0., 0., 0., 0., 0., 0.]
-        return features
-
-    # compute corrected Ripley values for different radii
-    values = _ripley_values_3d(radii, rna_coord_out, mask_cyt)
-
-    # smooth them using moving average
-    smoothed_values = _moving_average(values, n=4)
-
-    # compute the gradients of these values
-    gradients = np.gradient(smoothed_values)
-
-    # compute features
-    index_max = np.argmax(smoothed_values)
-    max_radius = radii[index_max]
-    max_value = smoothed_values.max()
-    min_value = smoothed_values.min()
-    if index_max == 0:
-        max_gradient = gradients[0]
-    else:
-        max_gradient = max(gradients[:index_max])
-    if index_max == len(gradients) - 1:
-        min_gradient = gradients[-1]
-    else:
-        min_gradient = min(gradients[index_max:])
-    monotony, _ = spearmanr(smoothed_values, radii[2:-1])
-
-    features = [max_value, min_value, max_gradient, min_gradient,
-                monotony, max_radius]
-
-    return features
-
-
-def _ripley_values_3d(radii, rna_coord_out, mask_cyt):
-    rna_coord_out_3d = rna_coord_out[:, :3]
-
-    # sort rna coordinates
-    sorted_indices = np.lexsort((rna_coord_out_3d[:, 0],
-                                 rna_coord_out_3d[:, 2],
-                                 rna_coord_out_3d[:, 1]))
-    rna_coord_out_3d = rna_coord_out_3d[sorted_indices]
-
-    # compute distance matrix between rna and rna density
-    distances = distance_matrix(rna_coord_out_3d, rna_coord_out_3d, p=2)
-    factor = len(rna_coord_out_3d) ** 2 / mask_cyt.sum()
-
-    # cast cytoplasm mask in np.uint8
-    mask_cyt_8bit = stack.cast_img_uint8(mask_cyt)
-
-    # for each radius, get neighbors and weight
-    values = []
-    for r in radii:
-        mask_distance = distances.copy()
-        mask_distance = mask_distance <= r
-        nb_neighbors = np.sum(mask_distance, axis=0) - 1
-        weights = stack.mean_filter(mask_cyt_8bit,
-                                    kernel_shape="disk",
-                                    kernel_size=r)
-        weights = weights.astype(np.float32) / 255.
-        rna_weights = weights[rna_coord_out_3d[:, 1], rna_coord_out_3d[:, 2]]
-        nb_neighbors_weighted = np.multiply(nb_neighbors, rna_weights)
-        value = nb_neighbors_weighted.sum() / factor
-        values.append(value)
-    values = np.array(values, dtype=np.float32)
-    values_corrected = np.sqrt(values / np.pi) - np.array(radii)
-
-    return values_corrected
-
-
-def feature_polarization(centroid_rna_out, centroid_cyt,
-                         distance_cyt_centroid):
-    centroid_rna_out_2d = centroid_rna_out[1:]
-    # TODO compute the index with a cytoplasm centroid without the nuc area
-
-    # compute polarization index
-    polarization_index = np.linalg.norm(centroid_rna_out_2d - centroid_cyt)
-    factor = distance_cyt_centroid.max()
-    polarization_index_normalized = polarization_index / factor
-    feature = [polarization_index, polarization_index_normalized]
+    feature = [np.round(feature_cyt, decimals=2),
+               np.round(feature_nuc, decimals=2)]
 
     return feature
 
 
-def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt,
-                       mask_nuc):
-    if len(rna_coord_out) == 0:
-        return 1.
+def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt_out):
+    if len(rna_coord_out) <= 10:
+        features = [1., 0.]
+        return features
 
     # get number of rna outside nucleus and cell area
-    mask_cyt_no_nuc = mask_cyt.copy()
-    mask_cyt_no_nuc[mask_nuc > 0] = 0.
-    if mask_cyt_no_nuc.sum() == 0:
-        return 1.
+    if mask_cyt_out.sum() == 0:
+        features = [1., 0.]
+        return features
 
     # get coordinates of each pixel of the cell
-    cell_outside_nuc_coord = np.nonzero(mask_cyt_no_nuc)
+    cell_outside_nuc_coord = np.nonzero(mask_cyt_out)
     cell_outside_nuc_coord = np.column_stack(cell_outside_nuc_coord)
 
     # compute dispersion index
     a = distance_rna_centroid[rna_coord_out[:, 1], rna_coord_out[:, 2]]
     b = distance_rna_centroid[cell_outside_nuc_coord[:, 0],
                               cell_outside_nuc_coord[:, 1]]
-    feature = a.mean() / b.mean()
+    index_dispersion = a.mean() / b.mean()
+    log2_index_dispersion = np.log2(index_dispersion + 0.0001)
 
-    return feature
+    features = [np.round(index_dispersion, decimals=2),
+                np.round(log2_index_dispersion, decimals=2)]
+
+    return features
 
 
 def feature_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
-                                  mask_cyt, mask_nuc):
-    if len(rna_coord_out) == 0:
-        return 1.
+                                  mask_cyt_out):
+    if len(rna_coord_out) <= 10:
+        features = [1., 0.]
+        return features
 
     # get number of rna outside nucleus and cell area
-    mask_cyt_no_nuc = mask_cyt.copy()
-    mask_cyt_no_nuc[mask_nuc > 0] = 0.
-    if mask_cyt_no_nuc.sum() == 0:
-        return 1.
+    if mask_cyt_out.sum() == 0:
+        features = [1., 0.]
+        return features
 
     # get coordinates of each pixel of the cell
-    cell_outside_nuc_coord = np.nonzero(mask_cyt_no_nuc)
+    cell_outside_nuc_coord = np.nonzero(mask_cyt_out)
     cell_outside_nuc_coord = np.column_stack(cell_outside_nuc_coord)
 
     # compute dispersion index
     a = distance_cyt_centroid[rna_coord_out[:, 1], rna_coord_out[:, 2]]
     b = distance_cyt_centroid[cell_outside_nuc_coord[:, 0],
                               cell_outside_nuc_coord[:, 1]]
-    feature = a.mean() / b.mean()
+    index_peripheral_dispersion = a.mean() / b.mean()
+    log2_index_peripheral_dispersion = np.log2(
+        index_peripheral_dispersion + 0.0001)
 
-    return feature
-
-
-def features_topography(rna_coord, mask_cyt, mask_nuc):
-    mask_cyt_bool = mask_cyt > 0
-    mask_cyt_bool[:, 0] = False
-    mask_cyt_bool[0, :] = False
-    mask_nuc_bool = mask_nuc > 0
-    mask_nuc_bool[:, 0] = False
-    mask_nuc_bool[0, :] = False
-
-    # build nucleus topography
-    distance_map_nuc_out = ndi.distance_transform_edt(~mask_nuc_bool)
-    mask_cyt_without_nuc = mask_cyt_bool.copy()
-    mask_cyt_without_nuc[mask_nuc_bool] = 0
-    distance_map_nuc_in = ndi.distance_transform_edt(~mask_cyt_without_nuc)
-    distance_map_nuc = distance_map_nuc_out + distance_map_nuc_in
-    distance_map_nuc[~mask_cyt_bool] = 0
-    distance_map_nuc_edge = distance_map_nuc < 5
-    distance_map_nuc_edge[~mask_cyt_bool] = False
-    distance_map_nuc_5_15 = distance_map_nuc < 15
-    distance_map_nuc_5_15[mask_nuc_bool] = False
-    distance_map_nuc_5_15[distance_map_nuc_edge] = False
-    distance_map_nuc_5_15[~mask_cyt_bool] = False
-    distance_map_nuc_15_25 = distance_map_nuc < 25
-    distance_map_nuc_15_25[mask_nuc_bool] = False
-    distance_map_nuc_15_25[distance_map_nuc_edge] = False
-    distance_map_nuc_15_25[distance_map_nuc_5_15] = False
-    distance_map_nuc_15_25[~mask_cyt_bool] = False
-
-    # build cytoplasm topography
-    distance_map_cyt = ndi.distance_transform_edt(mask_cyt_bool)
-    distance_map_cyt_0_10 = distance_map_cyt < 10
-    distance_map_cyt_0_10[~mask_cyt_bool] = False
-    distance_map_cyt_10_20 = distance_map_cyt < 20
-    distance_map_cyt_10_20[~mask_cyt_bool] = False
-    distance_map_cyt_10_20[distance_map_cyt_0_10] = False
-    distance_map_cyt_20_30 = distance_map_cyt < 30
-    distance_map_cyt_20_30[~mask_cyt_bool] = False
-    distance_map_cyt_20_30[distance_map_cyt_0_10] = False
-    distance_map_cyt_20_30[distance_map_cyt_10_20] = False
-
-    # count rna for each topographic level
-    cell_area = mask_cyt_bool.sum()
-    nb_rna = len(rna_coord)
-
-    factor = nb_rna * max(distance_map_nuc_edge.sum(), 1) / cell_area
-    mask_rna = distance_map_nuc_edge[rna_coord[:, 1], rna_coord[:, 2]]
-    index_rna_nuc_edge = len(rna_coord[mask_rna]) / factor
-    proportion_rna_nuc_edge = len(rna_coord[mask_rna]) / nb_rna
-
-    factor = nb_rna * max(distance_map_nuc_5_15.sum(), 1) / cell_area
-    mask_rna = distance_map_nuc_5_15[rna_coord[:, 1], rna_coord[:, 2]]
-    index_rna_nuc_5_15 = len(rna_coord[mask_rna]) / factor
-    proportion_rna_nuc_5_15 = len(rna_coord[mask_rna]) / nb_rna
-
-    factor = nb_rna * max(distance_map_nuc_15_25.sum(), 1) / cell_area
-    mask_rna = distance_map_nuc_15_25[rna_coord[:, 1], rna_coord[:, 2]]
-    index_rna_nuc_15_25 = len(rna_coord[mask_rna]) / factor
-    proportion_rna_nuc_15_25 = len(rna_coord[mask_rna]) / nb_rna
-
-    factor = nb_rna * max(distance_map_cyt_0_10.sum(), 1) / cell_area
-    mask_rna = distance_map_cyt_0_10[rna_coord[:, 1], rna_coord[:, 2]]
-    index_rna_cyt_0_10 = len(rna_coord[mask_rna]) / factor
-    proportion_rna_cyt_0_10 = len(rna_coord[mask_rna]) / nb_rna
-
-    factor = nb_rna * max(distance_map_cyt_10_20.sum(), 1) / cell_area
-    mask_rna = distance_map_cyt_10_20[rna_coord[:, 1], rna_coord[:, 2]]
-    index_rna_cyt_10_20 = len(rna_coord[mask_rna]) / factor
-    proportion_rna_cyt_10_20 = len(rna_coord[mask_rna]) / nb_rna
-
-    factor = nb_rna * max(distance_map_cyt_20_30.sum(), 1) / cell_area
-    mask_rna = distance_map_cyt_20_30[rna_coord[:, 1], rna_coord[:, 2]]
-    index_rna_cyt_20_30 = len(rna_coord[mask_rna]) / factor
-    proportion_rna_cyt_20_30 = len(rna_coord[mask_rna]) / nb_rna
-
-    features = [index_rna_nuc_edge, index_rna_nuc_5_15,
-                index_rna_nuc_15_25, index_rna_cyt_0_10,
-                index_rna_cyt_10_20, index_rna_cyt_20_30,
-                proportion_rna_nuc_edge, proportion_rna_nuc_5_15,
-                proportion_rna_nuc_15_25, proportion_rna_cyt_0_10,
-                proportion_rna_cyt_10_20, proportion_rna_cyt_20_30]
+    features = [np.round(index_peripheral_dispersion, decimals=2),
+                np.round(log2_index_peripheral_dispersion, decimals=2)]
 
     return features
 
 
-def features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt,
-                  mask_nuc):
+def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
+                        mask_cyt_out):
+    # case where no mRNAs outside the nucleus are detected
+    if len(rna_coord_out) <= 0:
+        features = [1., 0., 0.]
+        features += [0., 0., 1., 0., 0.] * 30
+        features += [0., 0., 1., 0., 0.] * 30
+        return features
+
+    # build a distance map from nucleus border and from cytoplasm membrane
+    distance_map_nuc_out = ndi.distance_transform_edt(~mask_nuc)
+    distance_map_nuc_in = ndi.distance_transform_edt(~mask_cyt_out)
+    distance_map_nuc = distance_map_nuc_out + distance_map_nuc_in
+    distance_map_nuc[~mask_cyt] = 0
+    distance_map_cyt = ndi.distance_transform_edt(mask_cyt)
+
+    # initialization
+    features = []
+    cell_area = mask_cyt.sum()
+    nb_rna_out = len(rna_coord_out)
+    nb_rna = len(rna_coord)
+
+    # build nucleus edge topography
+    mask_nuc_edge = distance_map_nuc < 5
+    mask_nuc_edge[~mask_cyt] = False
+    factor = nb_rna * max(mask_nuc_edge.sum(), 1) / cell_area
+    mask_rna = mask_nuc_edge[rna_coord[:, 1], rna_coord[:, 2]]
+    nb_rna_nuc_edge = len(rna_coord[mask_rna])
+    index_rna_nuc_edge = nb_rna_nuc_edge / factor
+    log2_index_rna_nuc_edge = np.log2(index_rna_nuc_edge + 0.0001)
+    proportion_rna_nuc_edge = nb_rna_nuc_edge / nb_rna
+
+    features += [np.round(index_rna_nuc_edge, decimals=2),
+                 np.round(log2_index_rna_nuc_edge, decimals=2),
+                 np.round(proportion_rna_nuc_edge, decimals=2)]
+
+    # build nucleus topography
+    for radius in range(1, 31):
+        mask_nuc_radius = distance_map_nuc < radius
+        mask_nuc_radius[~mask_cyt] = False
+        mask_nuc_radius[mask_nuc] = False
+        factor = nb_rna_out * max(mask_nuc_radius.sum(), 1) / cell_area
+        mask_rna = mask_nuc_radius[rna_coord_out[:, 1], rna_coord_out[:, 2]]
+        nb_rna_nuc_radius = len(rna_coord_out[mask_rna])
+        index_rna_nuc = nb_rna_nuc_radius / factor
+        log2_index_rna_nuc = np.log2(index_rna_nuc + 0.0001)
+        proportion_rna_nuc = nb_rna_nuc_radius / nb_rna_out
+
+        features += [np.round(nb_rna_nuc_radius, decimals=2),
+                     np.round(mask_nuc_radius.sum(), decimals=2),
+                     np.round(index_rna_nuc, decimals=2),
+                     np.round(log2_index_rna_nuc, decimals=2),
+                     np.round(proportion_rna_nuc, decimals=2)]
+
+    # build cytoplasm topography
+    for radius in range(1, 31):
+        mask_cyt_radius = distance_map_cyt < radius
+        mask_cyt_radius[~mask_cyt] = False
+        mask_cyt_radius[mask_nuc] = False
+        factor = nb_rna_out * max(mask_cyt_radius.sum(), 1) / cell_area
+        mask_rna = mask_cyt_radius[rna_coord_out[:, 1], rna_coord_out[:, 2]]
+        nb_rna_cyt_radius = len(rna_coord_out[mask_rna])
+        index_rna_cyt = nb_rna_cyt_radius / factor
+        log2_index_rna_cyt = np.log2(index_rna_cyt + 0.0001)
+        proportion_rna_cyt = nb_rna_cyt_radius / nb_rna_out
+
+        features += [np.round(nb_rna_cyt_radius, decimals=2),
+                     np.round(mask_cyt_radius.sum(), decimals=2),
+                     np.round(index_rna_cyt, decimals=2),
+                     np.round(log2_index_rna_cyt, decimals=2),
+                     np.round(proportion_rna_cyt, decimals=2)]
+
+    return features
+
+
+def features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt_out):
+    # case where no mRNAs outside the nucleus are detected
     if len(rna_coord_out) == 0:
-        return [0., 0., 0., 0., 0., 0., 0., 0.,
-                0., 0., 0., 0., 1., 1., 1., 1., 1., 1.]
+        features = [0.] * 56 * 2
+        features += [0., 0., 1., 0., 0.] * 20
+        features += [1., 0., 1., 0., 1., 0.]
+        features += [1., 0., 1., 0., 1., 0.]
+        return features
 
-    # detect foci (radius 650nm, 5 spots minimum)
-    clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
-                                              resolution_z=300,
-                                              resolution_yx=103,
-                                              radius=650,
-                                              nb_min_spots=5)
-    foci = detection.extract_foci(clustered_spots=clustered_spots)
-    nb_foci_650nm_5 = len(foci)
-    nb_spots_in_foci_650nm_5 = np.sum(foci[:, 3])
-    proportion_rna_foci_650nm_5 = nb_spots_in_foci_650nm_5 / len(rna_coord_out)
+    features = []
+    for foci_radius in [50, 150, 250, 350, 450, 550, 650, 750]:
+        for min_foci_rna in [2, 3, 4, 5, 6, 7, 8]:
+            clustered_spots = detection.cluster_spots(
+                spots=rna_coord_out[:, :3],
+                resolution_z=300,
+                resolution_yx=103,
+                radius=foci_radius,
+                nb_min_spots=min_foci_rna)
+            foci = detection.extract_foci(clustered_spots=clustered_spots)
+            nb_foci = len(foci)
+            nb_spots_in_foci = np.sum(foci[:, 3])
+            proportion_rna_foci = nb_spots_in_foci / len(rna_coord_out)
 
-    # detect foci (radius 200nm, 5 spots minimum)
-    clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
-                                              resolution_z=300,
-                                              resolution_yx=103,
-                                              radius=200,
-                                              nb_min_spots=5)
-    foci = detection.extract_foci(clustered_spots=clustered_spots)
-    nb_foci_200nm_5 = len(foci)
-    nb_spots_in_foci_200nm_5 = np.sum(foci[:, 3])
-    proportion_rna_foci_200nm_5 = nb_spots_in_foci_200nm_5 / len(rna_coord_out)
+            features += [np.round(nb_foci, decimals=2),
+                         np.round(proportion_rna_foci, decimals=2)]
 
-    # detect foci (radius 350nm, 10 spots minimum)
-    clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
-                                              resolution_z=300,
-                                              resolution_yx=103,
-                                              radius=350,
-                                              nb_min_spots=10)
-    foci = detection.extract_foci(clustered_spots=clustered_spots)
-    nb_foci_350nm_10 = len(foci)
-    nb_spots_in_foci_350nm_10 = np.sum(foci[:, 3])
-    proportion_rna_foci_350nm_10 = (nb_spots_in_foci_350nm_10 /
-                                    len(rna_coord_out))
-
-    # detect foci (radius 350nm, 3 spots minimum)
-    clustered_spots = detection.cluster_spots(spots=rna_coord_out[:, :3],
-                                              resolution_z=300,
-                                              resolution_yx=103,
-                                              radius=350,
-                                              nb_min_spots=3)
-    foci = detection.extract_foci(clustered_spots=clustered_spots)
-    nb_foci_350nm_3 = len(foci)
-    nb_spots_in_foci_350nm_3 = np.sum(foci[:, 3])
-    proportion_rna_foci_350nm_3 = nb_spots_in_foci_350nm_3 / len(rna_coord_out)
-
-    # get regular foci id
+    # case where no default foci are detected
     rna_coord_out_foci = rna_coord_out[rna_coord_out[:, 3] != -1, :]
     if len(rna_coord_out_foci) == 0:
-        return [nb_foci_650nm_5, nb_foci_200nm_5, nb_foci_350nm_10,
-                nb_foci_350nm_3,
-                proportion_rna_foci_650nm_5, proportion_rna_foci_200nm_5,
-                proportion_rna_foci_350nm_10, proportion_rna_foci_350nm_3,
-                0., 0., 0., 0., 1., 1., 1., 1., 1., 1.]
+        features += [0., 0., 1., 0., 0.] * 20
+        features += [1., 0., 1., 0., 1., 0.]
+        features += [1., 0., 1., 0., 1., 0.]
+        return features
+
+    # get regular foci id
     l_id_foci = list(set(rna_coord_out_foci[:, 3]))
 
-    # count foci neighbors
-    rna_foci_0_10 = []
-    rna_foci_10_20 = []
-    foci_coord = []
-    for id_foci in l_id_foci:
-        rna_foci = rna_coord_out_foci[rna_coord_out_foci[:, 3] == id_foci, :3]
-        foci = np.mean(rna_foci, axis=0).reshape(1, 3)
-        foci_coord.append(foci)
-        distance = distance_matrix(rna_coord_out_foci[:, :3], foci)
-        mask_distance_0_10 = distance < 10
-        mask_distance_10_20 = distance < 20
-        mask_distance_10_20 &= ~mask_distance_0_10
-        nb_rna_foci_0_10 = mask_distance_0_10.sum()
-        nb_rna_foci_10_20 = mask_distance_10_20.sum()
-        rna_foci_0_10.append(nb_rna_foci_0_10)
-        rna_foci_10_20.append(nb_rna_foci_10_20)
+    # count foci neighbors for different radius
+    nb_rna_out = len(rna_coord_out)
+    cell_out_area = mask_cyt_out.sum()
+    for radius in range(1, 21):
+        s = disk(radius).astype(bool)
+        mask_foci_neighbor = np.zeros_like(mask_cyt_out)
+        for i in l_id_foci:
+            rna_foci_i = rna_coord_out_foci[rna_coord_out_foci[:, 3] == i, :3]
+            foci = np.mean(rna_foci_i, axis=0)
+            foci = np.round(foci).astype(np.int64)
+            row, col = foci[1], foci[2]
+            mask_neighbor = np.zeros_like(mask_cyt_out)
+            min_row = max(row-radius, 0)
+            max_row = min(row+radius+1, mask_neighbor.shape[0])
+            min_col = max(col-radius, 0)
+            max_col = min(col+radius+1, mask_neighbor.shape[1])
+            mask_neighbor[min_row:max_row, min_col:max_col] = s
+            mask_foci_neighbor |= mask_cyt_out & mask_neighbor
+        mask_rna = mask_foci_neighbor[rna_coord_out[:, 1], rna_coord_out[:, 2]]
+        nb_rna_neighbor = len(rna_coord_out[mask_rna])
+        foci_neighbor_area = mask_foci_neighbor.sum()
+        factor = nb_rna_out * max(foci_neighbor_area, 1) / cell_out_area
+        index_rna_foci = nb_rna_neighbor / factor
+        log2_index_rna_foci = np.log2(index_rna_foci + 0.0001)
+        proportion_rna_foci = nb_rna_neighbor / nb_rna_out
 
-    # compute expected ratio
-    # TODO better computation of the area around the foci
-    area_0_10 = len(l_id_foci) * np.pi * 10 ** 2
-    area_0_20 = len(l_id_foci) * np.pi * 20 ** 2
-    area_10_20 = area_0_20 - area_0_10
-    area_cyt_no_nuc = mask_cyt.sum() - mask_nuc.sum()
-    expected_rna_foci_0_10 = len(rna_coord_out) * area_0_10 / area_cyt_no_nuc
-    expected_rna_foci_10_20 = len(rna_coord_out) * area_10_20 / area_cyt_no_nuc
-    index_rna_foci_0_10 = np.sum(rna_foci_0_10) / expected_rna_foci_0_10
-    index_rna_foci_10_20 = np.sum(rna_foci_10_20) / expected_rna_foci_10_20
-    proportion_rna_foci_0_10 = np.sum(rna_foci_0_10) / len(rna_coord_out)
-    proportion_rna_foci_10_20 = np.sum(rna_foci_10_20) / len(rna_coord_out)
+        features += [np.round(nb_rna_neighbor, decimals=2),
+                     np.round(foci_neighbor_area, decimals=2),
+                     np.round(index_rna_foci, decimals=2),
+                     np.round(log2_index_rna_foci, decimals=2),
+                     np.round(proportion_rna_foci, decimals=2)]
 
     # get foci coordinates
+    foci_coord = []
+    for i in l_id_foci:
+        rna_foci_i = rna_coord_out_foci[rna_coord_out_foci[:, 3] == i, :3]
+        foci = np.mean(rna_foci_i, axis=0)
+        foci = np.round(foci).astype(np.int64)
+        foci_coord.append(foci.reshape(1, 3))
     foci_coord = np.array(foci_coord, dtype=np.int64)
     foci_coord = np.squeeze(foci_coord, axis=1)
     foci_coord_2d = foci_coord[:, 1:3]
 
     # compute statistics from distance to cytoplasm
-    distance_foci_cyt = distance_cyt[foci_coord_2d[:, 0],
-                                     foci_coord_2d[:, 1]]
-    factor = np.mean(distance_cyt[distance_nuc > 0])
-    foci_mean_distance_cyt = np.mean(distance_foci_cyt) / factor
-    factor = np.median(distance_cyt[distance_nuc > 0])
-    foci_median_distance_cyt = np.median(distance_foci_cyt) / factor
-    factor = np.std(distance_cyt[distance_nuc > 0])
-    foci_std_distance_cyt = np.std(distance_foci_cyt) / factor
+    distance_foci_cyt = distance_cyt[foci_coord_2d[:, 0], foci_coord_2d[:, 1]]
+    factor = np.mean(distance_cyt[mask_cyt_out])
+    index_foci_mean_distance_cyt = np.mean(distance_foci_cyt) / factor
+    log2_index_foci_mean_distance_cyt = np.log2(
+        index_foci_mean_distance_cyt + 0.0001)
+    factor = np.median(distance_cyt[mask_cyt_out])
+    index_foci_median_distance_cyt = np.median(distance_foci_cyt) / factor
+    log2_index_foci_median_distance_cyt = np.log2(
+        index_foci_median_distance_cyt + 0.0001)
+    factor = np.std(distance_cyt[mask_cyt_out])
+    index_foci_std_distance_cyt = np.std(distance_foci_cyt) / factor
+    log2_index_foci_std_distance_cyt = np.log2(
+        index_foci_std_distance_cyt + 0.0001)
+
+    features += [np.round(index_foci_mean_distance_cyt, decimals=2),
+                 np.round(log2_index_foci_mean_distance_cyt, decimals=2),
+                 np.round(index_foci_median_distance_cyt, decimals=2),
+                 np.round(log2_index_foci_median_distance_cyt, decimals=2),
+                 np.round(index_foci_std_distance_cyt, decimals=2),
+                 np.round(log2_index_foci_std_distance_cyt, decimals=2)]
 
     # compute statistics from distance to nucleus
     distance_foci_nuc = distance_nuc[foci_coord_2d[:, 0],
                                      foci_coord_2d[:, 1]]
-    factor = np.mean(distance_nuc[distance_nuc > 0])
-    foci_mean_distance_nuc = np.mean(distance_foci_nuc) / factor
-    factor = np.median(distance_nuc[distance_nuc > 0])
-    foci_median_distance_nuc = np.median(distance_foci_nuc) / factor
-    factor = np.std(distance_nuc[distance_nuc > 0])
-    foci_std_distance_nuc = np.std(distance_foci_nuc) / factor
+    factor = np.mean(distance_nuc[mask_cyt_out])
+    index_foci_mean_distance_nuc = np.mean(distance_foci_nuc) / factor
+    log2_index_foci_mean_distance_nuc = np.log2(
+        index_foci_mean_distance_nuc + 0.0001)
+    factor = np.median(distance_nuc[mask_cyt_out])
+    index_foci_median_distance_nuc = np.median(distance_foci_nuc) / factor
+    log2_index_foci_median_distance_nuc = np.log2(
+        index_foci_median_distance_nuc + 0.0001)
+    factor = np.std(distance_nuc[mask_cyt_out])
+    index_foci_std_distance_nuc = np.std(distance_foci_nuc) / factor
+    log2_index_foci_std_distance_nuc = np.log2(
+        index_foci_std_distance_nuc + 0.0001)
 
-    features = [nb_foci_650nm_5, nb_foci_200nm_5, nb_foci_350nm_10,
-                nb_foci_350nm_3,
-                proportion_rna_foci_650nm_5, proportion_rna_foci_200nm_5,
-                proportion_rna_foci_350nm_10, proportion_rna_foci_350nm_3,
-                index_rna_foci_0_10, index_rna_foci_10_20,
-                proportion_rna_foci_0_10, proportion_rna_foci_10_20,
-                foci_mean_distance_cyt, foci_median_distance_cyt,
-                foci_std_distance_cyt, foci_mean_distance_nuc,
-                foci_median_distance_nuc, foci_std_distance_nuc]
+    features += [np.round(index_foci_mean_distance_nuc, decimals=2),
+                 np.round(log2_index_foci_mean_distance_nuc, decimals=2),
+                 np.round(index_foci_median_distance_nuc, decimals=2),
+                 np.round(log2_index_foci_median_distance_nuc, decimals=2),
+                 np.round(index_foci_std_distance_nuc, decimals=2),
+                 np.round(log2_index_foci_std_distance_nuc, decimals=2)]
 
     return features
 
 
-def feature_area(mask_cyt, mask_nuc):
+def feature_area(mask_cyt, mask_nuc, mask_cyt_out):
     # get area of the cytoplasm and the nucleus
     area_cyt = mask_cyt.sum()
     area_nuc = mask_nuc.sum()
@@ -918,7 +935,10 @@ def feature_area(mask_cyt, mask_nuc):
     # compute relative area of the nucleus
     relative_area_nuc = area_nuc / area_cyt
 
+    # compute area of the cytoplasm outside nucleus
+    area_cyt_out = mask_cyt_out.sum()
+
     # return features
-    features = [relative_area_nuc, area_cyt, area_nuc]
+    features = [relative_area_nuc, area_cyt, area_nuc, area_cyt_out]
 
     return features
