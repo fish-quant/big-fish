@@ -601,3 +601,16 @@ def get_offset_value():
 
     """
     return 5
+
+
+def get_eps_float32():
+    """Return the epsilon value for a 32 bit float.
+
+    Returns
+    -------
+    _ : np.float32
+        Epsilon value.
+
+    """
+
+    return np.finfo(np.float32).eps
