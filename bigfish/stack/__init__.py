@@ -7,7 +7,7 @@ build stack of images.
 
 from .utils import (check_array, check_df, check_recipe, check_parameter,
                     check_range_value, complete_coordinates_2d,
-                    from_coord_to_image, get_offset_value)
+                    from_coord_to_image, get_offset_value, get_eps_float32)
 from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
                  save_image)
 from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
@@ -38,7 +38,7 @@ from .augmentation import augment
 
 _utils = ["check_array", "check_df", "check_recipe", "check_parameter",
           "check_range_value", "complete_coordinates_2d",
-          "from_coord_to_image", "get_offset_value"]
+          "from_coord_to_image", "get_offset_value", "get_eps_float32"]
 
 _io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
        "save_image"]
