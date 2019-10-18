@@ -19,7 +19,8 @@ from scipy.stats import spearmanr
 
 # TODO add sanity check functions
 # TODO add documentation
-# TODO check centroid cyt has a yx format
+# TODO allow to return intermediate results (distance map, etc.)
+# TODO round float results
 
 
 def get_features(cyt_coord, nuc_coord, rna_coord,
@@ -110,10 +111,10 @@ def get_features(cyt_coord, nuc_coord, rna_coord,
 
     # intranuclear related features
     if compute_intranuclear:
-        bb = feature_in_out_nucleus(rna_coord,
-                                    mask_nuc)
+        bb = features_in_out_nucleus(rna_coord,
+                                     mask_nuc)
 
-        features += [bb]
+        features += bb
 
     # intranuclear related features
     if compute_protrusion:
@@ -126,17 +127,17 @@ def get_features(cyt_coord, nuc_coord, rna_coord,
 
     # dispersion measures
     if compute_dispersion:
-        dd = feature_polarization(centroid_rna_out,
-                                  centroid_cyt,
-                                  centroid_nuc,
-                                  distance_cyt_centroid,
-                                  distance_nuc_centroid)
-        ee = feature_dispersion(rna_coord_out,
-                                distance_rna_out_centroid,
-                                mask_cyt_out)
-        ff = feature_peripheral_dispersion(rna_coord_out,
-                                           distance_cyt_centroid,
-                                           mask_cyt_out)
+        dd = features_polarization(centroid_rna_out,
+                                   centroid_cyt,
+                                   centroid_nuc,
+                                   distance_cyt_centroid,
+                                   distance_nuc_centroid)
+        ee = features_dispersion(rna_coord_out,
+                                 distance_rna_out_centroid,
+                                 mask_cyt_out)
+        ff = features_peripheral_dispersion(rna_coord_out,
+                                            distance_cyt_centroid,
+                                            mask_cyt_out)
 
         features += dd + ee + ff
 
@@ -158,7 +159,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord,
 
     # area related features
     if compute_area:
-        ii = feature_area(mask_cyt, mask_nuc, mask_cyt_out)
+        ii = features_area(mask_cyt, mask_nuc, mask_cyt_out)
 
         features += ii
 
@@ -244,7 +245,9 @@ def get_features_name(names_features_aubin=False,
                           "log2_index_std_distance_nuc"]
 
     if names_features_intranuclear:
-        features_name += ["proportion_in_nuc"]
+        features_name += ["proportion_in_nuc",
+                          "nb_rna_out",
+                          "nb_rna_in"]
 
     if names_features_protrusion:
         features_name += ["index_rna_opening_30",
@@ -602,7 +605,7 @@ def feature_dispersion_aubin(rna_coord, mask_cyt, centroid_rna):
 
 def features_distance(rna_coord_out, distance_cyt, distance_nuc, mask_cyt_out):
     rna_coord_out_2d = rna_coord_out[:, 1:3]
-    if len(rna_coord_out_2d) <= 10:
+    if len(rna_coord_out_2d) == 0:
         features = [1., 0., 1., 0., 1., 0.] * 2
         return features
     features = []
@@ -652,14 +655,18 @@ def features_distance(rna_coord_out, distance_cyt, distance_nuc, mask_cyt_out):
     return features
 
 
-def feature_in_out_nucleus(rna_coord, mask_nuc):
-    # compute the proportion of rna in the nucleus
-    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
-    rna_in = rna_coord[mask_rna_in]
-    feature = len(rna_in) / len(rna_coord)
-    feature = np.round(feature, decimals=2)
+def features_in_out_nucleus(rna_coord, rna_coord_out):
+    # number of mRNAs outside and inside nucleus
+    nb_rna_out = len(rna_coord_out)
+    nb_rna_in = len(rna_coord) - nb_rna_out
 
-    return feature
+    # compute the proportion of rna in the nucleus
+    proportion_rna_in = nb_rna_in / len(rna_coord)
+    proportion_rna_in = np.round(proportion_rna_in, decimals=2)
+
+    features = [proportion_rna_in, nb_rna_out, nb_rna_in]
+
+    return features
 
 
 def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
@@ -669,7 +676,7 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
     area_cyt_out = mask_cyt_out.sum()
 
     # case where we do not detect any rna outside the nucleus
-    if nb_rna_out <= 10:
+    if nb_rna_out == 0:
         features = [1., 0., 0.]
         return features
 
@@ -700,8 +707,8 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
     return features
 
 
-def feature_polarization(centroid_rna_out, centroid_cyt, centroid_nuc,
-                         distance_cyt_centroid, distance_nuc_centroid):
+def features_polarization(centroid_rna_out, centroid_cyt, centroid_nuc,
+                          distance_cyt_centroid, distance_nuc_centroid):
     centroid_rna_out_2d = centroid_rna_out[1:]
 
     # compute polarization index from cytoplasm centroid
@@ -721,8 +728,8 @@ def feature_polarization(centroid_rna_out, centroid_cyt, centroid_nuc,
     return feature
 
 
-def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt_out):
-    if len(rna_coord_out) <= 10:
+def features_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt_out):
+    if len(rna_coord_out) == 0:
         features = [1., 0.]
         return features
 
@@ -748,9 +755,9 @@ def feature_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt_out):
     return features
 
 
-def feature_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
-                                  mask_cyt_out):
-    if len(rna_coord_out) <= 10:
+def features_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
+                                   mask_cyt_out):
+    if len(rna_coord_out) == 0:
         features = [1., 0.]
         return features
 
@@ -780,7 +787,7 @@ def feature_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
 def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
                         mask_cyt_out):
     # case where no mRNAs outside the nucleus are detected
-    if len(rna_coord_out) <= 0:
+    if len(rna_coord_out) == 0:
         features = [1., 0., 0.]
         features += [0., 0., 1., 0., 0.] * 30
         features += [0., 0., 1., 0., 0.] * 30
@@ -985,7 +992,7 @@ def features_foci(rna_coord_out, distance_cyt, distance_nuc, mask_cyt_out):
     return features
 
 
-def feature_area(mask_cyt, mask_nuc, mask_cyt_out):
+def features_area(mask_cyt, mask_nuc, mask_cyt_out):
     # get area of the cytoplasm and the nucleus
     area_cyt = mask_cyt.sum()
     area_nuc = mask_nuc.sum()
