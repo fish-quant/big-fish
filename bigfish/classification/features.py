@@ -726,10 +726,10 @@ def features_polarization(centroid_rna_out, centroid_cyt, centroid_nuc,
     feature_nuc = polarization_distance / factor
 
     # gather features
-    feature = [feature_cyt,
-               feature_nuc]
+    features = [feature_cyt,
+                feature_nuc]
 
-    return feature
+    return features
 
 
 def features_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt_out):
@@ -798,7 +798,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     # case where no mRNAs outside the nucleus are detected
     if len(rna_coord_out) == 0:
         features = [1., 0., 0.]
-        features += [1., 0., 0.] * 6
+        features += [1., 0., 0.] * 5
         features += [1., 0., 0.] * 6
         return features
 
