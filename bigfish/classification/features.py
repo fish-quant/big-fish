@@ -112,7 +112,7 @@ def get_features(cyt_coord, nuc_coord, rna_coord,
     # intranuclear related features
     if compute_intranuclear:
         bb = features_in_out_nucleus(rna_coord,
-                                     mask_nuc)
+                                     rna_coord_out)
 
         features += bb
 
@@ -245,7 +245,7 @@ def get_features_name(names_features_aubin=False,
                           "log2_index_std_distance_nuc"]
 
     if names_features_intranuclear:
-        features_name += ["proportion_in_nuc",
+        features_name += ["proportion_rna_in_nuc",
                           "nb_rna_out",
                           "nb_rna_in"]
 
@@ -807,7 +807,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     nb_rna = len(rna_coord)
 
     # build nucleus edge topography
-    mask_nuc_edge = distance_map_nuc < 5
+    mask_nuc_edge = distance_map_nuc <= 5
     mask_nuc_edge[~mask_cyt] = False
     factor = nb_rna * max(mask_nuc_edge.sum(), 1) / cell_area
     mask_rna = mask_nuc_edge[rna_coord[:, 1], rna_coord[:, 2]]
@@ -822,7 +822,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
 
     # build nucleus topography
     for radius in range(1, 31):
-        mask_nuc_radius = distance_map_nuc < radius
+        mask_nuc_radius = distance_map_nuc <= radius
         mask_nuc_radius[~mask_cyt] = False
         mask_nuc_radius[mask_nuc] = False
         factor = nb_rna_out * max(mask_nuc_radius.sum(), 1) / cell_area
@@ -840,7 +840,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
 
     # build cytoplasm topography
     for radius in range(1, 31):
-        mask_cyt_radius = distance_map_cyt < radius
+        mask_cyt_radius = distance_map_cyt <= radius
         mask_cyt_radius[~mask_cyt] = False
         mask_cyt_radius[mask_nuc] = False
         factor = nb_rna_out * max(mask_cyt_radius.sum(), 1) / cell_area
