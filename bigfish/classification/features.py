@@ -275,8 +275,22 @@ def get_features_name(names_features_aubin=False,
                               "proportion_rna_nuc_radius_{}_{}".format(a, b)]
             a = b
 
+        a = 5
+        for b in range(15, 26, 10):
+            features_name += ["index_rna_nuc_radius_{}_{}".format(a, b),
+                              "log2_index_rna_nuc_radius_{}_{}".format(a, b),
+                              "proportion_rna_nuc_radius_{}_{}".format(a, b)]
+            a = b
+
         a = 0
         for b in range(5, 31, 5):
+            features_name += ["index_rna_cyt_radius_{}_{}".format(a, b),
+                              "log2_index_rna_cyt_radius_{}_{}".format(a, b),
+                              "proportion_rna_cyt_radius_{}_{}".format(a, b)]
+            a = b
+
+        a = 0
+        for b in range(10, 31, 10):
             features_name += ["index_rna_cyt_radius_{}_{}".format(a, b),
                               "log2_index_rna_cyt_radius_{}_{}".format(a, b),
                               "proportion_rna_cyt_radius_{}_{}".format(a, b)]
@@ -799,7 +813,9 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     if len(rna_coord_out) == 0:
         features = [1., 0., 0.]
         features += [1., 0., 0.] * 5
+        features += [1., 0., 0.] * 2
         features += [1., 0., 0.] * 6
+        features += [1., 0., 0.] * 3
         return features
 
     # build a distance map from nucleus border and from cytoplasm membrane
@@ -812,8 +828,8 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     # initialization
     features = []
     cell_area = mask_cyt.sum()
-    nb_rna_out = len(rna_coord_out)
     nb_rna = len(rna_coord)
+    nb_rna_out = len(rna_coord_out)
     eps = stack.get_eps_float32()
 
     # count mRNAs along nucleus edge (-5 to 5 pixels)
@@ -830,7 +846,8 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
                  log2_index_rna_nuc_edge,
                  proportion_rna_nuc_edge]
 
-    # count mRNAs in specific regions around nucleus
+    # count mRNAs in specific regions around nucleus (5-10, 10-15, 15-20,
+    # 20-25, 25-30)
     mask_cumulated_radius = mask_nuc_edge.copy()
     for radius in range(10, 31, 5):
         mask_nuc_radius = distance_map_nuc <= radius
@@ -843,13 +860,33 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
         nb_rna_nuc_radius = len(rna_coord[mask_rna])
         index_rna_nuc_radius = (nb_rna_nuc_radius + eps) / factor
         log2_index_rna_nuc_radius = np.log2(index_rna_nuc_radius)
-        proportion_rna_nuc_radius = nb_rna_nuc_radius / nb_rna_out
+        proportion_rna_nuc_radius = nb_rna_nuc_radius / nb_rna
 
         features += [index_rna_nuc_radius,
                      log2_index_rna_nuc_radius,
                      proportion_rna_nuc_radius]
 
-    # count mRNAs in specific regions around cytoplasmic membrane
+    # count mRNAs in specific regions around nucleus (5-15, 15-25)
+    mask_cumulated_radius = mask_nuc_edge.copy()
+    for radius in range(15, 26, 10):
+        mask_nuc_radius = distance_map_nuc <= radius
+        mask_nuc_radius[~mask_cyt] = False
+        mask_nuc_radius[mask_nuc] = False
+        mask_nuc_radius[mask_cumulated_radius] = False
+        mask_cumulated_radius |= mask_nuc_radius
+        factor = nb_rna * max(mask_nuc_radius.sum(), 1) / cell_area
+        mask_rna = mask_nuc_radius[rna_coord[:, 1], rna_coord[:, 2]]
+        nb_rna_nuc_radius = len(rna_coord[mask_rna])
+        index_rna_nuc_radius = (nb_rna_nuc_radius + eps) / factor
+        log2_index_rna_nuc_radius = np.log2(index_rna_nuc_radius)
+        proportion_rna_nuc_radius = nb_rna_nuc_radius / nb_rna
+
+        features += [index_rna_nuc_radius,
+                     log2_index_rna_nuc_radius,
+                     proportion_rna_nuc_radius]
+
+    # count mRNAs in specific regions around cytoplasmic membrane (0-5, 5-10,
+    # 10-15, 15-20, 20-25, 25-30)
     mask_cumulated_radius = np.zeros_like(mask_nuc_edge)
     for radius in range(5, 31, 5):
         mask_cyt_radius = distance_map_cyt <= radius
@@ -862,7 +899,27 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
         nb_rna_cyt_radius = len(rna_coord[mask_rna])
         index_rna_cyt_radius = (nb_rna_cyt_radius + eps) / factor
         log2_index_rna_cyt_radius = np.log2(index_rna_cyt_radius)
-        proportion_rna_cyt_radius = nb_rna_cyt_radius / nb_rna_out
+        proportion_rna_cyt_radius = nb_rna_cyt_radius / nb_rna
+
+        features += [index_rna_cyt_radius,
+                     log2_index_rna_cyt_radius,
+                     proportion_rna_cyt_radius]
+
+    # count mRNAs in specific regions around cytoplasmic membrane (0-10, 10-20,
+    # 20-30)
+    mask_cumulated_radius = np.zeros_like(mask_nuc_edge)
+    for radius in range(10, 31, 10):
+        mask_cyt_radius = distance_map_cyt <= radius
+        mask_cyt_radius[~mask_cyt] = False
+        mask_cyt_radius[mask_nuc] = False
+        mask_cyt_radius[mask_cumulated_radius] = False
+        mask_cumulated_radius |= mask_cyt_radius
+        factor = nb_rna * max(mask_cyt_radius.sum(), 1) / cell_area
+        mask_rna = mask_cyt_radius[rna_coord[:, 1], rna_coord[:, 2]]
+        nb_rna_cyt_radius = len(rna_coord[mask_rna])
+        index_rna_cyt_radius = (nb_rna_cyt_radius + eps) / factor
+        log2_index_rna_cyt_radius = np.log2(index_rna_cyt_radius)
+        proportion_rna_cyt_radius = nb_rna_cyt_radius / nb_rna
 
         features += [index_rna_cyt_radius,
                      log2_index_rna_cyt_radius,
