@@ -833,7 +833,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     eps = stack.get_eps_float32()
 
     # count mRNAs along nucleus edge (-5 to 5 pixels)
-    mask_nuc_edge = distance_map_nuc <= 5
+    mask_nuc_edge = distance_map_nuc < 5
     mask_nuc_edge[~mask_cyt] = False
     factor = nb_rna * max(mask_nuc_edge.sum(), 1) / cell_area
     mask_rna = mask_nuc_edge[rna_coord[:, 1], rna_coord[:, 2]]
@@ -850,7 +850,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     # 20-25, 25-30)
     mask_cumulated_radius = mask_nuc_edge.copy()
     for radius in range(10, 31, 5):
-        mask_nuc_radius = distance_map_nuc <= radius
+        mask_nuc_radius = distance_map_nuc < radius
         mask_nuc_radius[~mask_cyt] = False
         mask_nuc_radius[mask_nuc] = False
         mask_nuc_radius[mask_cumulated_radius] = False
@@ -869,7 +869,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     # count mRNAs in specific regions around nucleus (5-15, 15-25)
     mask_cumulated_radius = mask_nuc_edge.copy()
     for radius in range(15, 26, 10):
-        mask_nuc_radius = distance_map_nuc <= radius
+        mask_nuc_radius = distance_map_nuc < radius
         mask_nuc_radius[~mask_cyt] = False
         mask_nuc_radius[mask_nuc] = False
         mask_nuc_radius[mask_cumulated_radius] = False
@@ -889,7 +889,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     # 10-15, 15-20, 20-25, 25-30)
     mask_cumulated_radius = np.zeros_like(mask_nuc_edge)
     for radius in range(5, 31, 5):
-        mask_cyt_radius = distance_map_cyt <= radius
+        mask_cyt_radius = distance_map_cyt < radius
         mask_cyt_radius[~mask_cyt] = False
         mask_cyt_radius[mask_nuc] = False
         mask_cyt_radius[mask_cumulated_radius] = False
@@ -909,7 +909,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     # 20-30)
     mask_cumulated_radius = np.zeros_like(mask_nuc_edge)
     for radius in range(10, 31, 10):
-        mask_cyt_radius = distance_map_cyt <= radius
+        mask_cyt_radius = distance_map_cyt < radius
         mask_cyt_radius[~mask_cyt] = False
         mask_cyt_radius[mask_nuc] = False
         mask_cyt_radius[mask_cumulated_radius] = False
