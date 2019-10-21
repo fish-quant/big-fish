@@ -695,7 +695,7 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
 
     # case where we do not detect any rna outside the nucleus
     if nb_rna_out == 0:
-        features = [1., 0., 0.]
+        features = [0., np.log2(eps), 0.]
         return features
 
     # apply opening operator and count the loss of rna outside the nucleus
@@ -720,7 +720,7 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
                          log2_index_rna_opening,
                          proportion_rna_opening]
         else:
-            features += [1., 0., 0.]
+            features += [0., np.log2(eps), 0.]
 
     return features
 
@@ -809,13 +809,20 @@ def features_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
 
 def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
                         mask_cyt_out):
+    # initialization
+    features = []
+    cell_area = mask_cyt.sum()
+    nb_rna = len(rna_coord)
+    nb_rna_out = len(rna_coord_out)
+    eps = stack.get_eps_float32()
+
     # case where no mRNAs outside the nucleus are detected
-    if len(rna_coord_out) == 0:
-        features = [1., 0., 0.]
-        features += [1., 0., 0.] * 5
-        features += [1., 0., 0.] * 2
-        features += [1., 0., 0.] * 6
-        features += [1., 0., 0.] * 3
+    if nb_rna_out == 0:
+        features = [0., np.log2(eps), 0.]
+        features += [0., np.log2(eps), 0.] * 5
+        features += [0., np.log2(eps), 0.] * 2
+        features += [0., np.log2(eps), 0.] * 6
+        features += [0., np.log2(eps), 0.] * 3
         return features
 
     # build a distance map from nucleus border and from cytoplasm membrane
@@ -824,13 +831,6 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     distance_map_nuc = distance_map_nuc_out + distance_map_nuc_in
     distance_map_nuc[~mask_cyt] = 0
     distance_map_cyt = ndi.distance_transform_edt(mask_cyt)
-
-    # initialization
-    features = []
-    cell_area = mask_cyt.sum()
-    nb_rna = len(rna_coord)
-    nb_rna_out = len(rna_coord_out)
-    eps = stack.get_eps_float32()
 
     # count mRNAs along nucleus edge (-5 to 5 pixels)
     mask_nuc_edge = distance_map_nuc < 5
