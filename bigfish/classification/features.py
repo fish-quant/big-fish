@@ -447,7 +447,7 @@ def features_polarization(centroid_rna_out, centroid_cyt, centroid_nuc,
 def features_dispersion(rna_coord_out, distance_rna_centroid, mask_cyt_out):
     # initialization
     if len(rna_coord_out) == 0:
-        features = [1., 0.]
+        features = [1.]
         return features
 
     # get number of rna outside nucleus and cell area
@@ -479,7 +479,7 @@ def features_peripheral_dispersion(rna_coord_out, distance_cyt_centroid,
 
     # get number of rna outside nucleus and cell area
     if mask_cyt_out.sum() == 0:
-        features = [1., 0.]
+        features = [1.]
         return features
 
     # get coordinates of each pixel of the cell
