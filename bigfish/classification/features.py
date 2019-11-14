@@ -406,6 +406,7 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
         # case where we do not detect any rna outside the nucleus
         if nb_rna_out == 0:
             features += [0., 0., area_protrusion]
+            continue
 
         if area_protrusion > 0:
             factor = nb_rna_out * area_protrusion / area_cyt_out
