@@ -192,7 +192,8 @@ def get_features_name(names_features_distance=True,
 
     if names_features_protrusion:
         features_name += ["index_rna_opening_30",
-                          "proportion_rna_opening_30"]
+                          "proportion_rna_opening_30",
+                          "area_opening_30"]
 
     if names_features_dispersion:
         features_name += ["score_polarization_cyt",
@@ -393,11 +394,6 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
     area_nuc = mask_nuc.sum()
     area_cyt_out = mask_cyt_out.sum()
 
-    # case where we do not detect any rna outside the nucleus
-    if nb_rna_out == 0:
-        features = [0., 0.]
-        return features
-
     # apply opening operator and count the loss of rna outside the nucleus
     features = []
     for size in [30]:
@@ -406,6 +402,11 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
         mask_cyt_transformed[mask_nuc] = True
         new_area_cell_out = mask_cyt_transformed.sum() - area_nuc
         area_protrusion = area_cyt_out - new_area_cell_out
+
+        # case where we do not detect any rna outside the nucleus
+        if nb_rna_out == 0:
+            features += [0., 0., area_protrusion]
+
         if area_protrusion > 0:
             factor = nb_rna_out * area_protrusion / area_cyt_out
             mask_rna = mask_cyt_transformed[rna_coord_out[:, 1],
@@ -416,9 +417,10 @@ def features_protrusion(rna_coord_out, mask_cyt, mask_nuc, mask_cyt_out):
             proportion_rna_opening = nb_rna_protrusion / nb_rna_out
 
             features += [index_rna_opening,
-                         proportion_rna_opening]
+                         proportion_rna_opening,
+                         area_protrusion]
         else:
-            features += [0., 0.]
+            features += [0., 0., 0.]
 
     return features
 
