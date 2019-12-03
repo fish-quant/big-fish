@@ -9,12 +9,14 @@ import warnings
 import bigfish.stack as stack
 
 import numpy as np
+
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_objects
-from skimage.segmentation import find_boundaries
 
 
 # TODO homogenize the dtype of masks
+
+# ### Manipulate labels ###
 
 def label_instances(mask):
     """Count and label the different instances previously segmented in an
@@ -161,36 +163,3 @@ def dilate_erode_labels(label):
     label_final = label_final.astype(np.int64)
 
     return label_final
-
-
-def get_boundaries(mask):
-    """Get the boundaries coordinates of a mask (not sorted).
-
-    Parameters
-    ----------
-    mask : np.ndarray, np.uint or np.int or bool
-        Labelled image with shape (y, x).
-
-    Returns
-    -------
-    boundaries : np.ndarray, np.int64
-        Coordinate of the boundaries with shape (nb_points, 2).
-
-    """
-    # TODO sort boundaries coordinates with find_contours
-    # check parameters
-    stack.check_array(mask,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
-
-    # get boundaries mask
-    boundary_mask = find_boundaries(mask, mode='inner')
-
-    # get peak coordinates and radius
-    boundary_coordinates = np.nonzero(boundary_mask)
-    boundary_coordinates = np.column_stack(boundary_coordinates)
-
-    # complete coordinates if necessary
-    boundary_coordinates = stack.complete_coordinates_2d(boundary_coordinates)
-
-    return boundary_coordinates
