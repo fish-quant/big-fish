@@ -6,8 +6,7 @@ build stack of images.
 """
 
 from .utils import (check_array, check_df, check_recipe, check_parameter,
-                    check_range_value, complete_coordinates_2d,
-                    from_coord_to_image, get_offset_value, get_eps_float32)
+                    check_range_value, get_offset_value, get_eps_float32)
 from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
                  save_image)
 from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
@@ -26,7 +25,10 @@ from .projection import (maximum_projection, mean_projection,
 from .illumination import (compute_illumination_surface,
                            correct_illumination_surface)
 from .postprocess import (remove_transcription_site, extract_spots_from_frame,
-                          extract_coordinates_image)
+                          extract_coordinates_image, center_binary_mask,
+                          from_binary_surface_to_coord_2d, complete_coord_2d,
+                          from_coord_2d_to_binary_surface,
+                          from_binary_boundaries_to_binary_surface)
 from .preparation import (split_from_background, build_image, get_coordinates,
                           get_distance_layers, get_surface_layers, build_batch,
                           get_label, Generator, encode_labels, get_map_label,
@@ -37,8 +39,7 @@ from .augmentation import augment
 
 
 _utils = ["check_array", "check_df", "check_recipe", "check_parameter",
-          "check_range_value", "complete_coordinates_2d",
-          "from_coord_to_image", "get_offset_value", "get_eps_float32"]
+          "check_range_value", "get_offset_value", "get_eps_float32"]
 
 _io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
        "save_image"]
@@ -62,7 +63,10 @@ _illumination = ["compute_illumination_surface",
                  "correct_illumination_surface"]
 
 _postprocess = ["remove_transcription_site", "extract_spots_from_frame",
-                "extract_coordinates_image"]
+                "extract_coordinates_image", "center_binary_mask",
+                "from_binary_surface_to_coord_2d", "complete_coord_2d",
+                "from_coord_2d_to_binary_surface",
+                "from_binary_boundaries_to_binary_surface"]
 
 _augmentation = ["augment"]
 

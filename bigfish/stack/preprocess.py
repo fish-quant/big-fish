@@ -12,9 +12,9 @@ import pandas as pd
 
 from .io import read_image, read_cell_json, read_rna_json
 from .utils import (check_array, check_parameter, check_recipe,
-                    check_range_value, check_df, complete_coordinates_2d,
-                    from_coord_to_image, fit_recipe, get_path_from_recipe,
-                    get_nb_element_per_dimension, count_nb_fov)
+                    check_range_value, check_df, fit_recipe,
+                    get_path_from_recipe, get_nb_element_per_dimension,
+                    count_nb_fov)
 
 from sklearn.preprocessing import LabelEncoder
 

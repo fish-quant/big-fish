@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Functions used to format and clean any input loaded in bigfish.
+Functions used to format and clean any intermediate results loaded in or
+returned by a bigfish method.
 """
 
 import numpy as np
+from scipy import ndimage as ndi
 
-from .utils import check_array, check_parameter
+from .utils import check_array, check_parameter, get_offset_value
 
 from skimage.measure import regionprops, find_contours
+from skimage.draw import polygon_perimeter
 
 
 # ### Transcription sites ###
@@ -424,3 +427,206 @@ def _extract_spots_outside_foci(cell_cyt_mask, spots_out_foci):
     spots_out_foci_cell = spots_out_foci[mask_spots_to_keep]
 
     return spots_out_foci_cell
+
+
+# ### Segmentation postprocessing ###
+
+# TODO from_binary_surface_to_binary_boundaries
+
+def center_binary_mask(binary_mask):
+    """Center a 2-d binary mask (surface or boundaries) and pad with one pixel.
+
+    Parameters
+    ----------
+    binary_mask : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    binary_mask_centered : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(binary_mask,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # initialize parameter
+    marge = get_offset_value()
+
+    # center binary mask
+    coord = np.nonzero(binary_mask)
+    coord = np.column_stack(coord)
+    min_y, max_y = coord[:, 0].min(), coord[:, 0].max()
+    min_x, max_x = coord[:, 1].min(), coord[:, 1].max()
+    shape_y = max_y - min_y + 1
+    shape_x = max_x - min_x + 1
+    binary_mask_centered_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
+    binary_mask_centered = np.zeros(binary_mask_centered_shape, dtype=bool)
+    crop = binary_mask[min_y:max_y + 1, min_x:max_x + 1]
+    binary_mask_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
+
+    return binary_mask_centered
+
+
+def from_binary_surface_to_coord_2d(binary_surface):
+    """Extract coordinates from a 2-d binary matrix.
+
+    The resulting coordinates represent the external boundaries of the object.
+
+    Parameters
+    ----------
+    binary_surface : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    coord : np.ndarray, np.uint64
+        Array of coordinates with shape (nb_points, 2).
+
+    """
+    # check parameters
+    check_array(binary_surface,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # from binary surface to 2D coordinates boundaries
+    coord = find_contours(binary_surface, level=0)[0].astype(np.int64)
+
+    return coord
+
+
+def complete_coord_2d(coord):
+    """Complete a 2-d coordinates array, by generating/interpolating missing
+    points.
+
+    Parameters
+    ----------
+    coord : np.ndarray, np.uint64
+        Array of coordinates to complete, with shape (nb_points, 2).
+
+    Returns
+    -------
+    coord_completed : np.ndarray, np.uint64
+        Completed coordinates arrays, with shape (nb_points, 2).
+
+    """
+    # check parameters
+    check_array(coord,
+                ndim=2,
+                dtype=[np.int64])
+
+    # for each array in the list, complete its coordinates using the scikit
+    # image method 'polygon_perimeter'
+    coord_y, coord_x = polygon_perimeter(coord[:, 0], coord[:, 1])
+    coord_y = coord_y[:, np.newaxis]
+    coord_x = coord_x[:, np.newaxis]
+    coord_completed = np.concatenate((coord_y, coord_x), axis=-1)
+
+    return coord_completed
+
+
+def from_coord_2d_to_binary_surface(coord):
+    """Convert 2-d coordinates to a binary matrix with the surface of the
+    object.
+
+    As we manipulate the coordinates of the external boundaries, the relative
+    binary matrix has two extra pixels in each dimension. We compensate by
+    keeping only the inside pixels of the object surface.
+
+    Parameters
+    ----------
+    coord : np.ndarray, np.uint64
+        Array of coordinates with shape (nb_points, 2).
+
+    Returns
+    -------
+    binary_surface : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(coord,
+                ndim=2,
+                dtype=[np.int64])
+
+    # from coordinates to binary boundaries
+    boundaries = _from_coord_2d_to_binary_boundaries(coord)
+
+    # from binary boundaries to binary surface
+    binary_surface = from_binary_boundaries_to_binary_surface(boundaries)
+
+    # remove the pixels from the external boundaries
+    binary_surface[boundaries] = False
+
+    return binary_surface
+
+
+def from_binary_boundaries_to_binary_surface(binary_boundaries):
+    """Fill in the binary matrix representing the boundaries of an object.
+
+    Parameters
+    ----------
+    binary_boundaries : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    binary_surface : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(binary_boundaries,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # from binary boundaries to binary surface
+    binary_surface = ndi.binary_fill_holes(binary_boundaries)
+
+    return binary_surface
+
+
+def _from_coord_2d_to_binary_boundaries(coord):
+    """Convert 2-d coordinates to a binary matrix with the boundaries of the
+    object.
+
+    As we manipulate the coordinates of the external boundaries, the relative
+    binary matrix has two extra pixels in each dimension. We compensate by
+    reducing the marge by one in order to keep the same shape for the frame.
+
+    Parameters
+    ----------
+    coord : np.ndarray, np.uint64
+        Array of coordinates with shape (nb_points, 2).
+
+    Returns
+    -------
+    binary_boundaries : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(coord,
+                ndim=2,
+                dtype=[np.int64])
+
+    # initialize parameter
+    marge = get_offset_value()
+    marge -= 1
+
+    # from 2D coordinates boundaries to binary boundaries
+    max_y = coord[:, 0].max()
+    max_x = coord[:, 1].max()
+    min_y = coord[:, 0].min()
+    min_x = coord[:, 1].min()
+    shape_y = max_y - min_y + 1
+    shape_x = max_x - min_x + 1
+    image_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
+    coord[:, 0] = coord[:, 0] - min_y + marge
+    coord[:, 1] = coord[:, 1] - min_x + marge
+    binary_boundaries = np.zeros(image_shape, dtype=bool)
+    binary_boundaries[coord[:, 0], coord[:, 1]] = True
+
+    return binary_boundaries
