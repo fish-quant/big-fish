@@ -536,6 +536,8 @@ def get_offset_value():
         Margin value (in pixels).
 
     """
+    # TODO rename it 'get_margin_value'
+    # should be greater than 2 (maybe 1 is enough)
     return 5
 
 
