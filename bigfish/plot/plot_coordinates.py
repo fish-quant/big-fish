@@ -442,6 +442,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     -------
 
     """
+    # TODO recode it
     # check parameters
     stack.check_array(cyt_coord,
                       ndim=2,
