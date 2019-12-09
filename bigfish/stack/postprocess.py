@@ -431,7 +431,7 @@ def _extract_spots_outside_foci(cell_cyt_mask, spots_out_foci):
 
 # ### Segmentation postprocessing ###
 
-# TODO from_binary_surface_to_binary_boundaries
+# TODO add from_binary_surface_to_binary_boundaries
 
 def center_binary_mask(cyt, nuc=None, rna=None):
     """Center a 2-d binary mask (surface or boundaries) and pad it.
@@ -674,6 +674,7 @@ def from_boundaries_to_surface(binary_boundaries):
         Binary image with shape (y, x).
 
     """
+    # TODO check dtype input & output
     # check parameters
     check_array(binary_boundaries,
                 ndim=2,
