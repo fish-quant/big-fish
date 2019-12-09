@@ -509,11 +509,11 @@ def plot_segmentation_boundary(tensor, mask_nuc=None, mask_cyt=None,
     boundaries_nuc = None
     boundaries_cyt = None
     if mask_nuc is not None:
-        boundaries_nuc = find_boundaries(mask_nuc, mode='inner')
+        boundaries_nuc = find_boundaries(mask_nuc, mode='thick')
         boundaries_nuc = np.ma.masked_where(boundaries_nuc == 0,
                                             boundaries_nuc)
     if mask_cyt is not None:
-        boundaries_cyt = find_boundaries(mask_cyt, mode='inner')
+        boundaries_cyt = find_boundaries(mask_cyt, mode='thick')
         boundaries_cyt = np.ma.masked_where(boundaries_cyt == 0,
                                             boundaries_cyt)
 
