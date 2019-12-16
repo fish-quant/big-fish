@@ -5,6 +5,9 @@ The bigfish.classification module includes models to classify the localization
 patterns of the RNA.
 """
 
+from .input_preparation import (prepare_coordinate_data,
+                                build_boundaries_layers, build_surface_layers,
+                                build_distance_layers)
 # from .squeezenet import SqueezeNet0
 from .features import get_features, get_features_name
 
@@ -12,6 +15,9 @@ from .features import get_features, get_features_name
 
 _features = ["get_features", "get_features_name"]
 
+_input_preparation = ["prepare_coordinate_data", "build_boundaries_layers",
+                      "build_surface_layers", "build_distance_layers"]
+
 # _squeezenet = ["SqueezeNet0"]
 
-__all__ = _features
+__all__ = _features + _input_preparation
