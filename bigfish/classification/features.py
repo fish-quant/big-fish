@@ -4,20 +4,19 @@
 Functions to craft features.
 """
 
-import bigfish.stack as stack
-
 import numpy as np
 from scipy import ndimage as ndi
 
-from skimage.measure import regionprops
 from skimage.morphology import binary_opening
 from skimage.morphology.selem import disk
+
+from .input_preparation import prepare_coordinate_data
+
 
 # TODO add sanity check functions
 # TODO add documentation
 # TODO allow to return intermediate results (distance map, etc.)
 # TODO round float results
-
 
 def get_features(cyt_coord, nuc_coord, rna_coord,
                  compute_distance=True,
@@ -231,112 +230,6 @@ def get_features_name(names_features_distance=True,
                           "area_cyt_out"]
 
     return features_name
-
-
-# ### Prepare the data ###
-
-def from_coord_to_matrix(cyt_coord, nuc_coord):
-    # get size of the frame
-    max_y = cyt_coord[:, 0].max() + stack.get_offset_value() * 2
-    max_x = cyt_coord[:, 1].max() + stack.get_offset_value() * 2
-    image_shape = (max_y, max_x)
-
-    # cytoplasm
-    cyt = np.zeros(image_shape, dtype=bool)
-    cyt[cyt_coord[:, 0] + stack.get_offset_value(),
-        cyt_coord[:, 1] + stack.get_offset_value()] = True
-
-    # nucleus
-    nuc = np.zeros(image_shape, dtype=bool)
-    nuc[nuc_coord[:, 0] + stack.get_offset_value(),
-        nuc_coord[:, 1] + stack.get_offset_value()] = True
-
-    return cyt, nuc
-
-
-def get_centroid_surface(mask):
-    # get centroid
-    region = regionprops(mask.astype(np.uint8))[0]
-    centroid = np.array(region.centroid, dtype=np.int64)
-
-    return centroid
-
-
-def get_centroid_rna(rna_coord):
-    # get rna centroids
-    centroid_rna = np.mean(rna_coord[:, :3], axis=0, dtype=np.int64)
-    return centroid_rna
-
-
-def get_centroid_distance_map(centroid_coordinate, mask_cyt):
-    if centroid_coordinate.size == 3:
-        centroid_coordinate_2d = centroid_coordinate[1:]
-    else:
-        centroid_coordinate_2d = centroid_coordinate.copy()
-
-    # get mask centroid
-    mask_centroid = np.zeros_like(mask_cyt)
-    mask_centroid[centroid_coordinate_2d[0], centroid_coordinate_2d[1]] = True
-
-    # compute distance map
-    distance_map = ndi.distance_transform_edt(~mask_centroid)
-    distance_map[mask_cyt == 0] = 0
-    distance_map = distance_map.astype(np.float32)
-
-    return distance_map
-
-
-def prepare_coordinate_data(cyt_coord, nuc_coord, rna_coord):
-    # get a binary representation of the coordinates
-    cyt, nuc = from_coord_to_matrix(cyt_coord, nuc_coord)
-    rna_coord[:, 1:3] += stack.get_offset_value()
-
-    # fill in masks
-    mask_cyt, mask_nuc = stack.get_surface_layers(cyt, nuc, cast_float=False)
-
-    # get mask cytoplasm outside nucleus
-    mask_cyt_out = mask_cyt.copy()
-    mask_cyt_out[mask_nuc] = False
-
-    # compute distance maps for the cytoplasm and the nucleus
-    distance_cyt, distance_nuc = stack.get_distance_layers(cyt, nuc,
-                                                           normalized=False)
-
-    # normalize distance maps between 0 and 1
-    distance_cyt_normalized = distance_cyt / distance_cyt.max()
-    distance_cyt_normalized = stack.cast_img_float32(distance_cyt_normalized)
-    distance_nuc_normalized = distance_nuc / distance_nuc.max()
-    distance_nuc_normalized = stack.cast_img_float32(distance_nuc_normalized)
-
-    # get rna outside nucleus
-    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
-    rna_coord_out = rna_coord[~mask_rna_in]
-
-    # get centroids
-    centroid_cyt = get_centroid_surface(mask_cyt)
-    centroid_nuc = get_centroid_surface(mask_nuc)
-    centroid_rna = get_centroid_rna(rna_coord)
-    if len(rna_coord_out) == 0:
-        centroid_rna_out = centroid_cyt.copy()
-    else:
-        centroid_rna_out = get_centroid_rna(rna_coord_out)
-
-    # get centroid distance maps
-    distance_cyt_centroid = get_centroid_distance_map(centroid_cyt, mask_cyt)
-    distance_nuc_centroid = get_centroid_distance_map(centroid_nuc, mask_cyt)
-    distance_rna_out_centroid = get_centroid_distance_map(centroid_rna_out,
-                                                          mask_cyt)
-
-    prepared_inputs = (mask_cyt, mask_nuc, mask_cyt_out,
-                       distance_cyt, distance_nuc,
-                       distance_cyt_normalized, distance_nuc_normalized,
-                       rna_coord_out,
-                       centroid_cyt, centroid_nuc,
-                       centroid_rna, centroid_rna_out,
-                       distance_cyt_centroid, distance_nuc_centroid,
-                       distance_rna_out_centroid)
-
-    return prepared_inputs
 
 
 # ### Other features ###

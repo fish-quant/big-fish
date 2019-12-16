@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .utils import save_plot, get_minmax_values
-
-from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap
 
 
@@ -160,8 +158,109 @@ def plot_distribution_rna(data, data_validation=None, data_test=None,
     return
 
 
-def plot_cell_coordinates(data, id_cell, title=None, framesize=(5, 10),
-                          path_output=None, ext="png"):
+def plot_cell_coordinates(cyt_coord, nuc_coord, rna_coord, foci_coord,
+                          count_rna=False, title=None, remove_frame=False,
+                          framesize=(15, 10), path_output=None, ext="png",
+                          show=True):
+    """
+
+    Parameters
+    ----------
+    cyt_coord : np.ndarray, np.int64
+        Coordinates of the cytoplasm border with shape (nb_points, 2).
+    nuc_coord : np.ndarray, np.int64
+        Coordinates of the nuclei border with shape (nb_points, 2).
+    rna_coord : np.ndarray, np.int64
+        Coordinates of the RNA spots with shape (nb_spots, 4). One
+        coordinate per dimension (zyx dimension), plus the index of a
+        potential foci.
+    foci_coord : np.ndarray, np.int64
+        Array with shape (nb_foci, 5). One coordinate per dimension for the
+        foci centroid (zyx coordinates), the number of RNAs detected in the
+        foci and its index.
+    count_rna : bool
+        Display the number of RNAs in a foci.
+    title : str
+        Title of the image.
+    remove_frame : bool
+        Remove axes and frame.
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+    show : bool
+        Show the figure or not.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    stack.check_array(cyt_coord,
+                      ndim=2,
+                      dtype=[np.int64])
+    if nuc_coord is not None:
+        stack.check_array(nuc_coord,
+                          ndim=2,
+                          dtype=[np.int64])
+    if rna_coord is not None:
+        stack.check_array(rna_coord,
+                          ndim=2,
+                          dtype=[np.int64])
+    if foci_coord is not None:
+        stack.check_array(foci_coord,
+                          ndim=2,
+                          dtype=[np.int64])
+    stack.check_parameter(count_rna=bool,
+                          title=(str, type(None)),
+                          remove_frame=bool,
+                          framesize=tuple,
+                          path_output=(str, type(None)),
+                          ext=(str, list))
+
+    # initialize plot
+    if remove_frame:
+        fig = plt.figure(figsize=framesize, frameon=False)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+    else:
+        plt.figure(figsize=framesize)
+        if title is not None:
+            plt.title(title, fontweight="bold", fontsize=10)
+
+    # plot
+    plt.plot(cyt_coord[:, 1], cyt_coord[:, 0], c="black", linewidth=2)
+    plt.plot(nuc_coord[:, 1], nuc_coord[:, 0], c="steelblue", linewidth=2)
+    plt.scatter(rna_coord[:, 2], rna_coord[:, 1], s=25, c="firebrick",
+                marker=".")
+    if count_rna and foci_coord is not None:
+        plt.scatter(foci_coord[:, 2], foci_coord[:, 1], s=30, c="forestgreen",
+                    marker="x")
+        for (_, y, x, nb_rna, _) in foci_coord:
+            plt.text(x + 5, y - 5, str(nb_rna), color="#66CC00", size=20)
+
+    # format plot
+    _, _, min_y, max_y = plt.axis()
+    plt.ylim(max_y, min_y)
+    if not remove_frame:
+        plt.tight_layout()
+
+    # save and show
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return
+
+
+def plot_cell_coordinates_bis(data, id_cell, title=None, framesize=(5, 10),
+                              path_output=None, ext="png"):
     """
 
     Parameters
@@ -395,7 +494,7 @@ def plot_extraction_image(results, remove_frame=False, title=None,
 
 def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
               image_cyt=None, mask_cyt=None, mask_nuc=None, count_rna=False,
-              title=None, remove_frame=False, rescale=False,
+              dilation=False, title=None, remove_frame=False, rescale=False,
               framesize=(15, 10), path_output=None, ext="png", show=True):
     """
     Plot image and coordinates extracted for a specific cell.
@@ -422,6 +521,8 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
         Mask of the nucleus.
     count_rna : bool
         Display the number of RNAs in a foci.
+    dilation : bool
+        Dilate the spot and foci representations in the plot.
     title : str
         Title of the image.
     remove_frame : bool
@@ -442,7 +543,6 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
     -------
 
     """
-    # TODO recode it
     # check parameters
     stack.check_array(cyt_coord,
                       ndim=2,
@@ -472,6 +572,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
                           ndim=2,
                           dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(count_rna=bool,
+                          dilation=bool,
                           title=(str, type(None)),
                           remove_frame=bool,
                           rescale=bool,
@@ -480,43 +581,49 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
                           ext=(str, list))
     if title is None:
         title = ""
-    else:
-        title = " ({0})".format(title)
 
     # get shape of image built from coordinates
-    marge = stack.get_offset_value()
-    max_y = cyt_coord[:, 0].max() + 2 * marge + 1
-    max_x = cyt_coord[:, 1].max() + 2 * marge + 1
-    image_shape = (max_y, max_x)
+    image_shape, min_y, min_x, marge = stack.from_coord_to_frame(cyt_coord)
 
     # get cytoplasm layer
     cyt = np.zeros(image_shape, dtype=bool)
-    cyt[cyt_coord[:, 0] + marge, cyt_coord[:, 1] + marge] = True
+    cyt_coord[:, 0] = cyt_coord[:, 0] - min_y + marge
+    cyt_coord[:, 1] = cyt_coord[:, 1] - min_x + marge
+    cyt[cyt_coord[:, 0], cyt_coord[:, 1]] = True
 
     # get nucleus layer
     nuc = np.zeros(image_shape, dtype=bool)
     if nuc_coord is not None:
-        nuc[nuc_coord[:, 0] + marge, nuc_coord[:, 1] + marge] = True
+        nuc_coord[:, 0] = nuc_coord[:, 0] - min_y + marge
+        nuc_coord[:, 1] = nuc_coord[:, 1] - min_x + marge
+        nuc[nuc_coord[:, 0], nuc_coord[:, 1]] = True
+        print(nuc_coord)
 
     # get rna layer
     rna = np.zeros(image_shape, dtype=bool)
     if rna_coord is not None:
-        rna[rna_coord[:, 1] + marge, rna_coord[:, 2] + marge] = True
-        rna = stack.dilation_filter(rna,
-                                    kernel_shape="square",
-                                    kernel_size=3)
+        rna_coord[:, 1] = rna_coord[:, 1] - min_y + marge
+        rna_coord[:, 2] = rna_coord[:, 2] - min_x + marge
+        rna[rna_coord[:, 1], rna_coord[:, 2]] = True
+        print(rna_coord)
+        if dilation:
+            rna = stack.dilation_filter(rna,
+                                        kernel_shape="square",
+                                        kernel_size=3)
 
     # get foci layer
     foci = np.zeros(image_shape, dtype=bool)
     if foci_coord is not None:
         rna_in_foci_coord = rna_coord[rna_coord[:, 3] != -1, :].copy()
-        foci[rna_in_foci_coord[:, 1] + marge, rna_in_foci_coord[:, 2] + marge] = True
-        foci = stack.dilation_filter(foci,
-                                     kernel_shape="square",
-                                     kernel_size=3)
+        foci[rna_in_foci_coord[:, 1], rna_in_foci_coord[:, 2]] = True
+        if dilation:
+            foci = stack.dilation_filter(foci,
+                                         kernel_shape="square",
+                                         kernel_size=3)
 
     # build image coordinate
-    image_coord = np.ones((max_y, max_x, 3), dtype=np.float32)
+    image_coord = np.ones(shape=(image_shape[0], image_shape[1], 3),
+                          dtype=np.float32)
     image_coord[cyt, :] = [0, 0, 0]  # black
     image_coord[nuc, :] = [0, 102 / 255, 204 / 255]  # blue
     image_coord[rna, :] = [204 / 255, 0, 0]  # red
@@ -524,7 +631,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
 
     # plot original and coordinate image
     if image_cyt is not None:
-        fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
+        fig, ax = plt.subplots(1, 2, sharey=True, figsize=framesize)
 
         # original image
         if remove_frame:
@@ -535,16 +642,16 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
         else:
             ax[0].imshow(image_cyt)
         if mask_cyt is not None:
-            boundaries_cyt = find_boundaries(mask_cyt, mode='inner')
+            boundaries_cyt = stack.from_surface_to_boundaries(mask_cyt)
             boundaries_cyt = np.ma.masked_where(boundaries_cyt == 0,
                                                 boundaries_cyt)
             ax[0].imshow(boundaries_cyt, cmap=ListedColormap(['red']))
         if mask_nuc is not None:
-            boundaries_nuc = find_boundaries(mask_nuc, mode='inner')
+            boundaries_nuc = stack.from_surface_to_boundaries(mask_nuc)
             boundaries_nuc = np.ma.masked_where(boundaries_nuc == 0,
                                                 boundaries_nuc)
             ax[0].imshow(boundaries_nuc, cmap=ListedColormap(['blue']))
-        ax[0].set_title("Original image" + title,
+        ax[0].set_title("Original image ({0})".format(title),
                         fontweight="bold", fontsize=10)
 
         # coordinate image
@@ -554,7 +661,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
         if count_rna and foci_coord is not None:
             for (_, y, x, nb_rna, _) in foci_coord:
                 ax[1].text(x+5, y-5, str(nb_rna), color="#66CC00", size=20)
-        ax[1].set_title("Coordinate image" + title,
+        ax[1].set_title("Coordinate image ({0})".format(title),
                         fontweight="bold", fontsize=10)
 
         plt.tight_layout()
@@ -567,8 +674,7 @@ def plot_cell(cyt_coord, nuc_coord=None, rna_coord=None, foci_coord=None,
             ax.axis('off')
         else:
             plt.figure(figsize=framesize)
-            plt.title("Coordinate image" + title,
-                      fontweight="bold", fontsize=25)
+            plt.title(title, fontweight="bold", fontsize=10)
         plt.imshow(image_coord)
         if count_rna and foci_coord is not None:
             for (_, y, x, nb_rna, _) in foci_coord:

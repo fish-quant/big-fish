@@ -24,11 +24,12 @@ from .projection import (maximum_projection, mean_projection,
                          focus_projection, focus_projection_fast)
 from .illumination import (compute_illumination_surface,
                            correct_illumination_surface)
-from .postprocess import (remove_transcription_site, extract_spots_from_frame,
-                          extract_coordinates_image, center_binary_mask,
-                          from_surface_to_coord, complete_coord_boundaries,
-                          from_coord_to_surface,
-                          from_boundaries_to_surface)
+from .postprocess import (remove_transcription_site,
+                          extract_spots_from_frame, extract_coordinates_image,
+                          center_mask_coord, from_boundaries_to_surface,
+                          from_surface_to_boundaries, from_binary_to_coord,
+                          complete_coord_boundaries, from_coord_to_frame,
+                          from_coord_to_surface)
 from .preparation import (split_from_background, build_image, get_coordinates,
                           get_distance_layers, get_surface_layers, build_batch,
                           get_label, Generator, encode_labels, get_map_label,
@@ -62,10 +63,12 @@ _projection = ["maximum_projection", "mean_projection", "median_projection",
 _illumination = ["compute_illumination_surface",
                  "correct_illumination_surface"]
 
-_postprocess = ["remove_transcription_site", "extract_spots_from_frame",
-                "extract_coordinates_image", "center_binary_mask",
-                "from_surface_to_coord", "complete_coord_boundaries",
-                "from_coord_to_surface", "from_boundaries_to_surface"]
+_postprocess = ["remove_transcription_site",
+                "extract_spots_from_frame", "extract_coordinates_image",
+                "center_mask_coord", "from_boundaries_to_surface",
+                "from_surface_to_boundaries", "from_binary_to_coord",
+                "complete_coord_boundaries", "from_coord_to_frame",
+                "from_coord_to_surface"]
 
 _augmentation = ["augment"]
 
