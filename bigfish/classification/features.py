@@ -269,6 +269,11 @@ def features_distance(rna_coord_out, distance_cyt, distance_nuc, mask_cyt_out):
 
 
 def features_in_out_nucleus(rna_coord, rna_coord_out):
+    # case where no mRNAs outside the nucleus are detected
+    if len(rna_coord) == 0:
+        features = [0, 0, 0]
+        return features
+
     # number of mRNAs outside and inside nucleus
     nb_rna_out = len(rna_coord_out)
     nb_rna_in = len(rna_coord) - nb_rna_out
@@ -402,7 +407,7 @@ def features_topography(rna_coord, rna_coord_out, mask_cyt, mask_nuc,
     nb_rna_out = len(rna_coord_out)
 
     # case where no mRNAs outside the nucleus are detected
-    if nb_rna_out == 0:
+    if nb_rna == 0 or nb_rna_out == 0:
         features = [0., 0.]
         features += [0., 0.] * 5
         features += [0., 0.] * 6
