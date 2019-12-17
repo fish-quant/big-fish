@@ -68,7 +68,7 @@ def prepare_coordinate_data(cyt_coord, nuc_coord, rna_coord):
     distance_nuc_normalized = stack.cast_img_float32(distance_nuc_normalized)
 
     # get rna outside nucleus
-    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
+    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]].astype(bool)
     rna_coord_out = rna_coord[~mask_rna_in]
 
     # get centroids
@@ -119,7 +119,7 @@ def _get_centroid_distance_map(centroid_coordinate, mask_cyt):
         centroid_coordinate_2d = centroid_coordinate.copy()
 
     # get mask centroid
-    mask_centroid = np.zeros_like(mask_cyt)
+    mask_centroid = np.zeros_like(mask_cyt).astype(bool)
     mask_centroid[centroid_coordinate_2d[0], centroid_coordinate_2d[1]] = True
 
     # compute distance map

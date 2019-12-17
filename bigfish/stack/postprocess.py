@@ -519,8 +519,8 @@ def center_mask_coord(main, others=None):
             other_centered = other.copy()
             other_centered[:, 0] = other_centered[:, 0] - min_y + marge
             other_centered[:, 1] = other_centered[:, 1] - min_x + marge
-        elif other.shape[1] == 3:
-            # 'other' is a 3-d coordinates array
+        elif other.shape[1] == 3 or other.shape[1] == 4:
+            # 'other' is a 3-d or 4-d coordinates
             other_centered = other.copy()
             other_centered[:, 1] = other_centered[:, 1] - min_y + marge
             other_centered[:, 2] = other_centered[:, 2] - min_x + marge
