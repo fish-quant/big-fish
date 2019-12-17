@@ -71,7 +71,10 @@ def prepare_coordinate_data(cyt_coord, nuc_coord, rna_coord):
     # get centroids
     centroid_cyt = _get_centroid_surface(mask_cyt)
     centroid_nuc = _get_centroid_surface(mask_nuc)
-    centroid_rna = _get_centroid_rna(rna_coord)
+    if len(rna_coord) == 0:
+        centroid_rna = centroid_cyt.copy()
+    else:
+        centroid_rna = _get_centroid_rna(rna_coord)
     if len(rna_coord_out) == 0:
         centroid_rna_out = centroid_cyt.copy()
     else:
