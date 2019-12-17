@@ -54,10 +54,7 @@ def prepare_coordinate_data(cyt_coord, nuc_coord, rna_coord):
     distance_nuc_ = ndi.distance_transform_edt(~mask_nuc)
     distance_nuc = mask_cyt * distance_nuc_
 
-    # cast matrices in float32
-    mask_cyt = stack.cast_img_float32(mask_cyt)
-    mask_nuc = stack.cast_img_float32(mask_nuc)
-    mask_cyt_out = stack.cast_img_float32(mask_cyt_out)
+    # cast distance map in float32
     distance_cyt = distance_cyt.astype(np.float32)
     distance_nuc = distance_nuc.astype(np.float32)
 
@@ -68,7 +65,7 @@ def prepare_coordinate_data(cyt_coord, nuc_coord, rna_coord):
     distance_nuc_normalized = stack.cast_img_float32(distance_nuc_normalized)
 
     # get rna outside nucleus
-    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]].astype(bool)
+    mask_rna_in = mask_nuc[rna_coord[:, 1], rna_coord[:, 2]]
     rna_coord_out = rna_coord[~mask_rna_in]
 
     # get centroids
