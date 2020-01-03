@@ -7,8 +7,8 @@ patterns of the RNA.
 
 from .input_preparation import (prepare_coordinate_data,
                                 build_boundaries_layers, build_surface_layers,
-                                build_distance_layers)
-# from .squeezenet import SqueezeNet0
+                                build_distance_layers, Generator)
+from .squeezenet import SqueezeNet0, SqueezeNet_qbi
 from .features import get_features, get_features_name
 
 # ### Load models ###
@@ -16,8 +16,9 @@ from .features import get_features, get_features_name
 _features = ["get_features", "get_features_name"]
 
 _input_preparation = ["prepare_coordinate_data", "build_boundaries_layers",
-                      "build_surface_layers", "build_distance_layers"]
+                      "build_surface_layers", "build_distance_layers",
+                      "Generator"]
 
-# _squeezenet = ["SqueezeNet0"]
+_squeezenet = ["SqueezeNet0", "SqueezeNet_qbi"]
 
-__all__ = _features + _input_preparation
+__all__ = _features + _input_preparation + _squeezenet

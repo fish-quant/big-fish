@@ -8,7 +8,7 @@ import numpy as np
 
 
 def identity(image):
-    """don't apply any operation to the image.
+    """Do not apply any operation to the image.
 
     Parameters
     ----------
