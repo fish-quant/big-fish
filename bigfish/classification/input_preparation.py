@@ -261,7 +261,7 @@ def build_distance_layers(cyt_coord, nuc_coord, rna_coord, normalized=True):
         A 2-d tensor with shape (y, x) showing distance to the nucleus border.
         Normalize between 0 and 1 if 'normalized' True.
 
-        """
+    """
     # check parameters
     stack.check_array(cyt_coord,
                       ndim=2,
@@ -298,3 +298,264 @@ def build_distance_layers(cyt_coord, nuc_coord, rna_coord, normalized=True):
     rna_layer = stack.cast_img_float32(rna_layer)
 
     return cyt_distance, nuc_distance, rna_layer
+
+
+# ### Input image generator ###
+
+class Generator:
+
+    # TODO add documentation
+    # TODO check threading.Lock()
+    # TODO add classes
+    def __init__(self, filenames, labels, input_directory, batch_size,
+                 input_shape, augmentation, with_label, nb_epoch_max=10,
+                 shuffle=True, precompute_features=False):
+
+        # make generator threadsafe
+        self.lock = threading.Lock()
+
+        # get attributes
+        self.filenames = filenames
+        self.labels = labels
+        self.input_directory = input_directory
+        self.batch_size = batch_size
+        self.input_shape = input_shape
+        self.augmentation = augmentation
+        self.with_label = with_label
+        self.nb_epoch_max = nb_epoch_max
+        self.shuffle = shuffle
+        self.precompute_features = precompute_features
+
+        # initialize generator
+        self.nb_samples = len(self.filenames)
+        self.indices = self._get_shuffled_indices()
+        self.nb_batch_per_epoch = self._get_batch_per_epoch()
+        self.i_batch = 0
+        self.i_epoch = 0
+
+        # precompute feature if necessary
+        if self.precompute_features and "cell_ID" in self.data.columns:
+            unique_cells = list(set(self.data.loc[:, "cell_ID"]))
+            self.precomputed_features = self._precompute_features(unique_cells)
+        else:
+            self.precomputed_features = None
+
+    def __len__(self):
+        if self.nb_epoch_max is None:
+            raise ValueError("This generator loops indefinitely over the "
+                             "dataset. The 'len' method can't be used.")
+        else:
+            return self.nb_samples * self.nb_epoch_max
+
+    def __bool__(self):
+        if self.nb_epoch_max is None or self.nb_epoch_max > 0:
+            return True
+        else:
+            return False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        with self.lock:
+            return self._next()
+
+    def _next(self):
+        # we reach the end of an epoch
+        if self.i_batch == self.nb_batch_per_epoch:
+            self.i_epoch += 1
+
+            # the generator loop over the data indefinitely
+            if self.nb_epoch_max is None:
+                # TODO find something better
+                if self.i_epoch == 500:
+                    raise StopIteration
+                self.i_batch = 0
+                self.indices = self._get_shuffled_indices()
+                return self._next()
+
+            # we start a new epoch
+            elif (self.nb_epoch_max is not None
+                  and self.i_epoch < self.nb_epoch_max):
+                self.i_batch = 0
+                self.indices = self._get_shuffled_indices()
+                return self._next()
+
+            # we reach the maximum number of epochs
+            elif (self.nb_epoch_max is not None
+                  and self.i_epoch == self.nb_epoch_max):
+                raise StopIteration
+
+        # we build a new batch
+        else:
+            if self.with_label:
+                batch_data, batch_label = self._build_batch(self.i_batch)
+                self.i_batch += 1
+                return batch_data, batch_label
+            else:
+                batch_data = self._build_batch(self.i_batch)
+                self.i_batch += 1
+                return batch_data
+
+    def _get_shuffled_indices(self):
+        # shuffle input data and get their indices
+        input_indices_ordered = [i for i in range(self.nb_samples)]
+        if self.shuffle:
+            np.random.shuffle(input_indices_ordered)
+        return input_indices_ordered
+
+    def _get_batch_per_epoch(self):
+        # compute the number of batches to generate for the entire epoch
+        if self.nb_samples % self.batch_size == 0:
+            nb_batch = len(self.indices) // self.batch_size
+        else:
+            # the last batch can be smaller
+            nb_batch = (len(self.indices) // self.batch_size) + 1
+        return nb_batch
+
+    def _build_batch(self, i_batch):
+        # build a batch
+        start_index = i_batch * self.batch_size
+        end_index = min((i_batch + 1) * self.batch_size, self.nb_samples)
+        indices_batch = self.indices[start_index:end_index]
+
+        # return batch with label
+        if self.with_label:
+            batch_data, batch_label = build_batch(
+                data=self.data,
+                indices=indices_batch,
+                method=self.method,
+                input_shape=self.input_shape,
+                augmentation=self.augmentation,
+                with_label=self.with_label,
+                nb_classes=self.nb_classes,
+                precomputed_features=self.precomputed_features)
+
+            return batch_data, batch_label
+
+        # return batch without label
+        else:
+            batch_data = build_batch(
+                data=self.data,
+                indices=indices_batch,
+                method=self.method,
+                input_shape=self.input_shape,
+                augmentation=self.augmentation,
+                with_label=self.with_label,
+                nb_classes=self.nb_classes,
+                precomputed_features=self.precomputed_features)
+
+            return batch_data
+
+    def _precompute_features(self, unique_cells):
+        """
+
+        Parameters
+        ----------
+        unique_cells
+
+        Returns
+        -------
+
+        """
+        # TODO add documentation
+        # get a sample for each instance of cell
+        d_features = {}
+        for cell in unique_cells:
+            df_cell = self.data.loc[self.data.cell_ID == cell, :]
+            id_cell = df_cell.index[0]
+            image_ref = build_image(
+                self.data, id_cell,
+                image_shape=self.input_shape,
+                coord_refinement=True,
+                method=self.method,
+                augmentation=False)
+            d_features[cell] = (image_ref[:, :, 1], image_ref[:, :, 2])
+
+        return d_features
+
+    def reset(self):
+        # initialize generator
+        self.indices = self._get_shuffled_indices()
+        self.nb_batch_per_epoch = self._get_batch_per_epoch()
+        self.i_batch = 0
+        self.i_epoch = 0
+
+
+# TODO try to fully vectorize this step
+def build_batch(data, indices, method="normal", input_shape=(224, 224),
+                augmentation=True, with_label=False, nb_classes=9,
+                precomputed_features=None):
+    """Build a batch of data.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Dataframe with the data.
+    indices : List[int]
+        List of indices to use for the batch.
+    method : str
+        Channels used in the input image.
+            - 'normal' for (rna, cyt, nuc)
+            - 'distance' for (rna, distance_cyt, distance_nuc)
+            - 'surface' for (rna, surface_cyt, surface_nuc)
+    input_shape : Tuple[int]
+        Shape of the input image.
+    augmentation : bool
+        Apply a random operator on the image.
+    with_label : bool
+        Return label of the image as well.
+    nb_classes : int
+        Number of different classes available.
+    precomputed_features : dict
+        Some datasets are simulated from a small limited set of background
+        cells (cytoplasm and nucleus). In this case, we can precompute and keep
+        in memory the related features layers in order to dramatically speed
+        up the program. this dict associate the id of the reference cells to
+        their computed features layers (cytoplasm, nucleus).
+
+    Returns
+    -------
+    batch_data : np.ndarray, np.float32
+        Tensor with shape (batch_size, x, y, 3).
+    batch_label : np.ndarray, np.int64
+        Tensor of the encoded label, with shape (batch_size,)
+
+    """
+    # initialize the batch
+    batch_size = len(indices)
+    batch_data = np.zeros((batch_size, input_shape[0], input_shape[1], 3),
+                          dtype=np.float32)
+
+    # build each input image of the batch
+    if precomputed_features is None:
+        for i in range(batch_size):
+            id_cell = indices[i]
+            image = build_image(
+                data, id_cell,
+                image_shape=input_shape,
+                coord_refinement=True,
+                method=method,
+                augmentation=augmentation)
+            batch_data[i] = image
+    else:
+        for i in range(batch_size):
+            id_cell = indices[i]
+            image = build_image_precomputed(
+                data, id_cell,
+                image_shape=input_shape,
+                precomputed_features=precomputed_features,
+                augmentation=augmentation)
+            batch_data[i] = image
+
+    # return images with one-hot labels
+    if with_label:
+        labels = np.array(data.loc[indices, "label"], dtype=np.int64)
+        batch_label = _one_hot_label(labels, nb_classes)
+
+        return batch_data, batch_label
+
+    # return images only
+    else:
+
+        return batch_data

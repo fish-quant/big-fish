@@ -28,7 +28,8 @@ from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.python.keras.layers import (Conv2D, Concatenate, MaxPooling2D,
                                             Dropout, GlobalAveragePooling2D,
                                             Add, Input, Activation,
-                                            ZeroPadding2D, BatchNormalization)
+                                            ZeroPadding2D, BatchNormalization,
+                                            Dense)
 
 
 # TODO add logging routines
@@ -328,6 +329,252 @@ class SqueezeNet0(BaseModel):
         return embedding
 
 
+class SqueezeNet_qbi(BaseModel):
+    # TODO add documentation
+
+    def __init__(self, bypass=False, optimizer="adam",
+                 logdir=None):
+        # get model's attributes
+        super().__init__()
+        self.logdir = logdir
+
+        # initialize model
+        if not os.path.exists(self.logdir):
+            os.mkdir(self.logdir)
+        self.model = None
+        self.trained = False
+        self.history = None
+
+        # build model
+        self._build_model(bypass, optimizer)
+
+    def fit(self, train_data, train_label, validation_data, validation_label,
+            batch_size, nb_epochs):
+        # TODO exploit 'sample_weight'
+        # TODO implement resumed training with 'initial_epoch'
+        # TODO add documentation
+
+        callbacks = []
+
+        # define checkpoints
+        if self.logdir is not None:
+            # create checkpoint callback
+            checkpoint_path = os.path.join(self.logdir, "cp-{epoch}.ckpt")
+            cp_callback = ModelCheckpoint(
+                filepath=checkpoint_path,
+                verbose=1)
+            callbacks.append(cp_callback)
+
+        # TODO debug early stopping
+        # define early stopping
+        early_stop = EarlyStopping(
+            monitor="val_loss",
+            min_delta=0,
+            patience=5,
+            verbose=2)
+        callbacks.append(early_stop)
+
+        # fit model
+        self.history = self.model.fit(
+            x=train_data,
+            y=train_label,
+            batch_size=batch_size,
+            epochs=nb_epochs,
+            verbose=2,
+            callbacks=callbacks,
+            validation_data=(validation_data, validation_label),
+            shuffle=True,
+            sample_weight=None,
+            initial_epoch=0)
+
+        # update model attribute
+        self.trained = True
+
+        return
+
+    def fit_generator(self, train_generator, validation_generator, nb_epochs,
+                      nb_workers=1, multiprocessing=False):
+        # TODO implement multiprocessing
+        # TODO exploit an equivalent of 'sample_weight'
+        # TODO implement resumed training with 'initial_epoch'
+        # TODO add documentation
+        # TODO check distribution strategy during compilation
+        # TODO check callbacks parameters
+        # check generators
+        if train_generator.nb_epoch_max is not None:
+            Warning("Train generator must loop indefinitely over the data. "
+                    "The parameter 'nb_epoch_max' is set to None.")
+            train_generator.nb_epoch_max = None
+        if validation_generator.nb_epoch_max is not None:
+            Warning("Validation generator must loop indefinitely over the "
+                    "data. The parameter 'nb_epoch_max' is set to None.")
+            validation_generator.nb_epoch_max = None
+
+        callbacks = []
+
+        # define checkpoints
+        if self.logdir is not None:
+            # create checkpoint callback
+            checkpoint_path = os.path.join(self.logdir, "cp-{epoch}.ckpt")
+            cp_callback = ModelCheckpoint(
+                filepath=checkpoint_path,
+                verbose=1)
+            callbacks.append(cp_callback)
+
+        # define early stopping
+        early_stop = EarlyStopping(
+            monitor='accuracy',
+            min_delta=0,
+            patience=5,
+            verbose=2)
+        callbacks.append(early_stop)
+
+        # fit model from generator
+        steps_per_epoch = train_generator.nb_batch_per_epoch
+        self.history = self.model.fit_generator(
+            generator=train_generator,
+            steps_per_epoch=steps_per_epoch,
+            epochs=nb_epochs,
+            verbose=2,
+            callbacks=callbacks,
+            validation_data=validation_generator,
+            validation_steps=validation_generator.nb_batch_per_epoch,
+            max_queue_size=10,
+            workers=nb_workers,
+            use_multiprocessing=multiprocessing,
+            initial_epoch=0)
+
+        # update model attribute
+        self.trained = True
+
+        return
+
+    def predict(self, data, return_probability=False):
+        # compute probabilities
+        probability = self.predict_probability(data=data)
+
+        # make prediction
+        prediction = probability > 0.5
+
+        if return_probability:
+            return prediction, probability
+        else:
+            return prediction
+
+    def predict_probability(self, data):
+        # compute probabilities
+        probability = self.model.predict(x=data)
+
+        return probability
+
+    def predict_generator(self, generator, return_probability=False,
+                          nb_workers=1, multiprocessing=False, verbose=0):
+        # compute probabilities
+        probability = self.predict_probability_generator(
+            generator=generator,
+            nb_workers=nb_workers,
+            multiprocessing=multiprocessing,
+            verbose=verbose)
+
+        # make prediction
+        prediction = probability > 0.5
+
+        if return_probability:
+            return prediction, probability
+        else:
+            return prediction
+
+    def predict_probability_generator(self, generator, nb_workers=1,
+                                      multiprocessing=False, verbose=0):
+        # TODO add multiprocessing
+        # compute probabilities
+        probability = self.model.predict_generator(
+            generator=generator,
+            steps=generator.nb_batch_per_epoch,
+            workers=nb_workers,
+            max_queue_size=1,
+            use_multiprocessing=multiprocessing,
+            verbose=verbose)
+
+        return probability
+
+    def evaluate(self, data, label, verbose=0):
+        # evaluate model
+        loss, accuracy = self.model.evaluate(x=data, y=label)
+        if verbose > 0:
+            print("Loss: {0:.3f} | Accuracy: {1:.3f}"
+                  .format(loss, 100 * accuracy))
+
+        return loss, accuracy
+
+    def evaluate_generator(self, generator, nb_workers=1,
+                           multiprocessing=False, verbose=0):
+        # TODO check the outcome 'loss' and 'accuracy'
+        # evaluate model
+        loss, accuracy = self.model.evaluate_generator(
+            generator=generator,
+            steps=generator.nb_batch_per_epoch,
+            workers=nb_workers,
+            max_queue_size=1,
+            use_multiprocessing=multiprocessing,
+            verbose=verbose)
+        if verbose > 0:
+            print("Loss: {0:.3f} | Accuracy: {1:.3f}"
+                  .format(loss, 100 * accuracy))
+
+        return loss, accuracy
+
+    def _build_model(self, bypass, optimizer):
+        # build model architecture
+        input_ = Input(shape=(224, 224, 3),
+                       name="input",
+                       dtype="float32")
+        logits_ = squeezenet_network_qbi(input_tensor=input_,
+                                         bypass=bypass)
+
+        self.model = Model(inputs=input_,
+                           outputs=logits_,
+                           name="SqueezeNet_qbi")
+
+        # get optimizer
+        self.optimizer = get_optimizer(optimizer_name=optimizer)
+
+        # compile model
+        losses = {
+            "dense11_1": "binary_crossentropy",
+            "dense11_2": "binary_crossentropy",
+            "dense11_3": "binary_crossentropy",
+            "dense11_4": "binary_crossentropy",
+            "dense11_5": "binary_crossentropy"
+        }
+        self.model.compile(
+            optimizer=self.optimizer,
+            loss=losses,
+            metrics=["accuracy"])
+
+    def print_model(self):
+        print(self.model.summary(), "\n")
+
+    def get_weight(self, latest=True, checkpoint_name="cp.ckpt"):
+        # TODO fix the loose of the optimizer state
+        # load weights from a training checkpoint if it exists
+        if self.logdir is not None and os.path.isdir(self.logdir):
+            # the last one...
+            if latest:
+                checkpoint_path = tf.train.latest_checkpoint(self.logdir)
+            # ...or a specific one
+            else:
+                checkpoint_path = os.path.join(self.logdir, checkpoint_name)
+
+            # load weights
+            self.model.load_weights(checkpoint_path)
+            self.trained = True
+
+        else:
+            raise ValueError("Impossible to load pre-trained weights. The log "
+                             "directory is not specified or does not exist.")
+
+
 # ### Architecture functions ###
 
 def squeezenet_network_v0(input_tensor, nb_classes, bypass=False):
@@ -571,6 +818,157 @@ def squeezenet_network_v1(input_tensor, nb_classes, bypass=False):
         conv10)  # (batch_size, nb_classes)
 
     return avgpool10
+
+
+def squeezenet_network_qbi(input_tensor, bypass=False):
+    """A lighter architecture of the network.
+
+    Parameters
+    ----------
+    input_tensor : Keras tensor, float32
+        Input tensor with shape (batch_size, 224, 224, 3).
+    bypass : bool
+        Use residual bypasses.
+
+    Returns
+    -------
+    dense11_1 : Keras tensor, float32
+        Output tensor with shape (batch_size, 1)
+    dense11_2 : Keras tensor, float32
+        Output tensor with shape (batch_size, 1)
+    dense11_3 : Keras tensor, float32
+        Output tensor with shape (batch_size, 1)
+    dense11_4 : Keras tensor, float32
+        Output tensor with shape (batch_size, 1)
+    dense11_5 : Keras tensor, float32
+        Output tensor with shape (batch_size, 1)
+
+    """
+    # first convolution block
+    conv1 = Conv2D(
+        filters=64,
+        kernel_size=(3, 3),
+        strides=(2, 2),
+        activation='relu',
+        name='conv1')(
+        input_tensor)  # (batch_size, 111, 111, 64)
+    maxpool1 = MaxPooling2D(
+        pool_size=(3, 3),
+        strides=(2, 2),
+        name="maxpool1")(
+        conv1)  # (batch_size, 55, 55, 64)
+
+    # fire modules
+    fire2 = fire_module(
+        input_tensor=maxpool1,
+        nb_filters_s1x1=16,
+        nb_filters_e1x1=64,
+        nb_filters_e3x3=64,
+        name="fire2")  # (batch_size, 55, 55, 128)
+    fire3 = fire_module(
+        input_tensor=fire2,
+        nb_filters_s1x1=16,
+        nb_filters_e1x1=64,
+        nb_filters_e3x3=64,
+        name="fire3")  # (batch_size, 55, 55, 128)
+    if bypass:
+        fire3 = Add()([fire2, fire3])
+    maxpool3 = MaxPooling2D(
+        pool_size=(3, 3),
+        strides=(2, 2),
+        name="maxpool3")(
+        fire3)  # (batch_size, 27, 27, 128)
+    fire4 = fire_module(
+        input_tensor=maxpool3,
+        nb_filters_s1x1=32,
+        nb_filters_e1x1=128,
+        nb_filters_e3x3=128,
+        name="fire4")  # (batch_size, 27, 27, 256)
+    fire5 = fire_module(
+        input_tensor=fire4,
+        nb_filters_s1x1=32,
+        nb_filters_e1x1=128,
+        nb_filters_e3x3=128,
+        name="fire5")  # (batch_size, 27, 27, 256)
+    if bypass:
+        fire5 = Add()([fire4, fire5])
+    maxpool5 = MaxPooling2D(
+        pool_size=(3, 3),
+        strides=(2, 2),
+        name="maxpool5")(
+        fire5)  # (batch_size, 13, 13, 256)
+    fire6 = fire_module(
+        input_tensor=maxpool5,
+        nb_filters_s1x1=48,
+        nb_filters_e1x1=192,
+        nb_filters_e3x3=192,
+        name="fire6")  # (batch_size, 13, 13, 384)
+    fire7 = fire_module(
+        input_tensor=fire6,
+        nb_filters_s1x1=48,
+        nb_filters_e1x1=192,
+        nb_filters_e3x3=192,
+        name="fire7")  # (batch_size, 13, 13, 384)
+    if bypass:
+        fire7 = Add()([fire6, fire7])
+    fire8 = fire_module(
+        input_tensor=fire7,
+        nb_filters_s1x1=64,
+        nb_filters_e1x1=256,
+        nb_filters_e3x3=256,
+        name="fire8")  # (batch_size, 13, 13, 512)
+    fire9 = fire_module(
+        input_tensor=fire8,
+        nb_filters_s1x1=64,
+        nb_filters_e1x1=256,
+        nb_filters_e3x3=256,
+        name="fire9")  # (batch_size, 13, 13, 512)
+    if bypass:
+        fire9 = Add()([fire8, fire9])
+
+    # last convolution block
+    dropout10 = Dropout(
+        rate=0.5,
+        name="dropout10")(
+        fire9)
+    conv10 = Conv2D(
+        filters=512,
+        kernel_size=(1, 1),
+        activation='relu',
+        name='conv10')(
+        dropout10)  # (batch_size, 13, 13, 512)
+    avgpool10 = GlobalAveragePooling2D(
+        name="avgpool10")(
+        conv10)  # (batch_size, 512)
+
+    # multi-heads
+    dense11_1 = Dense(
+        units=1,
+        activation="sigmoid",
+        name="dense11_1")(
+        avgpool10)  # (batch_size, 1)
+    dense11_2 = Dense(
+        units=1,
+        activation="sigmoid",
+        name="dense11_2")(
+        avgpool10)  # (batch_size, 1)
+    dense11_3 = Dense(
+        units=1,
+        activation="sigmoid",
+        name="dense11_3")(
+        avgpool10)  # (batch_size, 1)
+    dense11_4 = Dense(
+        units=1,
+        activation="sigmoid",
+        name="dense11_4")(
+        avgpool10)  # (batch_size, 1)
+    dense11_5 = Dense(
+        units=1,
+        activation="sigmoid",
+        name="dense11_5")(
+        avgpool10)  # (batch_size, 1)
+
+    return [dense11_1, dense11_2, dense11_3, dense11_4, dense11_5]
 
 
 def fire_module(input_tensor, nb_filters_s1x1, nb_filters_e1x1,
