@@ -574,6 +574,30 @@ class SqueezeNet_qbi(BaseModel):
             raise ValueError("Impossible to load pre-trained weights. The log "
                              "directory is not specified or does not exist.")
 
+    def get_feature_map(self, data, after_average_pooling=True):
+        # TODO add documentation
+        # get input layer
+        input_ = self.model.input
+
+        # get embedding layer
+        if after_average_pooling:
+            output_ = self.model.layers[-6].output
+        else:
+            output_ = self.model.layers[-7].output
+
+        # define the steps to compute the feature map
+        features_map = function([input_, learning_phase()], [output_])
+
+        # compute the feature map
+        embedding = features_map([data, 0])
+        embedding = np.array(embedding, dtype=np.float32)[0]
+
+        if not after_average_pooling:
+            a, b, c, d = embedding.shape
+            embedding = np.reshape(embedding, (a, b * c * d))
+
+        return embedding
+
 
 # ### Architecture functions ###
 
