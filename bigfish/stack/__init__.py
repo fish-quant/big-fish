@@ -6,8 +6,10 @@ build stack of images.
 """
 
 from .utils import (check_array, check_df, check_recipe, check_parameter,
-                    check_range_value, get_offset_value, get_eps_float32)
+                    check_range_value,
+                    get_offset_value, get_eps_float32)
 from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
+                 read_dv,
                  save_image)
 from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
                          build_stack_no_recipe, rescale,
@@ -43,6 +45,7 @@ _utils = ["check_array", "check_df", "check_recipe", "check_parameter",
           "check_range_value", "get_offset_value", "get_eps_float32"]
 
 _io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
+       "read_dv",
        "save_image"]
 
 _preprocess = ["build_simulated_dataset", "build_stacks", "build_stack",

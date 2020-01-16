@@ -6,6 +6,7 @@ multidimensional tensor (np.ndarray) or a dataframe (pandas.DataFrame).
 """
 
 import pickle
+import mrc
 import warnings
 
 import numpy as np
@@ -21,7 +22,7 @@ def read_image(path):
     """Read an image with the .png, .tif or .tiff extension.
 
     The input image should be in 2-d or 3-d, with unsigned integer 8 or 16
-    bits, integer
+    bits.
 
     Parameters
     ----------
@@ -118,7 +119,7 @@ def read_pickle(path):
 
     Returns
     -------
-    data = pandas.DataFrame or np.ndarray
+    data : pandas.DataFrame or np.ndarray
         Data store in the pickle file (an image or coordinates with labels and
         metadata).
 
@@ -128,6 +129,35 @@ def read_pickle(path):
         data = pickle.load(f)
 
     return data
+
+
+def read_dv(path):
+    """Read a video file with the .dv extension.
+
+    The input image should be in 2-d or 3-d, with unsigned integer 8 or 16
+    bits.
+
+    Parameters
+    ----------
+    path : str
+        Path of the file to read.
+
+    Returns
+    -------
+    tensor : ndarray, np.uint or np.int
+        A 2-d or 3-d tensor with spatial dimensions.
+    """
+    # TODO allow more input dtype
+    # read video file
+    tensor = mrc.imread(path)
+
+    # check the image is in unsigned integer 16 bits with 2 or 3 dimensions
+    check_array(tensor,
+                dtype=[np.uint8, np.uint16, np.int64],
+                ndim=[2, 3],
+                allow_nan=False)
+
+    return tensor
 
 
 # ### Write ###
