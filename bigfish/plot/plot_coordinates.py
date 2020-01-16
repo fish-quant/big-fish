@@ -260,7 +260,8 @@ def plot_cell_coordinates(cyt_coord, nuc_coord, rna_coord, foci_coord,
 
 
 def plot_layers_coordinates(layers, titles=None, framesize=(5, 10),
-                            path_output=None, ext="png"):
+                            remove_frame=False, path_output=None, ext="png",
+                            show=True):
     """Plot input layers of the classification model.
 
     Parameters
@@ -271,29 +272,54 @@ def plot_layers_coordinates(layers, titles=None, framesize=(5, 10),
         List of the subtitles.
     framesize : tuple
         Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
     path_output : str
         Path to save the image (without extension).
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
+    show : bool
+        Show the figure or not.
 
     Returns
     -------
 
     """
     # TODO to improve
+
     # plot
-    fig, ax = plt.subplots(1, 3, figsize=framesize)
+    fig, ax = plt.subplots(1, 3, sharey=True, figsize=framesize)
+    if remove_frame:
+        ax[0].axis("off")
+        ax[1].axis("off")
+        ax[2].axis("off")
     ax[0].imshow(layers[0], cmap="binary", origin='lower')
     ax[1].imshow(layers[1], cmap="binary", origin='lower')
     ax[2].imshow(layers[2], cmap="binary", origin='lower')
-    if titles is not None:
+    ax[0].tick_params(top='False', bottom='False',
+                      left='False', right='False',
+                      labelleft='False', labelbottom='False')
+    ax[1].tick_params(top='False', bottom='False',
+                      left='False', right='False',
+                      labelleft='False', labelbottom='False')
+    ax[2].tick_params(top='False', bottom='False',
+                      left='False', right='False',
+                      labelleft='False', labelbottom='False')
+
+    if titles is not None and not remove_frame:
         ax[0].set_title(titles[0], fontweight="bold", fontsize=15)
         ax[1].set_title(titles[1], fontweight="bold", fontsize=15)
         ax[2].set_title(titles[2], fontweight="bold", fontsize=15)
-    plt.tight_layout()
-    save_plot(path_output, ext)
-    plt.show()
+    if not remove_frame:
+        plt.tight_layout()
+
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return
 
