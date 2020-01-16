@@ -431,116 +431,179 @@ def _extract_spots_outside_foci(cell_cyt_mask, spots_out_foci):
 
 # ### Segmentation postprocessing ###
 
-# TODO add from_binary_surface_to_binary_boundaries
+def center_mask_coord(main, others=None):
+    """Center a 2-d binary mask (surface or boundaries) or a 2-d localization
+    coordinates array and pad it.
 
-def center_binary_mask(cyt, nuc=None, rna=None):
-    """Center a 2-d binary mask (surface or boundaries) and pad it.
-
-    One mask should be at least provided ('cyt'). If others masks are provided
-    ('nuc' and 'rna'), they will be transformed like the main mask. All the
-    provided masks should have the same shape. If others coordinates are
-    provided, the values will be transformed, but an array of coordinates with
-    the same format is returned
+    One mask or coordinates array should be at least provided ('main'). If
+    others masks or arrays are provided ('others'), they will be transformed
+    like 'main'. All the provided masks should have the same shape.
 
     Parameters
     ----------
-    cyt : np.ndarray, np.uint or np.int or bool
-        Binary image of cytoplasm with shape (y, x).
-    nuc : np.ndarray, np.uint or np.int or bool
-        Binary image of nucleus with shape (y, x) or array of nucleus
-        coordinates with shape (nb_points, 2).
-    rna : np.ndarray, np.uint or np.int or bool
-        Binary image of mRNAs localization with shape (y, x) or array of mRNAs
-        coordinates with shape (nb_points, 2) or (nb_points, 3).
+    main : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x) or array of coordinates with shape
+        (nb_points, 2).
+    others : List(np.ndarray)
+        List of binary image with shape (y, x), array of coordinates with
+        shape (nb_points, 2) or array of coordinates with shape (nb_points, 3).
 
     Returns
     -------
-    cyt_centered : np.ndarray, np.uint or np.int or bool
-        Centered binary image of cytoplasm with shape (y, x).
-    nuc_centered : np.ndarray, np.uint or np.int or bool
-        Centered binary image of nucleus with shape (y, x).
-    rna_centered : np.ndarray, np.uint or np.int or bool
-        Centered binary image of mRNAs localizations with shape (y, x).
+    main_centered : np.ndarray, np.uint or np.int or bool
+        Centered binary image with shape (y, x).
+    others_centered : List(np.ndarray)
+        List of centered binary image with shape (y, x), centered array of
+        coordinates with shape (nb_points, 2) or centered array of
+        coordinates with shape (nb_points, 3).
+
+    """
+    # TODO allow the case when coordinates do not represent external boundaries
+    # check parameters
+    check_array(main,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
+    check_parameter(others=(list, type(None)))
+    if others is not None and len(others) != 0:
+        for x in others:
+            if x is None:
+                continue
+            check_array(x,
+                        ndim=2,
+                        dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # initialize parameter
+    marge = get_offset_value()
+
+    # compute by how much we need to move the main object to center it
+    if main.shape[1] == 2:
+        # 'main' is already a 2-d coordinates array (probably locating the
+        # external boundaries of the main object)
+        main_coord = main.copy()
+    else:
+        # get external boundaries coordinates
+        main_coord = from_binary_to_coord(main)
+
+    # we get the minimum and maximum from external boundaries coordinates so
+    # we add 1 to the minimum and substract 1 to the maximum
+    min_y, max_y = main_coord[:, 0].min() + 1, main_coord[:, 0].max() - 1
+    min_x, max_x = main_coord[:, 1].min() + 1, main_coord[:, 1].max() - 1
+
+    # we compute the shape of the main object with a predefined marge
+    shape_y = max_y - min_y + 1
+    shape_x = max_x - min_x + 1
+    main_centered_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
+
+    # center the main object
+    if main.shape[1] == 2:
+        # 'main' is a 2-d coordinates array
+        main_centered = main.copy()
+        main_centered[:, 0] = main_centered[:, 0] - min_y + marge
+        main_centered[:, 1] = main_centered[:, 1] - min_x + marge
+    else:
+        # 'main' is a 2-d binary matrix
+        main_centered = np.zeros(main_centered_shape, dtype=main.dtype)
+        crop = main[min_y:max_y + 1, min_x:max_x + 1]
+        main_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
+
+    if others is None or len(others) == 0:
+        return main_centered, None
+
+    # center the others objects with the same transformation
+    others_centered = []
+    for other in others:
+        if other is None:
+            other_centered = None
+        elif other.shape[1] == 2:
+            # 'other' is a 2-d coordinates array
+            other_centered = other.copy()
+            other_centered[:, 0] = other_centered[:, 0] - min_y + marge
+            other_centered[:, 1] = other_centered[:, 1] - min_x + marge
+        elif other.shape[1] == 3 or other.shape[1] == 4:
+            # 'other' is a 3-d or 4-d coordinates
+            other_centered = other.copy()
+            other_centered[:, 1] = other_centered[:, 1] - min_y + marge
+            other_centered[:, 2] = other_centered[:, 2] - min_x + marge
+        else:
+            # 'other' is a 2-d binary matrix
+            other_centered = np.zeros(main_centered_shape, dtype=other.dtype)
+            crop = other[min_y:max_y + 1, min_x:max_x + 1]
+            other_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
+        others_centered.append(other_centered)
+
+    return main_centered, others_centered
+
+
+def from_boundaries_to_surface(binary_boundaries):
+    """Fill in the binary matrix representing the boundaries of an object.
+
+    Parameters
+    ----------
+    binary_boundaries : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    binary_surface : np.ndarray, bool
+        Binary image with shape (y, x).
 
     """
     # check parameters
-    check_array(cyt,
+    check_array(binary_boundaries,
                 ndim=2,
                 dtype=[np.uint8, np.uint16, np.int64, bool])
-    if nuc is not None:
-        check_array(nuc,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16, np.int64, bool])
-    if rna is not None:
-        check_array(rna,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16, np.int64, bool])
 
-    # initialize parameter
-    nuc_centered, rna_centered = None, None
-    marge = get_offset_value()
+    # from binary boundaries to binary surface
+    binary_surface = ndi.binary_fill_holes(binary_boundaries)
 
-    # center the binary mask of the cell
-    coord = np.nonzero(cyt)
-    coord = np.column_stack(coord)
-    min_y, max_y = coord[:, 0].min(), coord[:, 0].max()
-    min_x, max_x = coord[:, 1].min(), coord[:, 1].max()
-    shape_y = max_y - min_y + 1
-    shape_x = max_x - min_x + 1
-    cyt_centered_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
-    cyt_centered = np.zeros(cyt_centered_shape, dtype=bool)
-    crop = cyt[min_y:max_y + 1, min_x:max_x + 1]
-    cyt_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
-
-    # center the binary mask of the nucleus with the same transformation
-    if nuc is not None:
-        if nuc.shape == 2:
-            nuc_centered = nuc.copy()
-            nuc_centered[:, 0] = nuc_centered[:, 0] - min_y + marge
-            nuc_centered[:, 1] = nuc_centered[:, 1] - min_x + marge
-
-        elif nuc.shape == cyt.shape:
-            nuc_centered = np.zeros(cyt_centered_shape, dtype=bool)
-            crop = nuc[min_y:max_y + 1, min_x:max_x + 1]
-            nuc_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
-
-        else:
-            raise ValueError("mRNAs mask should have the same shape than "
-                             "cytoplasm mask and coordinates should be in 2-d")
-
-    # center the binary mask of the mRNAs with the same transformation
-    if rna is not None:
-        if rna.shape[1] == 3:
-            rna_centered = rna.copy()
-            rna_centered[:, 1] = rna_centered[:, 1] - min_y + marge
-            rna_centered[:, 2] = rna_centered[:, 2] - min_x + marge
-
-        elif rna.shape[1] == 2:
-            rna_centered = rna.copy()
-            rna_centered[:, 0] = rna_centered[:, 0] - min_y + marge
-            rna_centered[:, 1] = rna_centered[:, 1] - min_x + marge
-
-        elif rna.shape == cyt.shape:
-            rna_centered = np.zeros(cyt_centered_shape, dtype=bool)
-            crop = rna[min_y:max_y + 1, min_x:max_x + 1]
-            rna_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
-
-        else:
-            raise ValueError("mRNAs mask should have the same shape than "
-                             "cytoplasm mask and coordinates should be in 2-d "
-                             "or 3-d")
-
-    return cyt_centered, nuc_centered, rna_centered
+    return binary_surface
 
 
-def from_surface_to_coord(binary_surface):
-    """Extract coordinates from a 2-d binary matrix.
-
-    The resulting coordinates represent the external boundaries of the object.
+def from_surface_to_boundaries(binary_surface):
+    """Convert the binary surface to binary boundaries.
 
     Parameters
     ----------
     binary_surface : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    binary_boundaries : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(binary_surface,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
+    original_dtype = binary_surface.dtype
+
+    # pad the binary surface in case object if on the edge
+    binary_surface_ = np.pad(binary_surface, [(1, 1)], mode="constant")
+
+    # compute distance map of the surface binary mask
+    distance_map = ndi.distance_transform_edt(binary_surface_)
+
+    # get binary boundaries
+    binary_boundaries_ = (distance_map < 2) & (distance_map > 0)
+    binary_boundaries_ = binary_boundaries_.astype(original_dtype)
+
+    # remove pad
+    binary_boundaries = binary_boundaries_[1:-1, 1:-1]
+
+    return binary_boundaries
+
+
+def from_binary_to_coord(binary):
+    """Extract coordinates from a 2-d binary matrix.
+
+    As the resulting coordinates represent the external boundaries of the
+    object, the coordinates values can be negative.
+
+    Parameters
+    ----------
+    binary : np.ndarray, np.uint or np.int or bool
         Binary image with shape (y, x).
 
     Returns
@@ -550,12 +613,19 @@ def from_surface_to_coord(binary_surface):
 
     """
     # check parameters
-    check_array(binary_surface,
+    check_array(binary,
                 ndim=2,
                 dtype=[np.uint8, np.uint16, np.int64, bool])
 
-    # from binary surface to 2D coordinates boundaries
-    coord = find_contours(binary_surface, level=0)[0].astype(np.int64)
+    # we enlarge the binary mask with one pixel to be sure the external
+    # boundaries of the object still fit within the frame
+    binary_ = np.pad(binary, [(1, 1)], mode="constant")
+
+    # get external boundaries coordinates
+    coord = find_contours(binary_, level=0)[0].astype(np.int64)
+
+    # remove the pad
+    coord -= 1
 
     return coord
 
@@ -590,150 +660,148 @@ def complete_coord_boundaries(coord):
     return coord_completed
 
 
-def _from_coord_to_boundaries(coord_cyt, coord_nuc=None, coord_rna=None):
-    """Convert 2-d coordinates to a binary matrix with the boundaries of the
-    object.
+def from_coord_to_frame(coord, external_coord=True):
+    """Initialize a frame shape to represent coordinates values in 2-d matrix.
 
-    As we manipulate the coordinates of the external boundaries, the relative
-    binary matrix has two extra pixels in each dimension. We compensate by
-    reducing the marge by one in order to keep the same shape for the frame.
-    If others coordinates are provided, the relative binary matrix is build
-    with the same shape as the main coordinates.
+    If coordinates represent the external boundaries of an object, we add 1 to
+    the minimum coordinate and substract 1 to the maximum coordinate in order
+    to build the frame. The frame centers the coordinates by default.
 
     Parameters
     ----------
-    coord_cyt : np.ndarray, np.int64
-        Array of cytoplasm boundaries coordinates with shape (nb_points, 2).
-    coord_nuc : np.ndarray, np.int64
-        Array of nucleus boundaries coordinates with shape (nb_points, 2).
-    coord_rna : np.ndarray, np.int64
-        Array of mRNAs coordinates with shape (nb_points, 2) or
+    coord : np.ndarray, np.int64
+        Array of cytoplasm boundaries coordinates with shape (nb_points, 2) or
         (nb_points, 3).
+    external_coord : bool
+        Coordinates represent external boundaries of object.
 
     Returns
     -------
-    cyt : np.ndarray, np.uint or np.int or bool
-        Binary image of cytoplasm boundaries with shape (y, x).
-    nuc : np.ndarray, np.uint or np.int or bool
-        Binary image of nucleus boundaries with shape (y, x).
-    rna : np.ndarray, np.uint or np.int or bool
-        Binary image of mRNAs localizations with shape (y, x).
+    frame_shape : tuple
+        Shape of the 2-d matrix.
+    min_y : int
+        Value tu substract from the y coordinate axis.
+    min_x : int
+        Value tu substract from the x coordinate axis.
+    marge : int
+        Value to add to the coordinates.
 
     """
-    # initialize parameter
-    nuc, rna = None, None
+    # check parameter
+    check_parameter(external_coord=bool)
+
+    # initialize marge
     marge = get_offset_value()
-    marge -= 1
 
     # from 2D coordinates boundaries to binary boundaries
-    max_y = coord_cyt[:, 0].max()
-    max_x = coord_cyt[:, 1].max()
-    min_y = coord_cyt[:, 0].min()
-    min_x = coord_cyt[:, 1].min()
+    if external_coord:
+        min_y, max_y = coord[:, 0].min() + 1, coord[:, 0].max() - 1
+        min_x, max_x = coord[:, 1].min() + 1, coord[:, 1].max() - 1
+    else:
+        min_y, max_y = coord[:, 0].min(), coord[:, 0].max()
+        min_x, max_x = coord[:, 1].min(), coord[:, 1].max()
     shape_y = max_y - min_y + 1
     shape_x = max_x - min_x + 1
-    image_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
-    coord_cyt[:, 0] = coord_cyt[:, 0] - min_y + marge
-    coord_cyt[:, 1] = coord_cyt[:, 1] - min_x + marge
-    cyt = np.zeros(image_shape, dtype=bool)
-    cyt[coord_cyt[:, 0], coord_cyt[:, 1]] = True
+    frame_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
 
-    # transform nucleus coordinates with the same parameters
-    if coord_nuc is not None:
-        nuc = np.zeros(image_shape, dtype=bool)
-        coord_nuc[:, 0] = coord_nuc[:, 0] - min_y + marge
-        coord_nuc[:, 1] = coord_nuc[:, 1] - min_x + marge
-        nuc[coord_nuc[:, 0], coord_nuc[:, 1]] = True
-
-    # transform mRNAs coordinates with the same parameters
-    if coord_rna is not None:
-        rna = np.zeros(image_shape, dtype=bool)
-        if coord_rna.shape[1] == 3:
-            coord_rna[:, 1] = coord_rna[:, 1] - min_y + marge
-            coord_rna[:, 2] = coord_rna[:, 2] - min_x + marge
-            rna[coord_rna[:, 1], coord_rna[:, 2]] = True
-        else:
-            coord_rna[:, 0] = coord_rna[:, 0] - min_y + marge
-            coord_rna[:, 1] = coord_rna[:, 1] - min_x + marge
-            rna[coord_rna[:, 0], coord_rna[:, 1]] = True
-
-    return cyt, nuc, rna
+    return frame_shape, min_y, min_x, marge
 
 
-def from_boundaries_to_surface(binary_boundaries):
-    """Fill in the binary matrix representing the boundaries of an object.
-
-    Parameters
-    ----------
-    binary_boundaries : np.ndarray, np.uint or np.int or bool
-        Binary image with shape (y, x).
-
-    Returns
-    -------
-    binary_surface : np.ndarray, np.uint or np.int or bool
-        Binary image with shape (y, x).
-
-    """
-    # TODO check dtype input & output
-    # check parameters
-    check_array(binary_boundaries,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64, bool])
-
-    # from binary boundaries to binary surface
-    binary_surface = ndi.binary_fill_holes(binary_boundaries)
-
-    return binary_surface
-
-
-def from_coord_to_surface(coord_cyt, coord_nuc=None, coord_rna=None):
+def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
+                          external_coord=True):
     """Convert 2-d coordinates to a binary matrix with the surface of the
     object.
 
-    As we manipulate the coordinates of the external boundaries, the relative
+    If we manipulate the coordinates of the external boundaries, the relative
     binary matrix has two extra pixels in each dimension. We compensate by
     keeping only the inside pixels of the object surface.
-    If others coordinates are provided, the relative binary matrix is build
-    with the same shape as the main coordinates.
+
+    If others coordinates are provided (nucleus and mRNAs), the relative
+    binary matrix is build with the same shape as the main coordinates (cell).
 
     Parameters
     ----------
-    coord_cyt : np.ndarray, np.int64
+    cyt_coord : np.ndarray, np.int64
         Array of cytoplasm boundaries coordinates with shape (nb_points, 2).
-    coord_nuc : np.ndarray, np.int64
+    nuc_coord : np.ndarray, np.int64
         Array of nucleus boundaries coordinates with shape (nb_points, 2).
-    coord_rna : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int64
         Array of mRNAs coordinates with shape (nb_points, 2) or
         (nb_points, 3).
+    external_coord : bool
+        Coordinates represent external boundaries of object.
 
     Returns
     -------
-    cyt_surface : np.ndarray, np.uint or np.int or bool
+    cyt_surface : np.ndarray, bool
         Binary image of cytoplasm surface with shape (y, x).
-    nuc_surface : np.ndarray, np.uint or np.int or bool
+    nuc_surface : np.ndarray, bool
         Binary image of nucleus surface with shape (y, x).
-    rna : np.ndarray, np.uint or np.int or bool
+    rna_binary : np.ndarray, bool
         Binary image of mRNAs localizations with shape (y, x).
+    new_rna_coord : np.ndarray, np.int64
+        Array of mRNAs coordinates with shape (nb_points, 2) or
+        (nb_points, 3).
 
     """
     # check parameters
-    check_array(coord_cyt,
+    check_array(cyt_coord,
                 ndim=2,
                 dtype=[np.int64])
-    if coord_nuc is not None:
-        check_array(coord_nuc,
+    if nuc_coord is not None:
+        check_array(nuc_coord,
                     ndim=2,
                     dtype=[np.int64])
-    if coord_rna is not None:
-        check_array(coord_rna,
+    if rna_coord is not None:
+        check_array(rna_coord,
                     ndim=2,
                     dtype=[np.int64])
+    check_parameter(external_coord=bool)
 
-    # from coordinates to binary boundaries
-    cyt, nuc, rna = _from_coord_to_boundaries(coord_cyt, coord_nuc, coord_rna)
+    # center coordinates
+    cyt_coord_, [nuc_coord_, rna_coord_] = center_mask_coord(
+        main=cyt_coord,
+        others=[nuc_coord, rna_coord])
 
-    # from binary boundaries to binary surface
-    cyt_surface = from_boundaries_to_surface(cyt)
-    nuc_surface = from_boundaries_to_surface(nuc)
+    # get the binary frame
+    frame_shape, min_y, min_x, marge = from_coord_to_frame(
+        coord=cyt_coord_,
+        external_coord=external_coord)
 
-    return cyt_surface, nuc_surface, rna
+    # from coordinates to binary external boundaries
+    cyt_boundaries_ext = np.zeros(frame_shape, dtype=bool)
+    cyt_boundaries_ext[cyt_coord_[:, 0], cyt_coord_[:, 1]] = True
+    if nuc_coord_ is not None:
+        nuc_boundaries_ext = np.zeros(frame_shape, dtype=bool)
+        nuc_boundaries_ext[nuc_coord_[:, 0], nuc_coord_[:, 1]] = True
+    else:
+        nuc_boundaries_ext = None
+
+    # from binary external boundaries to binary external surface
+    cyt_surface_ext = from_boundaries_to_surface(cyt_boundaries_ext)
+    if nuc_boundaries_ext is not None:
+        nuc_surface_ext = from_boundaries_to_surface(nuc_boundaries_ext)
+    else:
+        nuc_surface_ext = None
+
+    # from binary external surface to binary surface
+    cyt_surface = cyt_surface_ext & (~cyt_boundaries_ext)
+    if nuc_surface_ext is not None:
+        nuc_surface = nuc_surface_ext & (~nuc_boundaries_ext)
+    else:
+        nuc_surface = None
+
+    # center mRNAs coordinates
+    if rna_coord_ is not None:
+        rna_binary = np.zeros(frame_shape, dtype=bool)
+        if rna_coord_.shape[1] == 2:
+            rna_binary[rna_coord_[:, 0], rna_coord_[:, 1]] = True
+        else:
+            rna_binary[rna_coord_[:, 1], rna_coord_[:, 2]] = True
+        new_rna_coord = rna_coord_.copy()
+
+    else:
+        rna_binary = None
+        new_rna_coord = None
+
+    return cyt_surface, nuc_surface, rna_binary, new_rna_coord
