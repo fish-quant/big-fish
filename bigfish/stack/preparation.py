@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from scipy import ndimage as ndi
 
-from .utils import get_offset_value
+from .utils import get_margin_value
 from .augmentation import augment
 from .preprocess import cast_img_float32
 from .filter import mean_filter
@@ -272,8 +272,8 @@ def build_image(data, id_cell, image_shape=None, coord_refinement=True,
 
     # build matrices
     if image_shape is None:
-        max_x = cyt_coord[:, 0].max() + get_offset_value()
-        max_y = cyt_coord[:, 1].max() + get_offset_value()
+        max_x = cyt_coord[:, 0].max() + get_margin_value()
+        max_y = cyt_coord[:, 1].max() + get_margin_value()
         image_shape = (max_x, max_y)
     rna = np.zeros(image_shape, dtype=np.float32)
     rna[rna_coord[:, 0], rna_coord[:, 1]] = 1.0
@@ -350,8 +350,8 @@ def _build_rna(data, id_cell, output_shape=None):
     # get current shape
     cyt_coord = data.loc[id_cell, "pos_cell"]
     cyt_coord = np.array(cyt_coord, dtype=np.int64)
-    max_x = cyt_coord[:, 0].max() + get_offset_value()
-    max_y = cyt_coord[:, 1].max() + get_offset_value()
+    max_x = cyt_coord[:, 0].max() + get_margin_value()
+    max_y = cyt_coord[:, 1].max() + get_margin_value()
     input_shape = (max_x, max_y)
 
     if output_shape is not None:
