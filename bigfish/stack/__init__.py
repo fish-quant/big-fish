@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-The bigfish.stack module includes function to read data, preprocess them and
+The bigfish.stack module includes functions to read data, preprocess them and
 build stack of images.
 """
 
 from .utils import (check_array, check_df, check_recipe, check_parameter,
                     check_range_value,
-                    get_offset_value, get_eps_float32)
+                    get_margin_value, get_eps_float32)
 from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
                  read_dv,
                  save_image)
@@ -42,7 +42,7 @@ from .augmentation import augment
 
 
 _utils = ["check_array", "check_df", "check_recipe", "check_parameter",
-          "check_range_value", "get_offset_value", "get_eps_float32"]
+          "check_range_value", "get_margin_value", "get_eps_float32"]
 
 _io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
        "read_dv",
