@@ -8,7 +8,7 @@ returned by a bigfish method.
 import numpy as np
 from scipy import ndimage as ndi
 
-from .utils import check_array, check_parameter, get_offset_value
+from .utils import check_array, check_parameter, get_margin_value
 
 from skimage.measure import regionprops, find_contours
 from skimage.draw import polygon_perimeter
@@ -473,7 +473,7 @@ def center_mask_coord(main, others=None):
                         dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # initialize parameter
-    marge = get_offset_value()
+    marge = get_margin_value()
 
     # compute by how much we need to move the main object to center it
     if main.shape[1] == 2:
@@ -691,7 +691,7 @@ def from_coord_to_frame(coord, external_coord=True):
     check_parameter(external_coord=bool)
 
     # initialize marge
-    marge = get_offset_value()
+    marge = get_margin_value()
 
     # from 2D coordinates boundaries to binary boundaries
     if external_coord:
