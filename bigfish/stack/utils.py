@@ -536,8 +536,8 @@ def count_nb_fov(recipe):
 
     # a good recipe should have a list in the 'fov' key
     if not isinstance(recipe["fov"], list):
-        raise ValueError("'fov' should be a List or a str, not {0}"
-                         .format(type(recipe["fov"])))
+        raise TypeError("'fov' should be a List or a str, not {0}"
+                        .format(type(recipe["fov"])))
     else:
         return len(recipe["fov"])
 

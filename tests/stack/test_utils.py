@@ -43,12 +43,16 @@ def test_check_parameter():
     with pytest.raises(ValueError):
         foo(a=(), b="bar", c=5, d=2.5, e=np.array([3, 6, 9]),
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
+    with pytest.raises(ValueError):
         foo(a=[], b="bar", c=5.0, d=2.5, e=np.array([3, 6, 9]),
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
+    with pytest.raises(ValueError):
         foo(a=[], b="bar", c=5, d=2, e=np.array([3, 6, 9]),
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
+    with pytest.raises(ValueError):
         foo(a=[], b="bar", c=5, d=2.5, e=[3, 6, 9],
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
+    with pytest.raises(ValueError):
         foo(a=[], b="bar", c=5, d=2.5, e=np.zeros((3, 3)),
             f=True, g=pd.DataFrame(), h=pd.Series())
 
@@ -81,6 +85,7 @@ def test_check_df():
         stack.check_df(df,
                        features=["A", "B", "C", "D", "E"],
                        features_without_nan=["A", "C", "D"])
+    with pytest.raises(ValueError):
         stack.check_df(df,
                        features=["A", "B", "C", "D"],
                        features_without_nan=["A", "B", "C", "D"])
@@ -130,6 +135,7 @@ def test_check_range_value():
     # ... and when it should raise an error
     with pytest.raises(ValueError):
         stack.check_range_value(a, min_=2, max_=None)
+    with pytest.raises(ValueError):
         stack.check_range_value(a, min_=None, max_=8)
 
     return
@@ -178,6 +184,7 @@ def test_check_recipe():
                         "pattern": ["opt_c_fov.ext"]}
         with pytest.raises(ValueError):
             stack.check_recipe(bad_recipe_1, data_directory=None)
+        with pytest.raises(ValueError):
             stack.check_recipe(bad_recipe_2, data_directory=None)
 
         # case with a wrong pattern (repetitive key)
@@ -274,7 +281,7 @@ def test_element_per_dimension():
     return
 
 
-def nb_fov():
+def test_nb_fov():
     # case when 'fov' key is a string
     good_recipe_1 = {"fov": "fov_1",
                      "c": ["dapi", "smfish"],
@@ -322,7 +329,7 @@ def test_margin_value():
     return
 
 
-def epsilon_float_32():
+def test_epsilon_float_32():
     # test epsilon value and dtype
     eps = stack.get_eps_float32()
     assert eps < 1e-5
