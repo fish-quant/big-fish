@@ -8,13 +8,11 @@ build stack of images.
 from .utils import (check_array, check_df, check_recipe, check_parameter,
                     check_range_value,
                     get_margin_value, get_eps_float32)
-from .io import (read_image, read_pickle, read_cell_json, read_rna_json,
-                 read_dv,
-                 save_image)
-from .preprocess import (build_simulated_dataset, build_stacks, build_stack,
+from .io import (read_image, read_dv, read_array, save_image, save_array)
+from .preprocess import (build_stacks, build_stack,
                          build_stack_no_recipe, rescale,
                          cast_img_uint8, cast_img_uint16, cast_img_float32,
-                         cast_img_float64, clean_simulated_data,
+                         cast_img_float64,
                          deconstruct_image, reconstruct_image)
 from .filter import (log_filter, mean_filter, median_filter, maximum_filter,
                      minimum_filter, gaussian_filter, remove_background_mean,
@@ -42,16 +40,15 @@ from .augmentation import augment
 
 
 _utils = ["check_array", "check_df", "check_recipe", "check_parameter",
-          "check_range_value", "get_margin_value", "get_eps_float32"]
+          "check_range_value",
+          "get_margin_value", "get_eps_float32"]
 
-_io = ["read_image", "read_pickle", "read_cell_json", "read_rna_json",
-       "read_dv",
-       "save_image"]
+_io = ["read_image", "read_dv", "read_array", "save_image", "save_array"]
 
-_preprocess = ["build_simulated_dataset", "build_stacks", "build_stack",
+_preprocess = ["build_stacks", "build_stack",
                "build_stack_no_recipe", "rescale",
                "cast_img_uint8", "cast_img_uint16", "cast_img_float32",
-               "cast_img_float64", "clean_simulated_data", "deconstruct_image",
+               "cast_img_float64", "deconstruct_image",
                "reconstruct_image"]
 
 _filter = ["log_filter", "mean_filter", "median_filter", "maximum_filter",
