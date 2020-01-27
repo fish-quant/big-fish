@@ -1,196 +1,254 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Function used to read data from various sources and store them in a
-multidimensional tensor (np.ndarray) or a dataframe (pandas.DataFrame).
+multidimensional tensor (numpy.ndarray).
 """
 
-import pickle
 import mrc
 import warnings
 
 import numpy as np
-import pandas as pd
 
 from skimage import io
-from .utils import check_array, check_df
+from .utils import check_array, check_parameter
 
 
 # ### Read ###
 
-def read_image(path):
-    """Read an image with the .png, .tif or .tiff extension.
-
-    The input image should be in 2-d or 3-d, with unsigned integer 8 or 16
-    bits.
+def read_image(path, sanity_check=False):
+    """Read an image with the .png, .jpg, .jpeg, .tif or .tiff extension.
 
     Parameters
     ----------
     path : str
         Path of the image to read.
+    sanity_check : bool
+        Check if the array returned fit with bigfish pipeline.
 
     Returns
     -------
-    tensor : ndarray, np.uint or np.int
-        A 2-d or 3-d tensor with spatial dimensions.
+    image : ndarray, np.uint or np.int
+        Image read.
 
     """
-    # TODO allow more input dtype
+    # check path
+    check_parameter(path=str,
+                    sanity_check=bool)
+
     # read image
-    tensor = io.imread(path)
+    image = io.imread(path)
 
-    # check the image is in unsigned integer 16 bits with 2 or 3 dimensions
-    check_array(tensor,
-                dtype=[np.uint8, np.uint16, np.int64],
-                ndim=[2, 3],
-                allow_nan=False)
+    # check the output image
+    if sanity_check:
+        check_array(image,
+                    dtype=[np.uint8, np.uint16, np.uint32,
+                           np.int8, np.int16, np.int32,
+                           np.float32, np.float64,
+                           bool],
+                    ndim=[2, 3, 4, 5],
+                    allow_nan=False)
 
-    return tensor
-
-
-def read_cell_json(path):
-    """Read the json file 'cellLibrary.json' used by FishQuant.
-
-    Parameters
-    ----------
-    path : str
-        Path of the json file to read.
-
-    Returns
-    -------
-    df : pd.DataFrame
-        Dataframe with the 2D coordinates of the nucleus and the cytoplasm of
-        actual cells used to simulate data.
-
-    """
-    # read json file and open it in a dataframe
-    df = pd.read_json(path)
-
-    # check the output has the right features
-    check_df(df,
-             features=["name_img_BGD", "pos_cell", "pos_nuc"],
-             features_nan=["name_img_BGD", "pos_cell", "pos_nuc"])
-
-    return df
+    return image
 
 
-def read_rna_json(path):
-    """Read json files simulated by FishQuant with RNA 3D coordinates.
-
-    Parameters
-    ----------
-    path : str
-        Path of the json file to read.
-
-    Returns
-    -------
-    df : pandas.DataFrame
-        Dataframe with 3D coordinates of the simulated RNA, localization
-        pattern used to simulate them and its strength.
-
-    """
-    # read json file and open it in a dataframe
-    df = pd.read_json(path)
-
-    # check the output has the right number of features
-    if df.shape[1] != 9:
-        raise ValueError("The file does not seem to have the right number of "
-                         "features. It returns {0} dimensions instead of 9."
-                         .format(df.ndim))
-
-    # check the output has the right features
-    expected_features = ['RNA_pos', 'cell_ID', 'mRNA_level_avg',
-                         'mRNA_level_label', 'n_RNA', 'name_img_BGD',
-                         'pattern_level', 'pattern_name', 'pattern_prop']
-    check_df(df,
-             features=expected_features,
-             features_nan=expected_features)
-
-    return df
-
-
-def read_pickle(path):
-    """Read serialized pickle file.
-
-    Parameters
-    ----------
-    path : str
-        Path of the file to read.
-
-    Returns
-    -------
-    data : pandas.DataFrame or np.ndarray
-        Data store in the pickle file (an image or coordinates with labels and
-        metadata).
-
-    """
-    # open the file and read it
-    with open(path, mode='rb') as f:
-        data = pickle.load(f)
-
-    return data
-
-
-def read_dv(path):
+def read_dv(path, sanity_check=False):
     """Read a video file with the .dv extension.
 
-    The input image should be in 2-d or 3-d, with unsigned integer 8 or 16
-    bits.
-
     Parameters
     ----------
     path : str
         Path of the file to read.
+    sanity_check : bool
+        Check if the array returned fit with bigfish pipeline.
 
     Returns
     -------
-    tensor : ndarray, np.uint or np.int
-        A 2-d or 3-d tensor with spatial dimensions.
+    video : ndarray, np.uint or np.int
+        Video read.
+
     """
-    # TODO allow more input dtype
+    # check path
+    check_parameter(path=str,
+                    sanity_check=bool)
+
     # read video file
-    tensor = mrc.imread(path)
+    video = mrc.imread(path)
 
-    # check the image is in unsigned integer 16 bits with 2 or 3 dimensions
-    check_array(tensor,
-                dtype=[np.uint8, np.uint16, np.int64],
-                ndim=[2, 3],
-                allow_nan=False)
+    # metadata can be read running 'tensor.Mrc.info()'
 
-    return tensor
+    # check the output video
+    if sanity_check:
+        check_array(video,
+                    dtype=[np.uint16, np.int16, np.int32, np.float32],
+                    allow_nan=False)
+
+    return video
+
+
+def read_array(path, sanity_check=False):
+    """Read a numpy array with 'npy' extension.
+
+    Parameters
+    ----------
+    path
+    sanity_check
+
+    Returns
+    -------
+    array : ndarray, np.uint or np.int
+        Array read.
+
+    """
+    # check path
+    check_parameter(path=str,
+                    sanity_check=bool)
+    if ".npy" not in path:
+        path += ".npy"
+
+    # read array file
+    array = np.load(path)
+
+    # check the output array
+    if sanity_check:
+        check_array(array,
+                    dtype=[np.uint8, np.uint16, np.uint32,
+                           np.int8, np.int16, np.int32, np.int64,
+                           np.float32, np.float64,
+                           bool],
+                    ndim=[2, 3, 4, 5],
+                    allow_nan=False)
+
+    return array
 
 
 # ### Write ###
 
-def save_image(image, path):
-    """Save a 2-d or 3-d image.
+def save_image(image, path, extension="tif"):
+    """Save an image.
+
+    The input image should have between 2 and 5 dimensions, with boolean,
+    8-bit, 16-bit or 32-bit (unsigned) integer, 32-bit or 64-bit float.
+
+    The dimensions should be in the following order: (round, channel, z, y, x).
+
+    Additional notes:
+    - If the image has more than 2 dimensions, 'tif' and 'tiff' extensions are
+    required ('png' extension does not handle 3-d images other than (M, N, 3)
+    or (M, N, 4) shapes).
+    - A 2-d boolean image can be saved in 'png', 'jpg' or 'jpeg'
+    (cast in np.uint8).
+    - A multidimensional boolean image should be saved with
+    bigfish.stack.save_array function or as a 0-1 images with 'tif'/'tiff'
+    extension.
 
     Parameters
     ----------
     image : np.ndarray
-        Tensor to save with shape (z, y, x) or (y, x).
+        Image to save.
     path : str
         Path of the saved image.
+    extension : str
+        Default extension to save the image (among 'png', 'jpg', 'jpeg', 'tif'
+        or 'tiff').
 
     Returns
     -------
 
     """
-    # check image
+    # check image and parameters
+    check_parameter(image=np.ndarray,
+                    path=str,
+                    extension=str)
     check_array(image,
-                dtype=[np.uint8, np.uint16, np.int64,
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32,
                        np.float32, np.float64,
                        bool],
-                ndim=[2, 3],
+                ndim=[2, 3, 4, 5],
                 allow_nan=False)
 
-    # save image
+    # check extension and build path
+    if "." in path:
+        extension = path.split(".")[-1]
+    else:
+        path += ".{0}".format(extension)
+    if extension not in ["png", "jpg", "jpeg", "tif", "tiff"]:
+        raise ValueError("{0} extension is not supported, please choose among "
+                         "'png', 'jpg', 'jpeg', 'tif' or 'tiff'."
+                         .format(extension))
+
+    # warn about extension
+    if (extension in ["png", "jpg", "jpeg"] and len(image.shape) > 2
+            and image.dtype != bool):
+        raise ValueError("Extension {0} is not fitted with multidimensional "
+                         "images. Use 'tif' or 'tiff' extension instead."
+                         .format(extension))
+    if (extension in ["png", "jpg", "jpeg"] and len(image.shape) == 2
+            and image.dtype != bool):
+        warnings.warn("Extension {0} is not consistent with dtype. To prevent "
+                      "'image' from being cast you should use 'tif' or 'tiff' "
+                      "extension.".format(extension), UserWarning)
+    if (extension in ["png", "jpg", "jpeg"] and len(image.shape) == 2
+            and image.dtype == bool):
+        warnings.warn("Extension {0} is not consistent with dtype. To prevent "
+                      "'image' from being cast you should use "
+                      "'bigfish.stack.save_array' function instead."
+                      .format(extension), UserWarning)
+    if (extension in ["tif", "tiff"] and len(image.shape) == 2
+            and image.dtype == bool):
+        raise ValueError("Extension {0} is not fitted with boolean images. "
+                         "Use 'png', 'jpg' or 'jpeg' extension instead."
+                         .format(extension))
+    if (extension in ["png", "jpg", "jpeg", "tif", "tiff"]
+            and len(image.shape) > 2 and image.dtype == bool):
+        raise ValueError("Extension {0} is not fitted with multidimensional "
+                         "boolean images. Use 'bigfish.stack.save_array' "
+                         "function instead.".format(extension))
+
+    # save image without warnings
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.filterwarnings(action="ignore", category=UserWarning)
         io.imsave(path, image)
 
-    # import warnings
-    # warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-    # warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+    return
+
+
+def save_array(array, path):
+    """Save an array.
+
+    The input array should have between 2 and 5 dimensions, with boolean,
+    8-bit, 16-bit or 32-bit (unsigned) integer, 64-bit integer, 32-bit or
+    64-bit float.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to save.
+    path : str
+        Path of the saved array.
+
+    Returns
+    -------
+
+    """
+    # check array and path
+    check_parameter(array=np.ndarray,
+                    path=str)
+    check_array(array,
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32, np.int64,
+                       np.float32, np.float64,
+                       bool],
+                ndim=[2, 3, 4, 5],
+                allow_nan=False)
+    if "." in path and "npy" not in path:
+        path_ = path.split(".")[0]
+        path = path_ + ".npy"
+
+    # save array
+    np.save(path, array)
 
     return
