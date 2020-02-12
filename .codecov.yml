@@ -1,0 +1,14 @@
+comment: false
+
+ignore:
+  - "setup.py"
+  - "python_scripts"
+
+coverage:
+  status:
+    project:
+      default:
+        # Commits pushed to master should not make the overall project
+        # coverage decrease by more than 1%:
+        target: auto
+        threshold: 1%
