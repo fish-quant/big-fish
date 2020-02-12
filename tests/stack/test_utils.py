@@ -56,8 +56,6 @@ def test_check_parameter():
         foo(a=[], b="bar", c=5, d=2.5, e=np.zeros((3, 3)),
             f=True, g=pd.DataFrame(), h=pd.Series())
 
-    return
-
 
 def test_check_df():
     # build a dataframe to test
@@ -90,8 +88,6 @@ def test_check_df():
                        features=["A", "B", "C", "D"],
                        features_without_nan=["A", "B", "C", "D"])
 
-    return
-
 
 def test_check_array():
     # build some arrays to test
@@ -121,8 +117,6 @@ def test_check_array():
     with pytest.raises(ValueError):
         stack.check_array(d, allow_nan=False)
 
-    return
-
 
 def test_check_range_value():
     # build some arrays to test
@@ -137,8 +131,6 @@ def test_check_range_value():
         stack.check_range_value(a, min_=2, max_=None)
     with pytest.raises(ValueError):
         stack.check_range_value(a, min_=None, max_=8)
-
-    return
 
 
 # ### Test recipes ###
@@ -212,8 +204,6 @@ def test_check_recipe():
         with pytest.raises(TypeError):
             stack.check_recipe(bad_recipe_5, data_directory=None)
 
-    return
-
 
 def test_fit_recipe():
     # build a recipe to fit
@@ -240,8 +230,6 @@ def test_fit_recipe():
     new_recip_bis = fit_recipe(new_recipe)
     assert new_recip_bis == new_recipe
 
-    return
-
 
 def test_path_from_recipe():
     # build a temporary directory with one file
@@ -261,8 +249,6 @@ def test_path_from_recipe():
         path_dapi = get_path_from_recipe(good_recipe, tmp_dir, c=0)
         assert os.path.isfile(path_dapi)
 
-    return
-
 
 def test_element_per_dimension():
     # build a recipe to test
@@ -277,8 +263,6 @@ def test_element_per_dimension():
     assert nb_r == 1
     assert nb_c == 2
     assert nb_z == 1
-
-    return
 
 
 def test_nb_fov():
@@ -317,8 +301,6 @@ def test_nb_fov():
                       "pattern": "opt_c_fov.ext"}
         count_nb_fov(bad_recipe)
 
-    return
-
 
 # ### Others ###
 
@@ -326,13 +308,9 @@ def test_margin_value():
     # test margin value
     assert stack.get_margin_value() >= 2
 
-    return
-
 
 def test_epsilon_float_32():
     # test epsilon value and dtype
     eps = stack.get_eps_float32()
     assert eps < 1e-5
     assert isinstance(eps, np.float32)
-
-    return
