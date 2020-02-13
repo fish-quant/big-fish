@@ -46,7 +46,7 @@ def read_image(path, sanity_check=False):
         check_array(image,
                     dtype=[np.uint8, np.uint16, np.uint32,
                            np.int8, np.int16, np.int32,
-                           np.float32, np.float64,
+                           np.float16, np.float32, np.float64,
                            bool],
                     ndim=[2, 3, 4, 5],
                     allow_nan=False)
@@ -116,7 +116,7 @@ def read_array(path, sanity_check=False):
         check_array(array,
                     dtype=[np.uint8, np.uint16, np.uint32,
                            np.int8, np.int16, np.int32, np.int64,
-                           np.float32, np.float64,
+                           np.float16, np.float32, np.float64,
                            bool],
                     ndim=[2, 3, 4, 5],
                     allow_nan=False)
@@ -130,7 +130,7 @@ def save_image(image, path, extension="tif"):
     """Save an image.
 
     The input image should have between 2 and 5 dimensions, with boolean,
-    8-bit, 16-bit or 32-bit (unsigned) integer, 32-bit or 64-bit float.
+    8-bit, 16-bit or 32-bit (unsigned) integer, 16-bit, 32-bit or 64-bit float.
 
     The dimensions should be in the following order: (round, channel, z, y, x).
 
@@ -165,7 +165,7 @@ def save_image(image, path, extension="tif"):
     check_array(image,
                 dtype=[np.uint8, np.uint16, np.uint32,
                        np.int8, np.int16, np.int32,
-                       np.float32, np.float64,
+                       np.float16, np.float32, np.float64,
                        bool],
                 ndim=[2, 3, 4, 5],
                 allow_nan=False)
@@ -220,8 +220,8 @@ def save_array(array, path):
     """Save an array.
 
     The input array should have between 2 and 5 dimensions, with boolean,
-    8-bit, 16-bit or 32-bit (unsigned) integer, 64-bit integer, 32-bit or
-    64-bit float.
+    8-bit, 16-bit or 32-bit (unsigned) integer, 64-bit integer, 16-bit, 32-bit
+    or 64-bit float.
 
     Parameters
     ----------
@@ -240,10 +240,10 @@ def save_array(array, path):
     check_array(array,
                 dtype=[np.uint8, np.uint16, np.uint32,
                        np.int8, np.int16, np.int32, np.int64,
-                       np.float32, np.float64,
+                       np.float16, np.float32, np.float64,
                        bool],
                 ndim=[2, 3, 4, 5],
-                allow_nan=False)
+                allow_nan=True)
     if "." in path and "npy" not in path:
         path_ = path.split(".")[0]
         path = path_ + ".npy"
