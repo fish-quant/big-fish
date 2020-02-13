@@ -12,8 +12,7 @@ from .io import (read_image, read_dv, read_array, save_image, save_array)
 from .preprocess import (build_stacks, build_stack,
                          build_stack_no_recipe, rescale,
                          cast_img_uint8, cast_img_uint16, cast_img_float32,
-                         cast_img_float64,
-                         deconstruct_image, reconstruct_image)
+                         cast_img_float64)
 from .filter import (log_filter, mean_filter, median_filter, maximum_filter,
                      minimum_filter, gaussian_filter, remove_background_mean,
                      remove_background_gaussian, dilation_filter,
@@ -48,8 +47,7 @@ _io = ["read_image", "read_dv", "read_array", "save_image", "save_array"]
 _preprocess = ["build_stacks", "build_stack",
                "build_stack_no_recipe", "rescale",
                "cast_img_uint8", "cast_img_uint16", "cast_img_float32",
-               "cast_img_float64", "deconstruct_image",
-               "reconstruct_image"]
+               "cast_img_float64"]
 
 _filter = ["log_filter", "mean_filter", "median_filter", "maximum_filter",
            "minimum_filter", "gaussian_filter", "remove_background_mean",
