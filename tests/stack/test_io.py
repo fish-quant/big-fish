@@ -22,10 +22,10 @@ from numpy.testing import assert_array_equal
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32,
     np.int8, np.int16, np.int32,
-    np.float32, np.float64, bool])
+    np.float16, np.float32, np.float64, bool])
 @pytest.mark.parametrize("extension", [
     "png", "jpg", "jpeg", "tif", "tiff"])
-def test_io(shape, dtype, extension):
+def test_image(shape, dtype, extension):
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
         test = np.zeros(shape, dtype=dtype)
@@ -68,7 +68,7 @@ def test_io(shape, dtype, extension):
             assert test.dtype == tensor.dtype
 
 
-def test_io_specific():
+def test_image_specific():
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
         # non-supported image (1 dimension)
@@ -126,7 +126,7 @@ def test_dv(dtype):
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32,
     np.int8, np.int16, np.int32, np.int64,
-    np.float32, np.float64, bool])
+    np.float16, np.float32, np.float64, bool])
 def test_npy(shape, dtype):
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
