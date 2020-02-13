@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions used to format and clean any input loaded in bigfish.
@@ -20,7 +22,7 @@ from skimage.exposure import rescale_intensity
 
 # TODO be able to build only one channel
 
-# ### Real data ###
+# ### Building stack ###
 
 def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
                  channel_to_stretch=None, stretching_percentile=99.9,
@@ -678,53 +680,23 @@ def _load_stack_no_recipe(paths, input_dimension=None):
     return tensor_5d
 
 
-# ### Normalization ###
-
-def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
-    """Rescale tensor values up to its dtype range.
-
-    Each round and each channel is rescaled independently.
-
-    We can improve the contrast of the image by stretching its range of
-    intensity values. To do that we provide a smaller range of pixel intensity
-    to rescale, spreading out the information contained in the original
-    histogram. Usually, we apply such normalization to smFish channels. Other
-    channels are simply rescale from the minimum and maximum intensity values
-    of the image to those of its dtype.
+def _wrap_5d(tensor):
+    """Increases the number of dimensions of a tensor up to 5.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
-        Tensor to rescale with shape (r, c, z, y, x), (c, z, y, x), (z, y, x)
-        or (y, x).
-    channel_to_stretch : int or List[int]
-        Channel to stretch.
-    stretching_percentile : float
-        Percentile to determine the maximum intensity value used to rescale
-        the image.
+    tensor : np.ndarray
+        Tensor to wrap.
 
     Returns
     -------
-    tensor : np.ndarray, np.uint
-        Tensor to rescale with shape (r, c, z, y, x), (c, z, y, x), (z, y, x)
-        or (y, x).
+    tensor_5d : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
+    original_ndim : int
+        Original number of dimensions.
 
     """
-    # check parameters
-    check_array(tensor,
-                ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16],
-                allow_nan=False)
-    check_parameter(channel_to_stretch=(int, list, type(None)),
-                    stretching_percentile=float)
-
-    # format 'channel_to_stretch'
-    if channel_to_stretch is None:
-        channel_to_stretch = []
-    elif isinstance(channel_to_stretch, int):
-        channel_to_stretch = [channel_to_stretch]
-
-    # get a 5-d tensor
+    # wrap tensor in 5-d if necessary
     original_ndim = tensor.ndim
     if original_ndim == 2:
         tensor_5d = tensor[np.newaxis, np.newaxis, np.newaxis, ...]
@@ -735,10 +707,25 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     else:
         tensor_5d = tensor
 
-    # rescale
-    tensor_5d = _rescale_5d(tensor_5d, channel_to_stretch,
-                            stretching_percentile)
+    return tensor_5d, original_ndim
 
+
+def _unwrap_5d(tensor_5d, original_ndim):
+    """Remove useless dimensions from a 5-d tensor.
+
+    Parameters
+    ----------
+    tensor_5d : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
+    original_ndim : int
+        Original number of dimensions.
+
+    Returns
+    -------
+    tensor : np.ndarray
+        Unwrapped tensor.
+
+    """
     # rebuild the original tensor shape
     if original_ndim == 2:
         tensor = tensor_5d[0, 0, 0, :, :]
@@ -752,71 +739,154 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     return tensor
 
 
-def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
-    """Rescale tensor values up to its dtype range.
+# ### Image normalization ###
 
-    Each round and each channel is rescaled independently.
+def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
+    """Rescale tensor values up to its dtype range (unsigned/signed integers)
+    or between 0 and 1 (float).
 
-    We can improve the contrast of the image by stretching its range of
-    intensity values. To do that we provide a smaller range of pixel intensity
-    to rescale, spreading out the information contained in the original
-    histogram. Usually, we apply such normalization to smFish channels. Other
-    channels are simply rescale from the minimum and maximum intensity values
-    of the image to those of its dtype.
+    Each round and each channel is rescaled independently. Tensor has between
+    2 to 5 dimensions, in the following order: (round, channel, z, y, x).
+
+    By default, we rescale the tensor intensity range to its dtype range (or
+    between 0 and 1 for float tensor). We can improve the contrast by
+    stretching a smaller range of pixel intensity: between the minimum value
+    of a channel and percentile value of the channel (cf.
+    'stretching_percentile').
+
+    To be consistent with skimage, 64-bit (unsigned) integer images are not
+    supported.
 
     Parameters
     ----------
     tensor : np.ndarray, np.uint
-        Tensor to rescale with shape (r, c, z, y, x).
-    channel_to_stretch : List[int]
-        Channel to stretch.
-    stretching_percentile : float
+        Tensor to rescale.
+    channel_to_stretch : int, List[int] or Tuple[int]
+        Channel to stretch. If None, minimum and maximum of each channel are
+        used as the intensity range to rescale.
+    stretching_percentile : float or int
         Percentile to determine the maximum intensity value used to rescale
-        the image.
+        the image. If 1, the maximum pixel intensity is used to rescale the
+        image.
 
     Returns
     -------
-    tensor : np.ndarray, np.uint
-        Tensor to rescale with shape (r, c, z, y, x).
+    tensor : np.ndarray
+        Tensor rescaled.
 
     """
+    # check parameters
+    check_parameter(tensor=np.ndarray,
+                    channel_to_stretch=(int, list, tuple, type(None)),
+                    stretching_percentile=(int, float))
+    check_array(tensor,
+                ndim=[2, 3, 4, 5],
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32,
+                       np.float16, np.float32, np.float64])
+    check_range_value(tensor, min_=0)
+
+    # enlist 'channel_to_stretch' if necessary
+    if channel_to_stretch is None:
+        channel_to_stretch = []
+    elif isinstance(channel_to_stretch, int):
+        channel_to_stretch = [channel_to_stretch]
+
+    # wrap tensor in 5-d if necessary
+    tensor_5d, original_ndim = _wrap_5d(tensor)
+
+    # rescale
+    tensor_5d = _rescale_5d(tensor_5d,
+                            channel_to_stretch=channel_to_stretch,
+                            stretching_percentile=stretching_percentile)
+
+    # rebuild the original tensor shape
+    tensor = _unwrap_5d(tensor_5d, original_ndim)
+
+    return tensor
+
+
+def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
+    """Rescale tensor values up to its dtype range (unsigned/signed integers)
+    or between 0 and 1 (float).
+
+    Each round and each channel is rescaled independently. Tensor has between
+    2 to 5 dimensions, in the following order: (round, channel, z, y, x).
+
+    By default, we rescale the tensor intensity range to its dtype range (or
+    between 0 and 1 for float tensor). We can improve the contrast by
+    stretching a smaller range of pixel intensity: between the minimum value
+    of a channel and percentile value of the channel (cf.
+    'stretching_percentile').
+
+    Parameters
+    ----------
+    tensor : np.ndarray, np.uint
+        Tensor to rescale.
+    channel_to_stretch : int, List[int] or Tuple[int]
+        Channel to stretch. If None, minimum and maximum of each channel are
+        used as the intensity range to rescale.
+    stretching_percentile : float
+        Percentile to determine the maximum intensity value used to rescale
+        the image. If 1, the maximum pixel intensity is used to rescale the
+        image.
+
+    Returns
+    -------
+    tensor : np.ndarray
+        Tensor rescaled.
+
+    """
+    # target intensity range
+    target_range = 'dtype'
+    if tensor.dtype in [np.float16, np.float32, np.float64]:
+        target_range = (0, 1)
+
     # rescale each round independently
     rounds = []
     for r in range(tensor.shape[0]):
 
         # rescale each channel independently
         channels = []
-        for i in range(tensor.shape[1]):
-            channel = tensor[r, i, :, :, :]
-            if i in channel_to_stretch:
+        for c in range(tensor.shape[1]):
+
+            # get channel
+            channel = tensor[r, c, :, :, :]
+
+            # rescale channel
+            if c in channel_to_stretch:
                 pa, pb = np.percentile(channel, (0, stretching_percentile))
                 channel_rescaled = rescale_intensity(channel,
-                                                     in_range=(pa, pb))
+                                                     in_range=(pa, pb),
+                                                     out_range=target_range)
             else:
-                channel_rescaled = rescale_intensity(channel)
+                channel_rescaled = rescale_intensity(channel,
+                                                     out_range=target_range)
             channels.append(channel_rescaled)
+
+        # stack channels
         tensor_4d = np.stack(channels, axis=0)
         rounds.append(tensor_4d)
 
+    # stack rounds
     tensor_5d = np.stack(rounds, axis=0)
 
     return tensor_5d
 
 
-def cast_img_uint8(tensor):
-    """Cast the image in np.uint8.
+def cast_img_uint8(tensor, catch_warning=False):
+    """Cast the image in np.uint8 and scale values between 0 and 255.
 
-    Negative values (from np.float tensors) are not allowed as the skimage
-    method 'img_as_ubyte' would clip them to 0. Positives values are scaled
-    between 0 and 255.
-
-    Casting image to np.uint8 reduce the memory needed to process it and
-    accelerate computations.
+    Negative values are not allowed as the skimage method 'img_as_ubyte' would
+    clip them to 0. Positives values are scaled between 0 and 255, excepted
+    if they fit directly in 8 bit (in this case values are not modified).
 
     Parameters
     ----------
     tensor : np.ndarray
         Image to cast.
+    catch_warning : bool
+        Catch and ignore UserWarning about possible precision or sign loss.
 
     Returns
     -------
@@ -826,40 +896,49 @@ def cast_img_uint8(tensor):
     """
     # check tensor dtype
     check_array(tensor,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
-                allow_nan=False)
+                ndim=[2, 3, 4, 5],
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32,
+                       np.float16, np.float32, np.float64])
+    if tensor.dtype in [np.float16, np.float32, np.float64]:
+        check_range_value(tensor, min_=0, max_=1)
+    elif tensor.dtype in [np.int8, np.int16, np.int32]:
+        check_range_value(tensor, min_=0)
 
     if tensor.dtype == np.uint8:
         return tensor
 
-    # check the range value for float tensors
-    if tensor.dtype in [np.float32, np.float64]:
-        if not check_range_value(tensor, 0, 1):
-            raise ValueError("To cast a tensor from {0} to np.uint8, its "
-                             "values must be between 0 and 1, and not {1} "
-                             "and {2}."
-                             .format(tensor.dtype, tensor.min(), tensor.max()))
+    if (tensor.dtype in [np.uint16, np.uint32, np.int16, np.int32]
+            and tensor.max() <= 255):
+        raise ValueError("Tensor values are between {0} and {1}. It fits in 8 "
+                         "bits and won't be scaled between 0 and 255. Use "
+                         "'tensor.astype(np.uint8)' instead."
+                         .format(tensor.min(), tensor.max()))
 
     # cast tensor
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    if catch_warning:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tensor = img_as_ubyte(tensor)
+    else:
         tensor = img_as_ubyte(tensor)
 
     return tensor
 
 
-def cast_img_uint16(tensor):
+def cast_img_uint16(tensor, catch_warning=False):
     """Cast the data in np.uint16.
 
-    Negative values (from np.float tensors) are not allowed as the skimage
-    method 'img_as_uint' would clip them to 0. Positives values are scaled
-    between 0 and 65535.
+    Negative values are not allowed as the skimage method 'img_as_uint' would
+    clip them to 0. Positives values are scaled between 0 and 65535, excepted
+    if they fit directly in 16 bit (in this case values are not modified).
 
     Parameters
     ----------
     tensor : np.ndarray
         Image to cast.
-
+    catch_warning : bool
+        Catch and ignore UserWarning about possible precision or sign loss.
     Returns
     -------
     tensor : np.ndarray, np.uint16
@@ -868,42 +947,47 @@ def cast_img_uint16(tensor):
     """
     # check tensor dtype
     check_array(tensor,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
-                allow_nan=False)
+                ndim=[2, 3, 4, 5],
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32,
+                       np.float16, np.float32, np.float64])
+    if tensor.dtype in [np.float16, np.float32, np.float64]:
+        check_range_value(tensor, min_=0, max_=1)
+    elif tensor.dtype in [np.int8, np.int16, np.int32]:
+        check_range_value(tensor, min_=0)
 
     if tensor.dtype == np.uint16:
         return tensor
 
-    # check the range value for float tensors
-    if tensor.dtype in [np.float32, np.float64]:
-        if not check_range_value(tensor, 0, 1):
-            raise ValueError("To cast a tensor from {0} to np.uint16, its "
-                             "values must be between 0 and 1, and not {1} "
-                             "and {2}."
-                             .format(tensor.dtype, tensor.min(), tensor.max()))
+    if tensor.dtype in [np.uint32, np.int32] and tensor.max() <= 65535:
+        raise ValueError("Tensor values are between {0} and {1}. It fits in "
+                         "16 bits and won't be scaled between 0 and 65535. "
+                         "Use 'tensor.astype(np.uint16)' instead."
+                         .format(tensor.min(), tensor.max()))
 
     # cast tensor
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    if catch_warning:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tensor = img_as_uint(tensor)
+    else:
         tensor = img_as_uint(tensor)
 
     return tensor
 
 
-def cast_img_float32(tensor):
+def cast_img_float32(tensor, catch_warning=False):
     """Cast the data in np.float32.
 
-    If the input data is in np.uint8 or np.uint16, the values are scale
-    between 0 and 1. When converting from a np.float dtype, values are not
-    modified.
-
-    Casting image to np.float32 reduce the memory needed to process it and
-    accelerate computations (compare to np.float64).
+    If the input data is in (unsigned) integer, the values are scaled between
+    0 and 1. When converting from a np.float dtype, values are not modified.
 
     Parameters
     ----------
     tensor : np.ndarray
         Image to cast.
+    catch_warning : bool
+        Catch and ignore UserWarning about possible precision or sign loss.
 
     Returns
     -------
@@ -913,12 +997,17 @@ def cast_img_float32(tensor):
     """
     # check tensor dtype
     check_array(tensor,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
-                allow_nan=False)
+                ndim=[2, 3, 4, 5],
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32,
+                       np.float16, np.float32, np.float64])
 
     # cast tensor
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    if catch_warning:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tensor = img_as_float32(tensor)
+    else:
         tensor = img_as_float32(tensor)
 
     return tensor
@@ -927,9 +1016,8 @@ def cast_img_float32(tensor):
 def cast_img_float64(tensor):
     """Cast the data in np.float64.
 
-    If the input data is in np.uint8 or np.uint16, the values are scale
-    between 0 and 1. When converting from a np.float dtype, values are not
-    modified.
+    If the input data is in (unsigned) integer, the values are scaled between
+    0 and 1. When converting from a np.float dtype, values are not modified.
 
     Parameters
     ----------
@@ -944,210 +1032,12 @@ def cast_img_float64(tensor):
     """
     # check tensor dtype
     check_array(tensor,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, np.bool],
-                allow_nan=False)
+                ndim=[2, 3, 4, 5],
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32,
+                       np.float16, np.float32, np.float64])
 
     # cast tensor
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        tensor = img_as_float64(tensor)
+    tensor = img_as_float64(tensor)
 
     return tensor
-
-
-# ### Resize and rescale ###
-# TODO debug
-def deconstruct_image(image, target_size):
-    """Deconstruct an image in a sequence of smaller or larger images in order
-    to fit with a segmentation method, while preserving image scale.
-
-    If the image need to be enlarged to reach the target size, we pad it. If
-    the current size is a multiple of the target size, image is cropped.
-    Otherwise, it is padded (to multiply the target size) then cropped.
-    Information about the deconstruction process are returned in order to
-    easily reconstruct the original image after transformation.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image to deconstruct with shape (y, x).
-    target_size : int
-        Size of the elements to return.
-
-    Returns
-    -------
-    images : List[np.ndarray]
-        List of images to analyse independently.
-    deconstruction : dict
-        Dictionary with deconstruction information to help the reconstruction
-        of the original image.
-
-    """
-    # TODO adapt to non squared images
-    # TODO add an overlap in the crop
-    # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8, np.uint16,
-                       np.float32, np.float64,
-                       bool],
-                allow_nan=False)
-    check_parameter(target_size=int)
-
-    # initialize metadata
-    (width, height) = image.shape
-    deconstruction = {"cropped": False, "padded": False,
-                      "original_width": width, "original_height": height}
-
-    # check if the image is squared
-    if width != height:
-        raise ValueError("Non-squared image are not supported yet.")
-
-    # case where the image is too small
-    if width < target_size:
-
-        # padding
-        to_add = target_size - width
-        right = int(to_add / 2)
-        left = to_add - right
-        pad_width = ((left, right), (left, right))
-        images = [np.pad(image, pad_width, mode="symmetric")]
-        deconstruction["padded"] = True
-        deconstruction["pad_left"] = left
-        deconstruction["pad_right"] = right
-
-    # case where the image is too large
-    elif width > target_size:
-
-        # current size is not a multiple of the target size
-        if width % target_size != 0:
-
-            # padding
-            to_add = target_size * (1 + width // target_size) - width
-            right = int(to_add / 2)
-            left = to_add - right
-            pad_width = ((left, right), (left, right))
-            image = np.pad(image, pad_width, mode="symmetric")
-            deconstruction["padded"] = True
-            deconstruction["pad_left"] = left
-            deconstruction["pad_right"] = right
-            (width, height) = image.shape
-
-        # cropping
-        nb_row = height // target_size
-        nb_col = width // target_size
-        images = []
-        for i_row in range(nb_row):
-            row_start = i_row * target_size
-            row_end = (i_row + 1) * target_size
-            for i_col in range(nb_col):
-                col_start = i_col * target_size
-                col_end = (i_col + 1) * target_size
-                image_ = image[row_start:row_end, col_start:col_end]
-                images.append(image_)
-        deconstruction["cropped"] = True
-        deconstruction["nb_row"] = nb_row
-        deconstruction["nb_col"] = nb_col
-
-    else:
-        images = [image.copy()]
-
-    # store number of images created from the original one
-    deconstruction["nb_images"] = len(images)
-
-    return images, deconstruction
-
-
-def reconstruct_image(images, deconstruction):
-    """Reconstruct an image based on the information stored during the
-    deconstruction process (padding and cropping).
-
-    Parameters
-    ----------
-    images : List[np.ndarray] or np.ndarray
-        Images used to reconstruct an image with the original width and height.
-    deconstruction : dict
-        Information of the deconstruction process.
-
-    Returns
-    -------
-    reconstructed_image : np.ndarray
-        Image with the original width and height.
-
-    """
-    # TODO adapt to non squared images
-    # TODO add an overlap in the crop
-    # TODO handle the different overlapped label values
-    # check parameters
-    check_parameter(images=(np.ndarray, list),
-                    deconstruction=dict)
-    if isinstance(images, np.ndarray):
-        images = [images]
-    for image_ in images:
-        check_array(image_,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16,
-                           np.float32, np.float64,
-                           bool],
-                    allow_nan=False)
-
-    # case where the original image was padded then cropped
-    if deconstruction["padded"] and deconstruction["cropped"]:
-
-        # reconstruct the padded image (cropped => padded - original)
-        nb_row = deconstruction["nb_row"]
-        nb_col = deconstruction["nb_col"]
-        image_ = images[0]
-        (cropped_width, cropped_height) = image_.shape
-        reconstructed_image = np.zeros(
-            (nb_row * cropped_height, nb_col * cropped_width),
-            dtype=image_.dtype)
-        i = 0
-        for i_row in range(nb_row):
-            row_ = i_row * cropped_height
-            _row = (i_row + 1) * cropped_height
-            for i_col in range(nb_col):
-                col_ = i_col * cropped_width
-                _col = (i_col + 1) * cropped_width
-                reconstructed_image[row_:_row, col_:_col] = images[i]
-                i += 1
-
-        # reconstruct the original image (cropped - padded => original)
-        left = deconstruction["pad_left"]
-        right = deconstruction["pad_right"]
-        reconstructed_image = reconstructed_image[left:-right, left:-right]
-
-    # case where the original image was padded only
-    elif deconstruction["padded"] and not deconstruction["cropped"]:
-
-        # reconstruct the original image from a padding (padded => original)
-        left = deconstruction["pad_left"]
-        right = deconstruction["pad_right"]
-        reconstructed_image = images[0][left:-right, left:-right]
-
-    # case where the original image was cropped only
-    elif not deconstruction["padded"] and deconstruction["cropped"]:
-
-        # reconstruct the original image from a cropping (cropped => original)
-        nb_row = deconstruction["nb_row"]
-        nb_col = deconstruction["nb_col"]
-        image_ = images[0]
-        (cropped_width, cropped_height) = image_.shape
-        reconstructed_image = np.zeros(
-            (nb_row * cropped_height, nb_col * cropped_width),
-            dtype=image_.dtype)
-        i = 0
-        for i_row in range(nb_row):
-            row_ = i_row * cropped_height
-            _row = (i_row + 1) * cropped_height
-            for i_col in range(nb_col):
-                col_ = i_col * cropped_width
-                _col = (i_col + 1) * cropped_width
-                reconstructed_image[row_:_row, col_:_col] = images[i]
-                i += 1
-
-    # case where no deconstruction happened
-    else:
-        reconstructed_image = images[0].copy()
-
-    return reconstructed_image
