@@ -24,9 +24,8 @@ from skimage.exposure import rescale_intensity
 
 # ### Building stack ###
 
-def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
-                 channel_to_stretch=None, stretching_percentile=99.9,
-                 cast_8bit=False, return_origin=False):
+def build_stacks(data_map, input_dimension=None, sanity_check=False,
+                 return_origin=False):
     """Generator to build several stacks from recipe-folder pairs.
 
     To build a stack, a recipe should be linked to a directory including all
@@ -104,24 +103,15 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
         Map between input directories and recipes.
     input_dimension : int
         Number of dimensions of the loaded files.
-    check : bool
+    sanity_check : bool
         Check the validity of the loaded tensor.
-    normalize : bool
-        Normalize the different channels of the loaded stack (rescaling).
-    channel_to_stretch : int or List[int]
-        Channel to stretch.
-    stretching_percentile : float
-        Percentile to determine the maximum intensity value used to rescale
-        the image.
     return_origin : bool
         Return the input directory and the recipe used to build the stack.
-    cast_8bit : bool
-        Cast tensor in np.uint8.
 
     Returns
     -------
-    tensor : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
     input_directory : str
         Path of the input directory from where the tensor is built.
     recipe : dict
@@ -130,6 +120,8 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
     """
     # check parameters
     check_parameter(data_map=list,
+                    input_dimension=(int, type(None)),
+                    sanity_check=bool,
                     return_origin=bool)
 
     # load and generate tensors for each recipe-folder pair
@@ -139,8 +131,7 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
         nb_fov = count_nb_fov(recipe)
         for i_fov in range(nb_fov):
             tensor = build_stack(recipe, input_folder, input_dimension, i_fov,
-                                 check, normalize, channel_to_stretch,
-                                 stretching_percentile, cast_8bit)
+                                 sanity_check)
             if return_origin:
                 yield tensor, input_folder, recipe, i_fov
             else:
@@ -148,8 +139,7 @@ def build_stacks(data_map, input_dimension=None, check=False, normalize=False,
 
 
 def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
-                check=False, normalize=False, channel_to_stretch=None,
-                stretching_percentile=99.9, cast_8bit=False):
+                sanity_check=False):
     """Build 5-d stack and normalize it.
 
     The recipe dictionary for one field of view takes the form:
@@ -217,22 +207,13 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
         Number of dimensions of the loaded files.
     i_fov : int
         Index of the fov to build.
-    check : bool
+    sanity_check : bool
         Check the validity of the loaded tensor.
-    normalize : bool
-        Normalize the different channels of the loaded stack (rescaling).
-    channel_to_stretch : int or List[int]
-        Channel to stretch.
-    stretching_percentile : float
-        Percentile to determine the maximum intensity value used to rescale
-        the image.
-    cast_8bit : bool
-        Cast the tensor in np.uint8.
 
     Returns
     -------
-    tensor : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # check parameters
@@ -240,28 +221,20 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
     check_parameter(input_folder=str,
                     input_dimension=(int, type(None)),
                     i_fov=int,
-                    check=bool,
-                    normalize=bool,
-                    channel_to_stretch=(int, list, type(None)),
-                    stretching_percentile=float,
-                    cast_8bit=bool)
+                    sanity_check=bool)
 
     # build stack from recipe and tif files
     tensor = _load_stack(recipe, input_folder, input_dimension, i_fov)
 
     # check the validity of the loaded tensor
-    if check:
+    if sanity_check:
         check_array(tensor,
+                    dtype=[np.uint8, np.uint16, np.uint32,
+                           np.int8, np.int16, np.int32,
+                           np.float16, np.float32, np.float64,
+                           bool],
                     ndim=5,
-                    dtype=[np.uint8, np.uint16])
-
-    # rescale data and improve contrast
-    if normalize:
-        tensor = rescale(tensor, channel_to_stretch, stretching_percentile)
-
-    # cast in np.uint8 if necessary, in order to reduce memory allocation
-    if tensor.dtype == np.uint16 and cast_8bit:
-        tensor = cast_img_uint8(tensor)
+                    allow_nan=False)
 
     return tensor
 
@@ -573,10 +546,8 @@ def _get_input_dimension(recipe, input_folder):
     return nb_dim
 
 
-def build_stack_no_recipe(paths, input_dimension=None, check=False,
-                          normalize=False, channel_to_stretch=None,
-                          stretching_percentile=99.9, cast_8bit=False):
-    """Build 5-d stack and normalize it, without recipe.
+def build_stack_no_recipe(paths, input_dimension=None, sanity_check=False):
+    """Build 5-d stack without recipe.
 
     Parameters
     ----------
@@ -584,49 +555,32 @@ def build_stack_no_recipe(paths, input_dimension=None, check=False,
         List of the paths to stack.
     input_dimension : str
         Number of dimensions of the loaded files.
-    check : bool
-        Check the validity of the loaded tensor.
-    normalize : bool
-        Normalize the different channels of the loaded stack (rescaling).
-    channel_to_stretch : int or List[int]
-        Channel to stretch.
-    stretching_percentile : float
-        Percentile to determine the maximum intensity value used to rescale
-        the image.
-    cast_8bit : bool
-        Cast the tensor in np.uint8.
+    sanity_check : bool
+        Check the validity of the loaded tensor
 
     Returns
     -------
-    tensor : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # check parameters
     check_parameter(paths=(str, list),
                     input_dimension=(int, type(None)),
-                    normalize=bool,
-                    channel_to_stretch=(int, list, type(None)),
-                    stretching_percentile=float,
-                    cast_8bit=bool)
+                    sanity_check=bool)
 
     # build stack from tif files
     tensor = _load_stack_no_recipe(paths, input_dimension)
 
     # check the validity of the loaded tensor
-    if check:
+    if sanity_check:
         check_array(tensor,
+                    dtype=[np.uint8, np.uint16, np.uint32,
+                           np.int8, np.int16, np.int32,
+                           np.float16, np.float32, np.float64,
+                           bool],
                     ndim=5,
-                    dtype=[np.uint8, np.uint16],
                     allow_nan=False)
-
-    # rescale data and improve contrast
-    if normalize:
-        tensor = rescale(tensor, channel_to_stretch, stretching_percentile)
-
-    # cast in np.uint8 if necessary, in order to reduce memory allocation
-    if tensor.dtype == np.uint16 and cast_8bit:
-        tensor = cast_img_uint8(tensor)
 
     return tensor
 
@@ -647,7 +601,7 @@ def _load_stack_no_recipe(paths, input_dimension=None):
     Returns
     -------
     tensor_5d : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # load an image and get the number of dimensions
@@ -674,8 +628,8 @@ def _load_stack_no_recipe(paths, input_dimension=None):
         tensor_5d = stacks[0]
     else:
         raise ValueError("Files do not have the right number of dimensions: "
-                         "{0}. The files we stack should be in 2-d, 3-d, 4-d "
-                         "or 5-d.".format(input_dimension))
+                         "{0}. The files we stack should have between 2 and "
+                         "5 dimensions.".format(input_dimension))
 
     return tensor_5d
 
