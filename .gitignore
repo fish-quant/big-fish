@@ -19,3 +19,4 @@ data/output/*
 
 # Cache
 __pycache__/
+.pytest_cache/
