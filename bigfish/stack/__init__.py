@@ -5,8 +5,8 @@ The bigfish.stack module includes functions to read data, preprocess them and
 build stack of images.
 """
 
-from .utils import (check_array, check_df, check_recipe, check_parameter,
-                    check_range_value,
+from .utils import (check_array, check_df, check_recipe, check_datamap,
+                    check_parameter, check_range_value,
                     get_margin_value, get_eps_float32)
 from .io import (read_image, read_dv, read_array, save_image, save_array)
 from .preprocess import (build_stacks, build_stack,
@@ -38,8 +38,8 @@ from .preparation import (split_from_background, build_image, get_coordinates,
 from .augmentation import augment
 
 
-_utils = ["check_array", "check_df", "check_recipe", "check_parameter",
-          "check_range_value",
+_utils = ["check_array", "check_df", "check_recipe", "check_datamap",
+          "check_parameter", "check_range_value",
           "get_margin_value", "get_eps_float32"]
 
 _io = ["read_image", "read_dv", "read_array", "save_image", "save_array"]

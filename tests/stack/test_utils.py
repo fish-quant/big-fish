@@ -40,19 +40,19 @@ def test_check_parameter():
                f=False, g=pd.Series(), h=pd.DataFrame())
 
     # ... and when it should raise an error
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         foo(a=(), b="bar", c=5, d=2.5, e=np.array([3, 6, 9]),
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         foo(a=[], b="bar", c=5.0, d=2.5, e=np.array([3, 6, 9]),
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         foo(a=[], b="bar", c=5, d=2, e=np.array([3, 6, 9]),
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         foo(a=[], b="bar", c=5, d=2.5, e=[3, 6, 9],
             f=True, g=pd.DataFrame(), h=pd.DataFrame())
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         foo(a=[], b="bar", c=5, d=2.5, e=np.zeros((3, 3)),
             f=True, g=pd.DataFrame(), h=pd.Series())
 
@@ -161,7 +161,7 @@ def test_check_recipe():
                          "ext": "tif",
                          "pattern": "opt_c_fov.ext"}
         assert stack.check_recipe(good_recipe_2, data_directory=None)
-        with pytest.raises(ValueError):
+        with pytest.raises(FileNotFoundError):
             stack.check_recipe(good_recipe_2, data_directory=tmp_dir)
 
         # cases without a 'pattern' key with a string value
@@ -174,9 +174,9 @@ def test_check_recipe():
                         "opt": "experience_1",
                         "ext": "tif",
                         "pattern": ["opt_c_fov.ext"]}
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             stack.check_recipe(bad_recipe_1, data_directory=None)
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             stack.check_recipe(bad_recipe_2, data_directory=None)
 
         # case with a wrong pattern (repetitive key)
@@ -199,7 +199,7 @@ def test_check_recipe():
                         "opt": 1,
                         "ext": "tif",
                         "pattern": "opt_c_fov.ext"}
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             stack.check_recipe(bad_recipe_4, data_directory=None)
         with pytest.raises(TypeError):
             stack.check_recipe(bad_recipe_5, data_directory=None)
@@ -300,6 +300,40 @@ def test_nb_fov():
                       "ext": "tif",
                       "pattern": "opt_c_fov.ext"}
         count_nb_fov(bad_recipe)
+
+
+def test_check_datamap():
+    # build a temporary directory with two files
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        path = os.path.join(tmp_dir, "experience_1_dapi_fov_1.tif")
+        with open(path, 'w') as f:
+            f.write("dapi file")
+        path = os.path.join(tmp_dir, "experience_1_smfish_fov_1.tif")
+        with open(path, 'w') as f:
+            f.write("smFISH file")
+
+        # test the consistency of the check function
+        recipe = {"fov": "fov_1",
+                  "c": ["dapi", "smfish"],
+                  "opt": "experience_1",
+                  "ext": "tif",
+                  "pattern": "opt_c_fov.ext"}
+        datamap = [(recipe, tmp_dir)]
+        assert stack.check_datamap(datamap)
+        datamap = [[recipe, tmp_dir]]
+        assert stack.check_datamap(datamap)
+        datamap = [(None, tmp_dir)]
+        with pytest.raises(TypeError):
+            stack.check_datamap(datamap)
+        datamap = [(recipe, 3)]
+        with pytest.raises(TypeError):
+            stack.check_datamap(datamap)
+        datamap = [(recipe, "/foo/bar")]
+        with pytest.raises(NotADirectoryError):
+            stack.check_datamap(datamap)
+        datamap = [(recipe, tmp_dir, None)]
+        with pytest.raises(ValueError):
+            stack.check_datamap(datamap)
 
 
 # ### Others ###

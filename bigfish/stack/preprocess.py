@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 
 from .io import read_image
-from .utils import (check_array, check_parameter, check_recipe,
+from .utils import (check_array, check_parameter, check_recipe, check_datamap,
                     check_range_value, fit_recipe,
                     get_path_from_recipe, get_nb_element_per_dimension,
                     count_nb_fov)
@@ -19,8 +19,6 @@ from .utils import (check_array, check_parameter, check_recipe,
 from skimage import img_as_ubyte, img_as_float32, img_as_float64, img_as_uint
 from skimage.exposure import rescale_intensity
 
-
-# TODO be able to build only one channel
 
 # ### Building stack ###
 
@@ -47,17 +45,17 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
     The recipe dictionary for one field of view takes the form:
 
         {
-         "fov": List[str], (optional)
-         "z": List[str],   (optional)
-         "c": List[str],   (optional)
-         "r": List[str],   (optional)
-         "ext": str,       (optional)
-         "opt": str,       (optional)
-         "pattern"
+         "fov": str or List[str], (optional)
+         "z": str or List[str],   (optional)
+         "c": str or List[str],   (optional)
+         "r": str or List[str],   (optional)
+         "ext": str,              (optional)
+         "opt": str,              (optional)
+         "pattern": str
          }
 
-    - A field of view is defined by an ID common to every images belonging to
-    the same field of view ("fov").
+    - A field of view is defined by a string common to every images belonging
+    to the same field of view ("fov").
     - At least every images are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
@@ -66,7 +64,6 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
-    - The fields "fov", "z", "c" and "r" can be strings instead of lists.
 
     Example 1. Let us assume 3-d images (zyx dimensions) saved as
     "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
@@ -116,6 +113,8 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
         Path of the input directory from where the tensor is built.
     recipe : dict
         Recipe used to build the tensor.
+    i_fov : int
+        Index of the fov to build (for a specific recipe).
 
     """
     # check parameters
@@ -123,6 +122,7 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
                     input_dimension=(int, type(None)),
                     sanity_check=bool,
                     return_origin=bool)
+    check_datamap(data_map)
 
     # load and generate tensors for each recipe-folder pair
     for recipe, input_folder in data_map:
@@ -130,32 +130,34 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
         # load and generate tensors for each fov stored in a recipe
         nb_fov = count_nb_fov(recipe)
         for i_fov in range(nb_fov):
-            tensor = build_stack(recipe, input_folder, input_dimension, i_fov,
-                                 sanity_check)
+            tensor = build_stack(recipe, input_folder,
+                                 input_dimension=input_dimension,
+                                 sanity_check=sanity_check,
+                                 i_fov=i_fov)
             if return_origin:
                 yield tensor, input_folder, recipe, i_fov
             else:
                 yield tensor
 
 
-def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
-                sanity_check=False):
-    """Build 5-d stack and normalize it.
+def build_stack(recipe, input_folder, input_dimension=None, sanity_check=False,
+                i_fov=0):
+    """Build a 5-d stack from the same field of view (fov).
 
     The recipe dictionary for one field of view takes the form:
 
         {
-         "fov": List[str], (optional)
-         "z": List[str],   (optional)
-         "c": List[str],   (optional)
-         "r": List[str],   (optional)
-         "ext": str,       (optional)
-         "opt": str,       (optional)
-         "pattern"
+         "fov": str or List[str], (optional)
+         "z": str or List[str],   (optional)
+         "c": str or List[str],   (optional)
+         "r": str or List[str],   (optional)
+         "ext": str,              (optional)
+         "opt": str,              (optional)
+         "pattern": str
          }
 
-    - A field of view is defined by an ID common to every images belonging to
-    the same field of view ("fov").
+    - A field of view is defined by a string common to every images belonging
+    to the same field of view ("fov").
     - At least every images are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
@@ -164,7 +166,6 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
-    - The fields "fov", "z", "c" and "r" can be strings instead of lists.
 
     Example 1. Let us assume 3-d images (zyx dimensions) saved as
     "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
@@ -240,31 +241,30 @@ def build_stack(recipe, input_folder, input_dimension=None, i_fov=0,
 
 
 def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
-    """Build a 5-d tensor from the same fields of view (fov).
+    """Build a 5-d tensor from the same field of view (fov).
 
     The function stacks a set of images using a recipe mapping the
     different images with the dimensions they represent. Each stacking step
     add a new dimension to the original tensors (eg. we stack 2-d images with
-    the same xy coordinates, but different depths to get a 3-d image). If the
-    files we need to build a new dimension are not included in the
-    recipe, an empty dimension is added. This operation is repeated until we
-    get a 5-d tensor. We first operate on the z dimension, then the
-    channels and eventually the rounds.
+    the same xy coordinates to get a 3-d image). If the files we need to build
+    a new dimension are not included in the recipe, an empty dimension is
+    added. This operation is repeated until we get a 5-d tensor. We first
+    operate on the z dimension, then the channels and eventually the rounds.
 
     The recipe dictionary for one field of view takes the form:
 
         {
-         "fov": List[str], (optional)
-         "z": List[str],   (optional)
-         "c": List[str],   (optional)
-         "r": List[str],   (optional)
-         "ext": str,       (optional)
-         "opt": str,       (optional)
-         "pattern"
+         "fov": str or List[str], (optional)
+         "z": str or List[str],   (optional)
+         "c": str or List[str],   (optional)
+         "r": str or List[str],   (optional)
+         "ext": str,              (optional)
+         "opt": str,              (optional)
+         "pattern": str
          }
 
-    - A field of view is defined by an ID common to every images belonging to
-    the same field of view ("fov").
+    - A field of view is defined by a string common to every images belonging
+    to the same field of view ("fov").
     - At least every images are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
@@ -273,36 +273,6 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
-    - The fields "fov", "z", "c" and "r" can be strings instead of lists.
-
-    Example 1. Let us assume 3-d images (zyx dimensions) saved as
-    "r03c03f01_405.tif", "r03c03f01_488.tif" and "r03c03f01_561.tif". The first
-    morpheme "r03c03f01" uniquely identifies a 3-d field of view. The second
-    morphemes "405", "488" and "561" identify three different channels we
-    want to stack. There is no round in this experiment. We need to return a
-    tensor with shape (1, 3, z, y, x). Thus, a valid recipe would be:
-
-        {
-         "fov": "r03c03f01",
-         "c": ["405", "488", "561"],
-         "ext": "tif"
-         "pattern": "fov_c.ext"
-         }
-
-    Example 2. Let us assume 2-d images (yx dimensions) saved as
-    "dapi_1.TIFF", "cy3_1.TIFF", "GFP_1.TIFF", "dapi_2.TIFF", "cy3_2.TIFF" and
-    "GFP_2.TIFF". The first morphemes "dapi", "cy3" and "GFP" identify
-    channels. The second morphemes "1" and "2" identify two different fields of
-    view. There is no round and no z dimension in this experiment. We can
-    build two tensors with shape (1, 3, 1, y, x). Thus, a valid recipe would
-    be:
-
-        {
-         "fov": ["1", "2"],
-         "c": ["dapi", "cy3", "GFP"],
-         "ext": "TIFF"
-         "pattern": "c_fov.ext"
-         }
 
     Parameters
     ----------
@@ -319,8 +289,8 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
 
     Returns
     -------
-    stack : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    stack : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # complete the recipe with unused morphemes
@@ -347,8 +317,8 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
         stack = _build_stack_from_5d(recipe, input_folder, fov=i_fov)
     else:
         raise ValueError("Files do not have the right number of dimensions: "
-                         "{0}. The files we stack should be in 2-d, 3-d, 4-d "
-                         "or 5-d.".format(input_dimension))
+                         "{0}. The files we stack should have between 2 and "
+                         "5 dimensions.".format(input_dimension))
 
     return stack
 
@@ -375,8 +345,8 @@ def _build_stack_from_2d(recipe, input_folder, fov=0, nb_r=1, nb_c=1, nb_z=1):
 
     Returns
     -------
-    tensor_5d : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor_5d : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
 
@@ -430,8 +400,8 @@ def _build_stack_from_3d(recipe, input_folder, fov=0, nb_r=1, nb_c=1):
 
     Returns
     -------
-    tensor_5d : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor_5d : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # load and stack successively channel elements then round elements
@@ -474,8 +444,8 @@ def _build_stack_from_4d(recipe, input_folder, fov=0, nb_r=1):
 
     Returns
     -------
-    tensor_5d : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor_5d : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # load each file from a new round element and stack them
@@ -507,8 +477,8 @@ def _build_stack_from_5d(recipe, input_folder, fov=0):
 
     Returns
     -------
-    tensor_5d : np.ndarray, np.uint
-        Tensor with shape (r, c, z, y, x).
+    tensor_5d : np.ndarray
+        Tensor with shape (round, channel, z, y, x).
 
     """
     # the recipe can only contain one file with a 5-d tensor per fov

@@ -257,7 +257,7 @@ def check_range_value(array, min_=None, max_=None):
 def check_recipe(recipe, data_directory=None):
     """Check and validate a recipe.
 
-    Checking a recipe consist in validating its filename pattern and the
+    Checking a recipe consists in validating its filename pattern and the
     content of the dictionary.
 
     Parameters
@@ -273,7 +273,7 @@ def check_recipe(recipe, data_directory=None):
     Returns
     -------
     _ : bool
-        Assert if the array is well formatted.
+        Assert if the recipe is well formatted.
 
     """
     # check parameters
@@ -282,12 +282,12 @@ def check_recipe(recipe, data_directory=None):
 
     # check the filename pattern
     if "pattern" not in recipe:
-        raise ValueError("A recipe should have a filename pattern "
-                         "('pattern' keyword).")
+        raise KeyError("A recipe should have a filename pattern "
+                       "('pattern' keyword).")
     recipe_pattern = recipe["pattern"]
     if not isinstance(recipe_pattern, str):
-        raise ValueError("'pattern' should be a string, not a {0}."
-                         .format(type(recipe_pattern)))
+        raise TypeError("'pattern' should be a string, not a {0}."
+                        .format(type(recipe_pattern)))
 
     # count the different dimensions to combinate in the recipe (among
     # 'fov', 'r', 'c' and 'z')
@@ -301,9 +301,9 @@ def check_recipe(recipe, data_directory=None):
     # check keys and values of the recipe
     for key, value in recipe.items():
         if key not in ['fov', 'r', 'c', 'z', 'ext', 'opt', 'pattern']:
-            raise ValueError("The recipe can only contain the keys 'fov', "
-                             "'r', 'c', 'z', 'ext', 'opt' or 'pattern'. "
-                             "Not '{0}'.".format(key))
+            raise KeyError("The recipe can only contain the keys 'fov', 'r', "
+                           "'c', 'z', 'ext', 'opt' or 'pattern'. Not '{0}'."
+                           .format(key))
         if not isinstance(value, (list, str)):
             raise TypeError("A recipe can only contain lists or strings, "
                             "not {0}.".format(type(value)))
@@ -311,8 +311,8 @@ def check_recipe(recipe, data_directory=None):
     # check that requested files exist
     if data_directory is not None:
         if not os.path.isdir(data_directory):
-            raise ValueError("Directory does not exist: {0}"
-                             .format(data_directory))
+            raise NotADirectoryError("Directory does not exist: {0}"
+                                     .format(data_directory))
         recipe = fit_recipe(recipe)
         nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
         nb_fov = count_nb_fov(recipe)
@@ -323,8 +323,8 @@ def check_recipe(recipe, data_directory=None):
                         path = get_path_from_recipe(recipe, data_directory,
                                                     fov=fov, r=r, c=c, z=z)
                         if not os.path.isfile(path):
-                            raise ValueError("File does not exist: {0}"
-                                             .format(path))
+                            raise FileNotFoundError("File does not exist: {0}"
+                                                    .format(path))
 
     return True
 
@@ -542,6 +542,42 @@ def count_nb_fov(recipe):
         return len(recipe["fov"])
 
 
+def check_datamap(data_map):
+    """Check and validate a data map.
+
+    Checking a data map consists in validating the recipe-folder pairs.
+
+    Parameters
+    ----------
+    data_map : List[tuple]
+        Map between input directories and recipes.
+
+    Returns
+    -------
+    _ : bool
+        Assert if the data map is well formatted.
+
+    """
+    check_parameter(data_map=list)
+    for pair in data_map:
+        if not isinstance(pair, (tuple, list)):
+            raise TypeError("A data map is a list with tuples or lists. "
+                            "Not {0}".format(type(pair)))
+        if len(pair) != 2:
+            raise ValueError("Elements of a data map are tuples or lists that "
+                             "map a recipe (dict) to an input directory "
+                             "(string). Here {0} elements are given {1}"
+                             .format(len(pair), pair))
+        (recipe, input_folder) = pair
+        if not isinstance(input_folder, str):
+            raise TypeError("A data map map a recipe (dict) to an input "
+                            "directory (string). Not ({0}, {1})"
+                            .format(type(recipe), type(input_folder)))
+        check_recipe(recipe, data_directory=input_folder)
+
+    return True
+
+
 # ### Sanity checks parameters ###
 
 def check_parameter(**kwargs):
@@ -573,8 +609,8 @@ def check_parameter(**kwargs):
                 target = "(" + ", ".join(target) + ")"
             else:
                 target = expected_dtype.__name__
-            raise ValueError("Parameter {0} should be a {1}. It is a {2} "
-                             "instead.".format(arg, target, actual))
+            raise TypeError("Parameter {0} should be a {1}. It is a {2} "
+                            "instead.".format(arg, target, actual))
 
     return True
 
