@@ -35,7 +35,7 @@ from .preparation import (split_from_background, build_image, get_coordinates,
                           format_experimental_data, get_label_encoder,
                           remove_transcription_site_bis, filter_data,
                           balance_data, get_gene_encoder)
-from .augmentation import augment
+from .augmentation import augment_2d
 
 
 _utils = ["check_array", "check_df", "check_recipe", "check_datamap",
@@ -68,7 +68,7 @@ _postprocess = ["remove_transcription_site",
                 "complete_coord_boundaries", "from_coord_to_frame",
                 "from_coord_to_surface"]
 
-_augmentation = ["augment"]
+_augmentation = ["augment_2d"]
 
 _preparation = ["split_from_background", "build_image", "get_coordinates",
                 "get_distance_layers", "get_surface_layers", "build_batch",

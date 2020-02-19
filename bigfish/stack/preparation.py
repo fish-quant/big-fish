@@ -12,7 +12,7 @@ import pandas as pd
 from scipy import ndimage as ndi
 
 from .utils import get_margin_value
-from .augmentation import augment
+from .augmentation import augment_2d
 from .preprocess import cast_img_float32
 from .filter import mean_filter
 
