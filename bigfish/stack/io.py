@@ -13,7 +13,8 @@ import warnings
 import numpy as np
 
 from skimage import io
-from .utils import check_array, check_parameter
+from .utils import check_array
+from .utils import check_parameter
 
 
 # ### Read ###

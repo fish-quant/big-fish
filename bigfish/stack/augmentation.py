@@ -5,7 +5,8 @@ Functions to augment the data (images or coordinates).
 """
 
 import numpy as np
-from .preprocess import check_parameter, check_array
+from .preprocess import check_parameter
+from .preprocess import check_array
 
 
 def augment_2d(image):
