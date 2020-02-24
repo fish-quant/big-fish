@@ -11,12 +11,20 @@ import warnings
 import numpy as np
 
 from .io import read_image
-from .utils import (check_array, check_parameter, check_recipe, check_datamap,
-                    check_range_value, fit_recipe,
-                    get_path_from_recipe, get_nb_element_per_dimension,
-                    count_nb_fov)
+from .utils import check_array
+from .utils import check_parameter
+from .utils import check_recipe
+from .utils import check_datamap
+from .utils import check_range_value
+from .utils import fit_recipe
+from .utils import get_path_from_recipe
+from .utils import get_nb_element_per_dimension
+from .utils import count_nb_fov
 
-from skimage import img_as_ubyte, img_as_float32, img_as_float64, img_as_uint
+from skimage import img_as_ubyte
+from skimage import img_as_float32
+from skimage import img_as_float64
+from skimage import img_as_uint
 from skimage.exposure import rescale_intensity
 
 
