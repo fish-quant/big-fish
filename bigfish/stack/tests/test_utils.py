@@ -11,11 +11,14 @@ import pytest
 import tempfile
 
 import bigfish.stack as stack
-from bigfish.stack.utils import (fit_recipe, get_path_from_recipe,
-                                 get_nb_element_per_dimension, count_nb_fov)
 
 import numpy as np
 import pandas as pd
+
+from bigfish.stack.utils import fit_recipe
+from bigfish.stack.utils import get_path_from_recipe
+from bigfish.stack.utils import get_nb_element_per_dimension
+from bigfish.stack.utils import count_nb_fov
 
 
 # ### Test sanity check functions ###

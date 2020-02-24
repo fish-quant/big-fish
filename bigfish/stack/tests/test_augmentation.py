@@ -11,9 +11,14 @@ import pytest
 import numpy as np
 import bigfish.stack as stack
 
-from bigfish.stack.augmentation import (
-    _identity, _flip_h, _flip_v, _transpose, _transpose_inverse, _rotation_90,
-    _rotation_180, _rotation_270)
+from bigfish.stack.augmentation import _identity
+from bigfish.stack.augmentation import _flip_h
+from bigfish.stack.augmentation import _flip_v
+from bigfish.stack.augmentation import _transpose
+from bigfish.stack.augmentation import _transpose_inverse
+from bigfish.stack.augmentation import _rotation_90
+from bigfish.stack.augmentation import _rotation_180
+from bigfish.stack.augmentation import _rotation_270
 
 from numpy.testing import assert_array_equal
 
