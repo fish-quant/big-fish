@@ -78,9 +78,8 @@ def read_dv(path, sanity_check=False):
     # read video file
     video = mrc.imread(path)
 
-    # metadata can be read running 'tensor.Mrc.info()'
-
     # check the output video
+    # metadata can be read running 'tensor.Mrc.info()'
     if sanity_check:
         check_array(video,
                     dtype=[np.uint16, np.int16, np.int32, np.float32],
@@ -89,40 +88,59 @@ def read_dv(path, sanity_check=False):
     return video
 
 
-def read_array(path, sanity_check=False):
+def read_array(path):
     """Read a numpy array with 'npy' extension.
 
     Parameters
     ----------
-    path
-    sanity_check
+    path : str
+        Path of the array to read.
 
     Returns
     -------
-    array : ndarray, np.uint or np.int
+    array : ndarray
         Array read.
 
     """
     # check path
-    check_parameter(path=str,
-                    sanity_check=bool)
+    check_parameter(path=str)
     if ".npy" not in path:
         path += ".npy"
 
     # read array file
     array = np.load(path)
 
-    # check the output array
-    if sanity_check:
-        check_array(array,
-                    dtype=[np.uint8, np.uint16, np.uint32,
-                           np.int8, np.int16, np.int32, np.int64,
-                           np.float16, np.float32, np.float64,
-                           bool],
-                    ndim=[2, 3, 4, 5],
-                    allow_nan=False)
-
     return array
+
+
+def read_compressed(path, verbose=False):
+    """Read a NpzFile object with 'npz' extension.
+
+    Parameters
+    ----------
+    path : str
+        Path of the file to read.
+    verbose : bool
+        Return names of the different compressed objects.
+
+    Returns
+    -------
+    data : NpzFile object
+        NpzFile read.
+
+    """
+    # check path
+    check_parameter(path=str,
+                    verbose=bool)
+    if ".npz" not in path:
+        path += ".npz"
+
+    # read array file
+    data = np.load(path)
+    if verbose:
+        print("Compressed objects: {0} \n".format(", ".join(data.files)))
+
+    return data
 
 
 # ### Write ###

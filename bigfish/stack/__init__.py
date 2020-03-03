@@ -17,6 +17,7 @@ from .utils import get_eps_float32
 from .io import read_image
 from .io import read_dv
 from .io import read_array
+from .io import read_compressed
 from .io import save_image
 from .io import save_array
 
@@ -80,6 +81,7 @@ _io = [
     "read_image",
     "read_dv",
     "read_array",
+    "read_compressed",
     "save_image",
     "save_array"]
 
