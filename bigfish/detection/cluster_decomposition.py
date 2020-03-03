@@ -17,6 +17,7 @@ from skimage.measure import regionprops
 
 # TODO complete documentation methods
 # TODO add sanity check functions
+# TODO problem: can return less mRNAs than before decomposition
 
 # ### Gaussian function ###
 
@@ -305,6 +306,7 @@ def build_reference_spot_3d(image, spots, radius, method="median"):
         l_reference_spot.append(image_spot)
 
     # if no spot where detected
+    # TODO problem when it returns None
     if len(l_reference_spot) == 0:
         return None
 
@@ -1153,6 +1155,7 @@ def run_decomposition(image, spots, radius, min_area=2, resolution_z=300,
         return spots_out_cluster, spots_in_cluster, cluster, reference_spot
 
     # build a reference median spot
+    # TODO case where no reference spots are computed
     reference_spot = build_reference_spot_3d(
         image,
         spots,
