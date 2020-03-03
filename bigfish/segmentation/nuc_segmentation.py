@@ -16,29 +16,20 @@ from skimage.morphology import (reconstruction, binary_dilation,
 # TODO rename functions
 # TODO complete documentation methods
 # TODO add sanity functions
+# TODO remove the background filtering ?
 
 
-def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
-                       threshold=2, small_object_size=2000):
+def filtered_threshold(image, threshold=2, small_object_size=2000):
     """Segment a 2-d image to discriminate object from background.
 
-    1) Compute background noise applying a large mean filter.
-    2) remove this background from original image, clipping negative values
-    to 0.
-    3) Apply a threshold in the image
-    4) Remove object with a small pixel area.
-    5) Fill in holes in the segmented objects.
+    1) Apply a threshold in the image.
+    2) Remove object with a small pixel area.
+    3) Fill in holes in the segmented objects.
 
     Parameters
     ----------
     image : np.ndarray, np.uint
         A 2-d image to segment with shape (y, x).
-    kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
-        The size of the kernel. For the rectangle we expect two integers
-        (width, height).
     threshold : int
         Pixel intensity threshold used to discriminate background from nuclei.
     small_object_size : int
@@ -50,11 +41,6 @@ def filtered_threshold(image, kernel_shape="disk", kernel_size=200,
         Binary 2-d image with shape (y, x).
 
     """
-    # remove background noise from image
-    image = stack.remove_background_mean(image,
-                                         kernel_shape=kernel_shape,
-                                         kernel_size=kernel_size)
-
     # discriminate nuclei from background, applying a threshold.
     image_segmented = image >= threshold
 
