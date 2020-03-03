@@ -136,3 +136,24 @@ def test_npy(shape, dtype):
         tensor = stack.read_array(path)
         assert_array_equal(test, tensor)
         assert test.dtype == tensor.dtype
+
+
+@pytest.mark.parametrize("shape", [
+    (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
+@pytest.mark.parametrize("dtype", [
+    np.uint8, np.uint16, np.uint32,
+    np.int8, np.int16, np.int32, np.int64,
+    np.float16, np.float32, np.float64, bool])
+def test_npz(shape, dtype):
+    # build a temporary directory and save tensors inside
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        test_1 = np.zeros(shape, dtype=dtype)
+        test_2 = np.ones(shape, dtype=dtype)
+        path = os.path.join(tmp_dir, "test.npz")
+        np.savez(path, test_1=test_1, test_2=test_2)
+        data = stack.read_compressed(path)
+        assert data.files == ["test_1", "test_2"]
+        assert_array_equal(test_1, data["test_1"])
+        assert_array_equal(test_2, data["test_2"])
+        assert test_1.dtype == data["test_1"].dtype
+        assert test_2.dtype == data["test_2"].dtype
