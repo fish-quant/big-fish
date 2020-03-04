@@ -9,8 +9,8 @@ dist/
 big_fish.egg-info/
 
 # Notebooks
-notebooks/old
-notebooks/.ipynb_checkpoints
+examples/old
+examples/.ipynb_checkpoints
 
 # Cache
 __pycache__/
