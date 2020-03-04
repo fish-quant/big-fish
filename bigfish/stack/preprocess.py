@@ -27,6 +27,8 @@ from skimage import img_as_float64
 from skimage import img_as_uint
 from skimage.exposure import rescale_intensity
 
+# TODO only read in memory on or several channel (and not the entire image)
+
 
 # ### Building stack ###
 
@@ -107,9 +109,10 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
     data_map : List[tuple]
         Map between input directories and recipes.
     input_dimension : int
-        Number of dimensions of the loaded files.
+        Number of dimensions of the loaded files. Can speed up the function if
+        provided.
     sanity_check : bool
-        Check the validity of the loaded tensor.
+        Check the validity of the loaded tensor. Can slow down the function.
     return_origin : bool
         Return the input directory and the recipe used to build the stack.
 
@@ -213,11 +216,12 @@ def build_stack(recipe, input_folder, input_dimension=None, sanity_check=False,
     input_folder : str
         Path of the folder containing the images.
     input_dimension : int
-        Number of dimensions of the loaded files.
+        Number of dimensions of the loaded files. Can speed up the function if
+        provided.
     i_fov : int
         Index of the fov to build.
     sanity_check : bool
-        Check the validity of the loaded tensor.
+        Check the validity of the loaded tensor. Can slow down the function.
 
     Returns
     -------
@@ -532,9 +536,10 @@ def build_stack_no_recipe(paths, input_dimension=None, sanity_check=False):
     paths : List[str]
         List of the paths to stack.
     input_dimension : str
-        Number of dimensions of the loaded files.
+        Number of dimensions of the loaded files. Can speed up the function if
+        provided.
     sanity_check : bool
-        Check the validity of the loaded tensor
+        Check the validity of the loaded tensor. Can slow down the function.
 
     Returns
     -------
