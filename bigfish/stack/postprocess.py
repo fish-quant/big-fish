@@ -13,6 +13,10 @@ from .utils import check_array, check_parameter, get_margin_value
 from skimage.measure import regionprops, find_contours
 from skimage.draw import polygon_perimeter
 
+# TODO make extraction foci optional
+# TODO extract cell-RNAs matrix
+# TODO extract transcription sites
+
 
 # ### Transcription sites ###
 
