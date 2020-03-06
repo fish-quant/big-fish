@@ -233,7 +233,7 @@ def log_filter(image, sigma):
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions.
 
     Returns
     -------
@@ -288,7 +288,7 @@ def gaussian_filter(image, sigma, allow_negative=False):
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions.
     allow_negative : bool
         Allow negative values after the filtering or clip them to 0. Not
         compatible with unsigned integer images.
@@ -381,7 +381,7 @@ def remove_background_gaussian(image, sigma):
         Image to process with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions.
 
     Returns
     -------
@@ -412,10 +412,12 @@ def dilation_filter(image, kernel_shape=None, kernel_size=None):
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
+        'rectangle' or 'square'). If None, use cross-shaped structuring
+        element (connectivity=1).
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (height, width). If None, use cross-shaped structuring element
+        (connectivity=1).
 
     Returns
     -------
@@ -456,10 +458,12 @@ def erosion_filter(image, kernel_shape=None, kernel_size=None):
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
+        'rectangle' or 'square'). If None, use cross-shaped structuring
+        element (connectivity=1).
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (height, width). If None, use cross-shaped structuring element
+        (connectivity=1).
 
     Returns
     -------
