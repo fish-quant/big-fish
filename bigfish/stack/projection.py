@@ -63,7 +63,7 @@ def mean_projection(tensor, return_float=False):
     if return_float:
         projected_tensor = tensor.mean(axis=0)
     else:
-        projected_tensor = tensor.mean(axis=0, dtype=tensor.dtype)
+        projected_tensor = tensor.mean(axis=0).astype(tensor.dtype)
 
     return projected_tensor
 
@@ -315,8 +315,10 @@ def focus_measurement(image, neighborhood_size=30, cast_8bit=False):
                 allow_nan=False)
     check_parameter(neighborhood_size=int)
 
-    # cast image in np.uint8
-    if cast_8bit:
+    # cast image in np.uint
+    if image.dtype == np.uint8:
+        pass
+    elif cast_8bit:
         image = cast_img_uint8(image, catch_warning=True)
     else:
         image = cast_img_uint16(image)
@@ -435,7 +437,7 @@ def get_in_focus_indices(global_focus, proportion):
     Returns
     -------
     indices_to_keep : List[int]
-        Sorted indices of slices with the best focus score (decreasing score).
+        Indices of slices with the best focus score.
 
     """
     # check parameters
@@ -453,6 +455,7 @@ def get_in_focus_indices(global_focus, proportion):
     # select the best z-slices
     n = min(n, global_focus.size)
     indices_to_keep = list(np.argsort(-global_focus)[:n])
+    indices_to_keep = sorted(indices_to_keep)
 
     return indices_to_keep
 

@@ -12,6 +12,7 @@ from .plot_coordinates import (plot_volume, plot_rna, plot_distribution_rna,
                                plot_cell_coordinates, plot_layers_coordinates,
                                plot_cell)
 from .plot_classification import plot_confusion_matrix, plot_2d_projection
+from .plot_quality import plot_sharpness
 
 
 _images = ["plot_yx", "plot_images", "plot_channels_2d",
@@ -25,4 +26,6 @@ _coordinates = ["plot_volume", "plot_rna", "plot_distribution_rna",
 
 _classification = ["plot_confusion_matrix", "plot_2d_projection"]
 
-__all__ = _images + _coordinates + _classification
+_quality = ["plot_sharpness"]
+
+__all__ = _images + _coordinates + _classification + _quality
