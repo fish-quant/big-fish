@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions used to format and clean any intermediate results loaded in or

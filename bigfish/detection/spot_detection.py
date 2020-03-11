@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Class and functions to detect RNA spots in 2-d and 3-d.
@@ -15,6 +17,7 @@ from skimage.measure import label
 # TODO complete documentation methods
 # TODO add sanity check functions
 # TODO improve documentation with optional output
+# TODO add function to calibrate psf
 
 # ### LoG detection ###
 
@@ -96,6 +99,7 @@ def local_maximum_detection(image, minimum_distance):
     stack.check_parameter(minimum_distance=(float, int))
 
     # compute the kernel size (centered around our pixel because it is uneven)
+    # TODO use tuple with a different size for each axis
     kernel_size = int(2 * minimum_distance + 1)
 
     # apply maximum filter to the original image
