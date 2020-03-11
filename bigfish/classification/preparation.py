@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 from scipy import ndimage as ndi
 
-from .utils import get_margin_value
-from .augmentation import augment_2d
-from .preprocess import cast_img_float32
-from .filter import mean_filter
+from bigfish.stack.utils import get_margin_value
+from bigfish.stack.augmentation import augment_2d
+from bigfish.stack.preprocess import cast_img_float32
+from bigfish.stack.filter import mean_filter
 
 from skimage.draw import polygon_perimeter
 from sklearn.preprocessing import LabelEncoder
