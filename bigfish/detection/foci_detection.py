@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions to fit gaussian functions to the detected RNA spots, especially in

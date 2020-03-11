@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions to augment the data (images or coordinates).

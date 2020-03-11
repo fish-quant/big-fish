@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 The bigfish.stack module includes functions to read data, preprocess them and
