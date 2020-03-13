@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 # TODO remove useless packages (numba and umap)
 
 # Package meta-data.
-VERSION = 0.0.1
+VERSION = 1.1
 DESCRIPTION = 'Toolbox for cell FISH images.'
 
 # Package abstract dependencies
