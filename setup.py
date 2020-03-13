@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 # Package meta-data.
 VERSION = 1.0
-DESCRIPTION = 'Toolbox for cell FISH images.'
+DESCRIPTION = 'Toolbox for the analysis of smFISH images.'
 
 # Package abstract dependencies
 REQUIRES = [
