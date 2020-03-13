@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 # TODO remove useless packages (numba and umap)
 
 # Package meta-data.
-VERSION = 1.1
+VERSION = 1.0
 DESCRIPTION = 'Toolbox for cell FISH images.'
 
 # Package abstract dependencies
@@ -58,7 +58,7 @@ setup(name='big-fish',
       author='Arthur Imbert',
       author_email='arthur.imbert.pro@gmail.com',
       url='https://github.com/fish-quant/big-fish',
-      packages=find_packages(where='bigfish'),
+      packages=find_packages(include=['bigfish']),
       license='MIT',
       python_requires='>=3.6.0',
       install_requires=REQUIRES,
