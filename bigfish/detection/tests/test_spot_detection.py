@@ -3,15 +3,9 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.filter submodule.
+Unitary tests for bigfish.stack.spot_detection submodule.
 """
 
-import pytest
-
-import numpy as np
-import bigfish.stack as stack
-
-from bigfish.stack.filter import _define_kernel
-
-from numpy.testing import assert_array_equal
-from numpy.testing import assert_allclose
+# TODO test bigfish.detection.spot_detector
+# TODO test bigfish.detection.local_maximum_detection
+# TODO test bigfish.detection.spots_thresholding

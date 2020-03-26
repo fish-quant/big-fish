@@ -7,17 +7,14 @@ The bigfish.detection module includes function to detect RNA spot in 2-d and
 3-d.
 """
 
-from .spot_detection import log_lm
+from .utils import get_sigma
+from .utils import get_radius
+from .utils import compute_snr
+from .utils import from_threshold_to_snr
+
+from .spot_detection import spot_detector
 from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
-from .spot_detection import compute_snr
-from .spot_detection import from_threshold_to_snr
-from .spot_detection import get_sigma
-from .spot_detection import log_cc
-from .spot_detection import get_cc
-from .spot_detection import log_lm
-from .spot_detection import log_lm
-from .spot_detection import log_lm
 
 from .cluster_decomposition import gaussian_3d
 from .cluster_decomposition import precompute_erf
@@ -36,16 +33,16 @@ from .foci_detection import cluster_spots
 from .foci_detection import extract_foci
 
 
-_spots = [
-    "log_lm",
-    "local_maximum_detection",
-    "spots_thresholding",
-    "compute_snr",
-    "from_threshold_to_snr",
+_utils = [
     "get_sigma",
-    "log_cc",
-    "get_cc",
-    "filter_cc"]
+    "get_radius",
+    "compute_snr",
+    "from_threshold_to_snr"]
+
+_spots = [
+    "spot_detector",
+    "local_maximum_detection",
+    "spots_thresholding"]
 
 _clusters = [
     "gaussian_3d",
@@ -65,4 +62,4 @@ _foci = [
     "cluster_spots",
     "extract_foci"]
 
-__all__ = _spots + _clusters + _foci
+__all__ = _utils + _spots + _clusters + _foci
