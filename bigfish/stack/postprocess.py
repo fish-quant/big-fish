@@ -18,6 +18,7 @@ from skimage.draw import polygon_perimeter
 # TODO make extraction foci optional
 # TODO extract cell-RNAs matrix
 # TODO extract transcription sites
+# TODO decompose and clean extraction step
 
 
 # ### Transcription sites ###
