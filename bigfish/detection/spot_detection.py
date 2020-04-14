@@ -6,15 +6,17 @@
 Class and functions to detect RNA spots in 2-d and 3-d.
 """
 
-import bigfish.stack as stack
-
 import scipy.ndimage as ndi
 import numpy as np
+
+import bigfish.stack as stack
+from .utils import get_sigma
 
 
 # ### LoG detection ###
 
-def spot_detector(image, sigma, threshold=2):
+def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
+                 psf_z=None, psf_yx=200):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -28,12 +30,18 @@ def spot_detector(image, sigma, threshold=2):
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    sigma : int, float or Tuple(float)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. It approximates
-        the standard deviation (in pixel) of the spots we want to detect.
     threshold : float or int
         A threshold to discriminate relevant spots from noisy blobs.
+    voxel_size_z : int or float
+        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+    psf_z : int or float
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer.
 
     Returns
     -------
@@ -43,7 +51,24 @@ def spot_detector(image, sigma, threshold=2):
 
     """
     # check parameters
-    stack.check_parameter(threshold=(float, int))
+    stack.check_parameter(threshold=(float, int),
+                          voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float))
+
+    # compute sigma and radius
+    ndim = image.ndim
+    if ndim == 3 and voxel_size_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'voxel_size_z' parameter is missing.".format(ndim))
+    if ndim == 3 and psf_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'psf_z' parameter is missing.".format(ndim))
+    if ndim == 2:
+        voxel_size_z = None
+        psf_z = None
+    sigma = get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
 
     # cast image in np.float and apply LoG filter
     image_filtered = stack.log_filter(image, sigma)
@@ -88,14 +113,14 @@ def local_maximum_detection(image, sigma):
     # compute the kernel size (centered around our pixel because it is uneven)
     if isinstance(sigma, (int, float)):
         sigma = tuple(sigma) * image.ndim
-        sigma = np.round(sigma).astype(image.dtype)
+        sigma = np.ceil(sigma).astype(image.dtype)
     elif image.ndim != len(sigma):
         raise ValueError("'sigma' should be a scalar or a tuple with one "
                          "value per dimension. Here the image has {0} "
                          "dimensions and sigma {1} elements."
                          .format(image.ndim, len(sigma)))
     else:
-        sigma = np.round(sigma).astype(image.dtype)
+        sigma = np.ceil(sigma).astype(image.dtype)
     kernel_size = 2 * sigma + 1
 
     # apply maximum filter to the original image
@@ -111,7 +136,7 @@ def spots_thresholding(image, mask_local_max, threshold):
     """Filter detected spots and get coordinates of the remaining spots.
 
     In order to make the thresholding robust, it should be applied to a
-    denoised image.
+    filtered image.
 
     Parameters
     ----------
@@ -148,4 +173,3 @@ def spots_thresholding(image, mask_local_max, threshold):
     spots = np.column_stack(spots)
 
     return spots, mask
-

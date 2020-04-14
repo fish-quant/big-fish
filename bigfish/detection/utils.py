@@ -10,6 +10,7 @@ import bigfish.stack as stack
 import numpy as np
 
 # TODO add function to calibrate psf
+# TODO add function to compute signal-to-noise ratio
 
 
 # ### Signal-to-Noise ratio ###
@@ -141,46 +142,46 @@ def from_threshold_to_snr(image, sigma, mask, threshold=2000,
 
 # ### Utilities ###
 
-def get_sigma(voxel_size_z=300, voxel_size_yx=103, psf_z=350, psf_yx=150):
+def get_sigma(voxel_size_z=300, voxel_size_yx=100, psf_z=400, psf_yx=200):
     """Compute the standard deviation of the PSF of the spots.
 
     Parameters
     ----------
-    voxel_size_z : float
+    voxel_size_z : int or float
         Height of a voxel, along the z axis, in nanometer.
-    voxel_size_yx : float
+    voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    psf_yx : int
-        Theoretical size of the PSF emitted by a spot in
-        the yx plan, in nanometer.
-    psf_z : int
-        Theoretical size of the PSF emitted by a spot in
-        the z plan, in nanometer.
+    psf_z : int or float
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
 
     Returns
     -------
-    sigma_z : float
-        Standard deviation of the PSF, along the z axis, in pixel.
-    sigma_y : float
-        Standard deviation of the PSF, along the y axis, in pixel.
-    sigma_x : float
-        Standard deviation of the PSF, along the x axis, in pixel.
+    sigma : Tuple[float]
+        Standard deviations in pixel of the PSF, one element per dimension.
 
     """
     # check parameters
-    stack.check_parameter(voxel_size_z=int,
-                          voxel_size_yx=int,
-                          psf_z=int,
-                          psf_yx=int)
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float))
 
     # compute sigma
-    sigma_z = psf_z / voxel_size_z
     sigma_yx = psf_yx / voxel_size_yx
 
-    return sigma_z, sigma_yx, sigma_yx
+    if voxel_size_z is None or psf_z is None:
+        return sigma_yx, sigma_yx
+
+    else:
+        sigma_z = psf_z / voxel_size_z
+        return sigma_z, sigma_yx, sigma_yx
 
 
-def get_radius(sigma, is_volume=True):
+def get_radius(voxel_size_z=300, voxel_size_yx=100, psf_z=400, psf_yx=200):
     """Approximate the radius of the detected spot.
 
     We use the formula:
@@ -192,12 +193,16 @@ def get_radius(sigma, is_volume=True):
 
     Parameters
     ----------
-    sigma : int, float or Tuple(float)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. It approximates
-        the standard deviation (in pixel) of the spots we want to detect.
-    is_volume : bool
-        Assume a 3-d or a 2-d spot.
+    voxel_size_z : int or float
+        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
 
     Returns
     -------
@@ -205,23 +210,12 @@ def get_radius(sigma, is_volume=True):
         Radius in pixels of the detected spots, one element per dimension.
 
     """
-    # check parameters
-    stack.check_parameter(sigma=(float, int, tuple),
-                          is_volume=bool)
+    # compute sigma
+    sigma = get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
 
     # compute radius
-    image_dim = 3 if is_volume else 2
-    if isinstance(sigma, (int, float)):
-        radius = np.sqrt(image_dim) * sigma
-        radius = tuple(radius) * image_dim
-    elif image_dim != len(sigma):
-        raise ValueError("'sigma' should be a scalar or a tuple with one "
-                         "value per dimension. Here the image has {0} "
-                         "dimensions and sigma {1} elements."
-                         .format(image_dim, len(sigma)))
-    else:
-        radius = [np.sqrt(image_dim) * sigma_ for sigma_ in sigma]
-        radius = tuple(radius)
+    radius = [np.sqrt(len(sigma)) * sigma_ for sigma_ in sigma]
+    radius = tuple(radius)
 
     return radius
 

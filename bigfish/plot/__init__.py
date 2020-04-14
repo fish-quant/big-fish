@@ -7,7 +7,8 @@ The bigfish.plot module includes function to plot images and simulated data.
 from .plot_images import (plot_yx, plot_channels_2d, plot_segmentation,
                           plot_images, plot_spot_detection,
                           plot_illumination_surface,
-                          plot_segmentation_boundary, plot_foci_detection)
+                          plot_segmentation_boundary, plot_foci_detection,
+                          plot_reference_spot)
 from .plot_coordinates import (plot_volume, plot_rna, plot_distribution_rna,
                                plot_cell_coordinates, plot_layers_coordinates,
                                plot_cell)
@@ -18,7 +19,7 @@ from .plot_quality import plot_sharpness
 _images = ["plot_yx", "plot_images", "plot_channels_2d",
            "plot_illumination_surface", "plot_segmentation",
            "plot_spot_detection", "plot_segmentation_boundary",
-           "plot_foci_detection"]
+           "plot_foci_detection", "plot_reference_spot"]
 
 _coordinates = ["plot_volume", "plot_rna", "plot_distribution_rna",
                 "plot_cell_coordinates", "plot_layers_coordinates",
