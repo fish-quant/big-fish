@@ -9,57 +9,39 @@ The bigfish.detection module includes function to detect RNA spot in 2-d and
 
 from .utils import get_sigma
 from .utils import get_radius
-from .utils import compute_snr
-from .utils import from_threshold_to_snr
 
-from .spot_detection import spot_detector
+from .spot_detection import detect_spots
 from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
 
-from .cluster_decomposition import gaussian_3d
+from .cluster_decomposition import decompose_cluster
+from .cluster_decomposition import build_reference_spot
+from .cluster_decomposition import modelize_spot
 from .cluster_decomposition import precompute_erf
-from .cluster_decomposition import build_reference_spot_3d
-from .cluster_decomposition import initialize_spot_parameter_3d
-from .cluster_decomposition import objective_function
-from .cluster_decomposition import fit_gaussian_3d
-from .cluster_decomposition import simulate_fitted_gaussian_3d
+from .cluster_decomposition import get_clustered_region
 from .cluster_decomposition import fit_gaussian_mixture
-from .cluster_decomposition import filter_clusters
-from .cluster_decomposition import decompose_clusters
-from .cluster_decomposition import run_decomposition
 
-from .foci_detection import convert_spot_coordinates
-from .foci_detection import cluster_spots
-from .foci_detection import extract_foci
+from .foci_detection import detect_foci
 
 
 _utils = [
     "get_sigma",
-    "get_radius",
-    "compute_snr",
-    "from_threshold_to_snr"]
+    "get_radius"]
 
 _spots = [
-    "spot_detector",
+    "detect_spots",
     "local_maximum_detection",
     "spots_thresholding"]
 
 _clusters = [
-    "gaussian_3d",
+    "decompose_cluster",
+    "build_reference_spot",
+    "modelize_spot",
     "precompute_erf",
-    "build_reference_spot_3d",
-    "initialize_spot_parameter_3d",
-    "objective_function",
-    "fit_gaussian_3d",
-    "simulate_fitted_gaussian_3d",
-    "fit_gaussian_mixture",
-    "filter_clusters",
-    "decompose_clusters",
-    "run_decomposition"]
+    "get_clustered_region",
+    "fit_gaussian_mixture"]
 
 _foci = [
-    "convert_spot_coordinates",
-    "cluster_spots",
-    "extract_foci"]
+    "detect_foci"]
 
 __all__ = _utils + _spots + _clusters + _foci

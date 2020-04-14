@@ -557,7 +557,7 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
         A 2-d tensor with shape (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or
-        (nb_spots, 2) for 3-d or 2-d images respectively.
+        (nb_spots, 2).
     radius_yx : float or int
         Radius yx of the detected spots.
     rescale : bool
@@ -581,6 +581,7 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
 
     """
     # TODO check coordinates shape
+    # TODO check spots is not empty
     # check parameters
     stack.check_array(tensor,
                       ndim=2,
@@ -588,7 +589,7 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
                              np.float32, np.float64])
     stack.check_array(spots,
                       ndim=2,
-                      dtype=[np.int64])
+                      dtype=np.int64)
     stack.check_parameter(radius_yx=(float, int),
                           rescale=bool,
                           title=(str, type(None)),
@@ -621,8 +622,11 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
         ax[1].imshow(tensor, vmin=vmin, vmax=vmax)
     else:
         ax[1].imshow(tensor)
-    for spot_coordinate in spots:
-        _, y, x = spot_coordinate
+    if spots.shape[1] == 3:
+        spots_2d = spots[:, 1:]
+    else:
+        spots_2d = spots
+    for y, x in spots_2d:
         c = plt.Circle((x, y), radius_yx,
                        color="red",
                        linewidth=1,
@@ -644,6 +648,82 @@ def plot_spot_detection(tensor, spots, radius_yx, rescale=False,
     return
 
 
+def plot_reference_spot(reference_spot, rescale=False, title=None,
+                        framesize=(8, 8), remove_frame=False,
+                        path_output=None, ext="png", show=True):
+    """Plot the selected yx plan of the selected dimensions of an image.
+
+    Parameters
+    ----------
+    reference_spot : np.ndarray
+        Spot image with shape (z, y, x) or (y, x).
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
+    title : str
+        Title of the image.
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+    show : bool
+        Show the figure or not.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    stack.check_array(reference_spot,
+                      ndim=[2,  3],
+                      dtype=[np.uint8, np.uint16,
+                             np.float32, np.float64])
+    stack.check_parameter(rescale=bool,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list),
+                          show=bool)
+
+    # project spot in 2-d if necessary
+    if reference_spot.ndim == 3:
+        reference_spot = stack.maximum_projection(reference_spot)
+
+    # get minimum and maximum value of the image
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(reference_spot)
+
+    # plot reference spot
+    if remove_frame:
+        fig = plt.figure(figsize=framesize, frameon=False)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+    else:
+        plt.figure(figsize=framesize)
+    if not rescale:
+        plt.imshow(reference_spot, vmin=vmin, vmax=vmax)
+    else:
+        plt.imshow(reference_spot)
+    if title is not None and not remove_frame:
+        plt.title(title, fontweight="bold", fontsize=25)
+    if not remove_frame:
+        plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return
+
+
 def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
                         rescale=False, title=None, framesize=(15, 10),
                         remove_frame=False, path_output=None, ext="png",
@@ -655,10 +735,11 @@ def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
     tensor : np.ndarray
         A 2-d tensor with shape (y, x).
     spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3).
+        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
     foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension (zyx
-        coordinates), number of RNAs in the foci and index of the foci.
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension (zyx or  yx coordinates), number of RNAs in the foci and
+         index of the foci.
     radius_spots_yx : float or int
         Radius yx of the detected spots.
     rescale : bool
@@ -690,7 +771,7 @@ def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
                              np.float32, np.float64])
     stack.check_array(foci,
                       ndim=2,
-                      dtype=[np.int64])
+                      dtype=np.int64)
     stack.check_parameter(spots=(np.ndarray, type(None)),
                           radius_spots_yx=(float, int),
                           rescale=bool,
@@ -703,7 +784,7 @@ def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
     if spots is not None:
         stack.check_array(spots,
                           ndim=2,
-                          dtype=[np.int64])
+                          dtype=np.int64)
 
     # get minimum and maximum value of the image
     vmin, vmax = None, None
@@ -729,7 +810,11 @@ def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
     else:
         ax[1].imshow(tensor)
     if spots is not None:
-        for (_, y, x) in spots:
+        if spots.shape[1] == 3:
+            spots_2d = spots[:, 1:]
+        else:
+            spots_2d = spots
+        for y, x in spots_2d:
             c = plt.Circle((x, y), radius_spots_yx,
                            color="red",
                            linewidth=1,
@@ -738,7 +823,11 @@ def plot_foci_detection(tensor, spots, foci, radius_spots_yx,
         title_ = "Detected spots and foci"
     else:
         title_ = "Detected foci"
-    for (_, y, x, _, _) in foci:
+    if foci.shape[1] == 5:
+        foci_2d = foci[:, 1:3]
+    else:
+        foci_2d = foci[:, :2]
+    for y, x in foci_2d:
         c = plt.Circle((x, y), radius_spots_yx * 2,
                        color="blue",
                        linewidth=2,
