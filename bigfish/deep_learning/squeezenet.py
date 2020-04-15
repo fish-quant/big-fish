@@ -20,7 +20,7 @@ import os
 import tensorflow as tf
 import numpy as np
 
-from .base import BaseModel, get_optimizer
+from bigfish.deep_learning.base import BaseModel, get_optimizer
 
 from tensorflow.python.keras.backend import function, learning_phase
 from tensorflow.python.keras.models import Model
