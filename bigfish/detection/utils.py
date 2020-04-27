@@ -142,7 +142,7 @@ def from_threshold_to_snr(image, sigma, mask, threshold=2000,
 
 # ### Utilities ###
 
-def get_sigma(voxel_size_z=300, voxel_size_yx=100, psf_z=400, psf_yx=200):
+def get_sigma(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
     """Compute the standard deviation of the PSF of the spots.
 
     Parameters
@@ -181,7 +181,7 @@ def get_sigma(voxel_size_z=300, voxel_size_yx=100, psf_z=400, psf_yx=200):
         return sigma_z, sigma_yx, sigma_yx
 
 
-def get_radius(voxel_size_z=300, voxel_size_yx=100, psf_z=400, psf_yx=200):
+def get_radius(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
     """Approximate the radius of the detected spot.
 
     We use the formula:

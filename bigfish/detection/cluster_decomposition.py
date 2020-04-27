@@ -20,7 +20,7 @@ from skimage.measure import regionprops
 from skimage.measure import label
 
 
-# ### Main functions ###
+# ### Main function ###
 
 def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
                       psf_z=None, psf_yx=200):
@@ -167,6 +167,8 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
                       "Less spots are detected after the decomposition than "
                       "before.",
                       UserWarning)
+
+    # TODO merge spots
 
     return spots_out_cluster, spots_in_cluster, clusters, reference_spot
 
