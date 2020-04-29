@@ -16,6 +16,9 @@ import bigfish.stack as stack
 
 from numpy.testing import assert_array_equal
 
+# TODO test bigfish.stack.read_array_from_csv
+# TODO test bigfish.stack.save_array_to_csv
+
 
 @pytest.mark.parametrize("shape", [
     (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])

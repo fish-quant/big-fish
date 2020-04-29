@@ -20,8 +20,10 @@ from .io import read_image
 from .io import read_dv
 from .io import read_array
 from .io import read_compressed
+from .io import read_array_from_csv
 from .io import save_image
 from .io import save_array
+from .io import save_array_to_csv
 
 from .preprocess import build_stacks
 from .preprocess import build_stack
@@ -84,8 +86,10 @@ _io = [
     "read_dv",
     "read_array",
     "read_compressed",
+    "read_array_from_csv",
     "save_image",
-    "save_array"]
+    "save_array",
+    "save_array_to_csv"]
 
 _preprocess = [
     "build_stacks",

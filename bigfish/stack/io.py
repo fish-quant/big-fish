@@ -113,6 +113,37 @@ def read_array(path):
     return array
 
 
+def read_array_from_csv(path, dtype=np.float64):
+    """Read a numpy array saved in a 'csv' file.
+
+    Parameters
+    ----------
+    path : str
+        Path of the csv file to read.
+    dtype : numpy data type
+        Expected dtype to cast the array.
+
+    Returns
+    -------
+    array : ndarray
+        Array read.
+
+    """
+    # check path
+    check_parameter(path=str,
+                    dtype=type)
+    if ".csv" not in path:
+        path += ".csv"
+
+    # read csv file
+    array = np.loadtxt(path, delimiter=";", encoding="utf-8")
+
+    # cast array dtype
+    array = array.astype(dtype)
+
+    return array
+
+
 def read_compressed(path, verbose=False):
     """Read a NpzFile object with 'npz' extension.
 
@@ -178,8 +209,7 @@ def save_image(image, path, extension="tif"):
 
     """
     # check image and parameters
-    check_parameter(image=np.ndarray,
-                    path=str,
+    check_parameter(path=str,
                     extension=str)
     check_array(image,
                 dtype=[np.uint8, np.uint16, np.uint32,
@@ -254,20 +284,60 @@ def save_array(array, path):
 
     """
     # check array and path
-    check_parameter(array=np.ndarray,
-                    path=str)
+    check_parameter(path=str)
     check_array(array,
                 dtype=[np.uint8, np.uint16, np.uint32,
                        np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64,
                        bool],
-                ndim=[2, 3, 4, 5],
-                allow_nan=True)
+                ndim=[2, 3, 4, 5])
     if "." in path and "npy" not in path:
         path_ = path.split(".")[0]
         path = path_ + ".npy"
 
     # save array
     np.save(path, array)
+
+    return
+
+
+def save_array_to_csv(array, path):
+    """Save an array into a csv file.
+
+    The input array should have 2 dimensions, with 8-bit, 16-bit or 32-bit
+    (unsigned) integer, 64-bit integer, 16-bit, 32-bit or 64-bit
+    float.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to save.
+    path : str
+        Path of the saved array.
+
+    Returns
+    -------
+
+    """
+    # check array and path
+    check_parameter(path=str)
+    check_array(array,
+                dtype=[np.uint8, np.uint16, np.uint32,
+                       np.int8, np.int16, np.int32, np.int64,
+                       np.float16, np.float32, np.float64],
+                ndim=2)
+
+    # save csv file
+    if ".csv" not in path:
+        path += ".csv"
+    if array.dtype == np.float16:
+        fmt = "%.4f"
+    elif array.dtype == np.float32:
+        fmt = "%.7f"
+    elif array.dtype == np.float64:
+        fmt = "%.16f"
+    else:
+        fmt = "%.1i"
+    np.savetxt(path, array, fmt=fmt, delimiter=';', encoding="utf-8")
 
     return
