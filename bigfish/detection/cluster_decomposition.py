@@ -54,14 +54,9 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     Returns
     -------
-    spots_out_cluster : np.ndarray, np.int64
-        Coordinate of the spots detected out of cluster, with shape
-        (nb_spots, 3) or (nb_spots, 2). One coordinate per dimension (zyx or
-        yx coordinates).
-    spots_in_cluster : np.ndarray, np.int64
-        Coordinate of the spots detected inside cluster, with shape
-        (nb_spots, 4) or (nb_spots, 3). One coordinate per dimension (zyx or
-        yx coordinates) plus the index of the cluster.
+    spots : np.ndarray, np.int64
+        Coordinate of the spots detected, with shape (nb_spots, 3) or
+        (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
     clusters : np.ndarray, np.int64
         Array with shape (nb_cluster, 7) or (nb_cluster, 6). One coordinate
         per dimension for the cluster centroid (zyx or yx coordinates), the
@@ -168,9 +163,11 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
                       "before.",
                       UserWarning)
 
-    # TODO merge spots
+    # merge outside and inside spots
+    spots = np.concatenate((spots_out_cluster, spots_in_cluster[:, :ndim]),
+                           axis=0)
 
-    return spots_out_cluster, spots_in_cluster, clusters, reference_spot
+    return spots, clusters, reference_spot
 
 
 # ### Reference spot ###
