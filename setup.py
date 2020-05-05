@@ -7,7 +7,7 @@ Setup script.
 from setuptools import setup, find_packages
 
 # Package meta-data.
-VERSION = 1.0
+VERSION = "0.3.0"
 DESCRIPTION = 'Toolbox for the analysis of smFISH images.'
 
 # Package abstract dependencies
@@ -31,7 +31,7 @@ with open("README.md", "r") as f:
 # A list of classifiers to categorize the project (only used for searching and
 # browsing projects on PyPI).
 CLASSIFIERS = [
-      'Development Status :: 3 - Alpha',
+      'Development Status :: 2 - Beta',
       'Intended Audience :: Science/Research',
       'Intended Audience :: Developers',
       'Intended Audience :: Biologist',
