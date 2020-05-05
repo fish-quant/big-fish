@@ -6,8 +6,6 @@ Setup script.
 
 from setuptools import setup, find_packages
 
-# TODO remove useless packages (numba and umap)
-
 # Package meta-data.
 VERSION = 1.0
 DESCRIPTION = 'Toolbox for the analysis of smFISH images.'
@@ -21,8 +19,6 @@ REQUIRES = [
       'scipy >= 1.2.0',
       'matplotlib >= 3.0.2',
       'pandas >= 0.24.0',
-      'numba >= 0.37.0',
-      'umap-learn >= 0.3.9',
       'mrc >= 0.1.5'
 ]
 
@@ -67,4 +63,3 @@ setup(name='big-fish',
       },
       classifiers=CLASSIFIERS
       )
- 
