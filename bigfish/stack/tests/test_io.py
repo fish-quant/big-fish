@@ -17,7 +17,9 @@ import bigfish.stack as stack
 from numpy.testing import assert_array_equal
 
 # TODO test bigfish.stack.read_array_from_csv
+# TODO test bigfish.stack.read_cell_extracted
 # TODO test bigfish.stack.save_array_to_csv
+# TODO test bigfish.stack.save_cell_extracted
 
 
 @pytest.mark.parametrize("shape", [
@@ -154,7 +156,7 @@ def test_npz(shape, dtype):
         test_2 = np.ones(shape, dtype=dtype)
         path = os.path.join(tmp_dir, "test.npz")
         np.savez(path, test_1=test_1, test_2=test_2)
-        data = stack.read_compressed(path)
+        data = stack.read_uncompressed(path)
         assert data.files == ["test_1", "test_2"]
         assert_array_equal(test_1, data["test_1"])
         assert_array_equal(test_2, data["test_2"])
