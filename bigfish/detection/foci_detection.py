@@ -40,6 +40,11 @@ def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
 
     Returns
     -------
+    clustered_spots : np.ndarray, np.int64
+        Coordinates of the detected spots with shape (nb_spots, 4) or
+        (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
+        plus the index of the cluster assigned to the spot. If no cluster was
+        assigned, value is -1.
     foci : np.ndarray, np.int64
         Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
         dimension for the foci centroid (zyx or yx coordinates), the number of
@@ -71,7 +76,7 @@ def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
     # extract and shape foci information
     foci = _extract_information(clustered_spots)
 
-    return foci
+    return clustered_spots, foci
 
 
 def _convert_spot_coordinates(spots, voxel_size_z, voxel_size_yx):
