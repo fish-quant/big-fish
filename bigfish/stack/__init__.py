@@ -19,10 +19,12 @@ from .utils import get_eps_float32
 from .io import read_image
 from .io import read_dv
 from .io import read_array
-from .io import read_compressed
+from .io import read_uncompressed
+from .io import read_cell_extracted
 from .io import read_array_from_csv
 from .io import save_image
 from .io import save_array
+from .io import save_cell_extracted
 from .io import save_array_to_csv
 
 from .preprocess import build_stacks
@@ -57,9 +59,10 @@ from .projection import get_in_focus_indices
 from .illumination import compute_illumination_surface
 from .illumination import correct_illumination_surface
 
+from .postprocess import identify_transcription_site
 from .postprocess import remove_transcription_site
+from .postprocess import extract_cell
 from .postprocess import extract_spots_from_frame
-from .postprocess import extract_coordinates_image
 from .postprocess import center_mask_coord
 from .postprocess import from_boundaries_to_surface
 from .postprocess import from_surface_to_boundaries
@@ -85,10 +88,12 @@ _io = [
     "read_image",
     "read_dv",
     "read_array",
-    "read_compressed",
+    "read_uncompressed",
+    "read_cell_extracted",
     "read_array_from_csv",
     "save_image",
     "save_array",
+    "save_cell_extracted",
     "save_array_to_csv"]
 
 _preprocess = [
@@ -128,9 +133,10 @@ _illumination = [
     "correct_illumination_surface"]
 
 _postprocess = [
+    "identify_transcription_site",
     "remove_transcription_site",
+    "extract_cell",
     "extract_spots_from_frame",
-    "extract_coordinates_image",
     "center_mask_coord",
     "from_boundaries_to_surface",
     "from_surface_to_boundaries",
