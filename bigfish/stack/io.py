@@ -16,6 +16,8 @@ from skimage import io
 from .utils import check_array
 from .utils import check_parameter
 
+# TODO add general read function with mime types
+
 
 # ### Read ###
 
@@ -144,7 +146,7 @@ def read_array_from_csv(path, dtype=np.float64):
     return array
 
 
-def read_compressed(path, verbose=False):
+def read_uncompressed(path, verbose=False):
     """Read a NpzFile object with 'npz' extension.
 
     Parameters
@@ -152,7 +154,7 @@ def read_compressed(path, verbose=False):
     path : str
         Path of the file to read.
     verbose : bool
-        Return names of the different compressed objects.
+        Return names of the different objects.
 
     Returns
     -------
@@ -160,7 +162,7 @@ def read_compressed(path, verbose=False):
         NpzFile read.
 
     """
-    # check path
+    # check parameters
     check_parameter(path=str,
                     verbose=bool)
     if ".npz" not in path:
@@ -169,9 +171,41 @@ def read_compressed(path, verbose=False):
     # read array file
     data = np.load(path)
     if verbose:
-        print("Compressed objects: {0} \n".format(", ".join(data.files)))
+        print("Available keys: {0} \n".format(", ".join(data.files)))
 
     return data
+
+
+def read_cell_extracted(path, verbose=False):
+    """Read a NpzFile object with 'npz' extension, previously written with
+    bigfish.stack.save_cell_extracted.
+
+    Parameters
+    ----------
+    path : str
+        Path of the file to read.
+    verbose : bool
+        Return names of the different objects.
+
+    Returns
+    -------
+    cell_results : Dict
+        Dictionary including information about the cell (image, masks,
+        coordinates arrays). Minimal information are :
+        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord : boundary coordinates of the cell.
+        - cell_mask : mask of the cell.
+
+    """
+    # read compressed file
+    data = read_uncompressed(path, verbose)
+
+    # store data in a dictionary
+    cell_results = {}
+    for key in data.files:
+        cell_results[key] = data[key]
+
+    return cell_results
 
 
 # ### Write ###
@@ -291,7 +325,7 @@ def save_array(array, path):
                        np.float16, np.float32, np.float64,
                        bool],
                 ndim=[2, 3, 4, 5])
-    if "." in path and "npy" not in path:
+    if "." in path and ".npy" not in path:
         path_ = path.split(".")[0]
         path = path_ + ".npy"
 
@@ -328,7 +362,10 @@ def save_array_to_csv(array, path):
                 ndim=2)
 
     # save csv file
-    if ".csv" not in path:
+    if "." in path and ".csv" not in path:
+        path_ = path.split(".")[0]
+        path = path_ + ".csv"
+    elif "." not in path:
         path += ".csv"
     if array.dtype == np.float16:
         fmt = "%.4f"
@@ -339,5 +376,37 @@ def save_array_to_csv(array, path):
     else:
         fmt = "%.1i"
     np.savetxt(path, array, fmt=fmt, delimiter=';', encoding="utf-8")
+
+    return
+
+
+def save_cell_extracted(cell_results, path):
+    """Save cell-level results from bigfish.stack.extract_cell in a NpzFile
+    object with 'npz' extension.
+
+    Parameters
+    ----------
+    cell_results : Dict
+        Dictionary including information about the cell (image, masks,
+        coordinates arrays). Minimal information are :
+        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord : boundary coordinates of the cell.
+        - cell_mask : mask of the cell.
+    path : str
+        Path of the saved array.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    check_parameter(cell_results=dict,
+                    path=str)
+
+    # save compressed file
+    if "." in path and ".npz" not in path:
+        path_ = path.split(".")[0]
+        path = path_ + ".npz"
+    np.savez(path, **cell_results)
 
     return
