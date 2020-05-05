@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 # Package meta-data.
 VERSION = 1.0
-DESCRIPTION = 'Toolbox for cell FISH images.'
+DESCRIPTION = 'Toolbox for the analysis of smFISH images.'
 
 # Package abstract dependencies
 REQUIRES = [
@@ -19,13 +19,14 @@ REQUIRES = [
       'scikit-learn >= 0.20.2',
       'scikit-image >= 0.14.2',
       'scipy >= 1.2.0',
-      'tensorflow >= 1.12.0, < 2.0',
       'matplotlib >= 3.0.2',
       'pandas >= 0.24.0',
       'numba >= 0.37.0',
       'umap-learn >= 0.3.9',
       'mrc >= 0.1.5'
 ]
+
+DEEPLEARNING_REQUIREMENTS = ['tensorflow >= 1.12.0, < 2.0']
 
 # Long description of the package
 with open("README.md", "r") as f:
@@ -56,10 +57,14 @@ setup(name='big-fish',
       long_description_content_type="text/markdown",
       author='Arthur Imbert',
       author_email='arthur.imbert.pro@gmail.com',
-      url='https://github.com/Henley13/big-fish',
+      url='https://github.com/fish-quant/big-fish',
       packages=find_packages(),
       license='MIT',
       python_requires='>=3.6.0',
       install_requires=REQUIRES,
+      extras_require={
+            'deeplearning': DEEPLEARNING_REQUIREMENTS
+      },
       classifiers=CLASSIFIERS
       )
+ 
