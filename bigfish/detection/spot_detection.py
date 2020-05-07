@@ -82,7 +82,7 @@ def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
     return spots
 
 
-def local_maximum_detection(image, sigma):
+def local_maximum_detection(image, min_distance):
     """Compute a mask to keep only local maximum, in 2-d and 3-d.
 
     1) We apply a multidimensional maximum filter.
@@ -93,10 +93,11 @@ def local_maximum_detection(image, sigma):
     ----------
     image : np.ndarray
         Image to process with shape (z, y, x) or (y, x).
-    sigma : int, float or Tuple(float)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. It approximates
-        the standard deviation (in pixel) of the spots we want to detect.
+    min_distance : int, float or Tuple(float)
+        Minimum distance (in pixels) between two spots we want to be able to
+        detect separately. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same distance is applied to
+        every dimensions.
 
     Returns
     -------
@@ -108,20 +109,20 @@ def local_maximum_detection(image, sigma):
     stack.check_array(image,
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_parameter(sigma=(float, int, tuple))
+    stack.check_parameter(min_distance=(float, int, tuple))
 
     # compute the kernel size (centered around our pixel because it is uneven)
-    if isinstance(sigma, (int, float)):
-        sigma = tuple(sigma) * image.ndim
-        sigma = np.ceil(sigma).astype(image.dtype)
-    elif image.ndim != len(sigma):
-        raise ValueError("'sigma' should be a scalar or a tuple with one "
-                         "value per dimension. Here the image has {0} "
-                         "dimensions and sigma {1} elements."
-                         .format(image.ndim, len(sigma)))
+    if isinstance(min_distance, (int, float)):
+        min_distance = (min_distance,) * image.ndim
+        min_distance = np.ceil(min_distance).astype(image.dtype)
+    elif image.ndim != len(min_distance):
+        raise ValueError("'min_distance' should be a scalar or a tuple with "
+                         "one value per dimension. Here the image has {0} "
+                         "dimensions and 'min_distance' {1} elements."
+                         .format(image.ndim, len(min_distance)))
     else:
-        sigma = np.ceil(sigma).astype(image.dtype)
-    kernel_size = 2 * sigma + 1
+        min_distance = np.ceil(min_distance).astype(image.dtype)
+    kernel_size = 2 * min_distance + 1
 
     # apply maximum filter to the original image
     image_filtered = ndi.maximum_filter(image, size=kernel_size)
