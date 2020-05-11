@@ -22,7 +22,7 @@ from .utils import check_parameter
 # ### Read ###
 
 def read_image(path, sanity_check=False):
-    """Read an image with the .png, .jpg, .jpeg, .tif or .tiff extension.
+    """Read an image with .png, .jpg, .jpeg, .tif or .tiff extension.
 
     Parameters
     ----------
@@ -47,8 +47,8 @@ def read_image(path, sanity_check=False):
     # check the output image
     if sanity_check:
         check_array(image,
-                    dtype=[np.uint8, np.uint16, np.uint32,
-                           np.int8, np.int16, np.int32,
+                    dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                           np.int8, np.int16, np.int32, np.int64,
                            np.float16, np.float32, np.float64,
                            bool],
                     ndim=[2, 3, 4, 5],
@@ -58,7 +58,7 @@ def read_image(path, sanity_check=False):
 
 
 def read_dv(path, sanity_check=False):
-    """Read a video file with the .dv extension.
+    """Read a video file with .dv extension.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ def read_dv(path, sanity_check=False):
 
     Returns
     -------
-    video : ndarray, np.uint or np.int
+    video : ndarray
         Video read.
 
     """
@@ -81,7 +81,7 @@ def read_dv(path, sanity_check=False):
     video = mrc.imread(path)
 
     # check the output video
-    # metadata can be read running 'tensor.Mrc.info()'
+    # metadata can be read running 'tensor.mrc.info()'
     if sanity_check:
         check_array(video,
                     dtype=[np.uint16, np.int16, np.int32, np.float32],
@@ -91,7 +91,7 @@ def read_dv(path, sanity_check=False):
 
 
 def read_array(path):
-    """Read a numpy array with 'npy' extension.
+    """Read a numpy array with .npy extension.
 
     Parameters
     ----------
@@ -106,8 +106,6 @@ def read_array(path):
     """
     # check path
     check_parameter(path=str)
-    if ".npy" not in path:
-        path += ".npy"
 
     # read array file
     array = np.load(path)
@@ -116,7 +114,7 @@ def read_array(path):
 
 
 def read_array_from_csv(path, dtype=np.float64):
-    """Read a numpy array saved in a 'csv' file.
+    """Read a numpy array saved in a csv file.
 
     Parameters
     ----------
@@ -134,8 +132,6 @@ def read_array_from_csv(path, dtype=np.float64):
     # check path
     check_parameter(path=str,
                     dtype=type)
-    if ".csv" not in path:
-        path += ".csv"
 
     # read csv file
     array = np.loadtxt(path, delimiter=";", encoding="utf-8")
@@ -147,7 +143,7 @@ def read_array_from_csv(path, dtype=np.float64):
 
 
 def read_uncompressed(path, verbose=False):
-    """Read a NpzFile object with 'npz' extension.
+    """Read a NpzFile object with .npz extension.
 
     Parameters
     ----------
@@ -165,8 +161,6 @@ def read_uncompressed(path, verbose=False):
     # check parameters
     check_parameter(path=str,
                     verbose=bool)
-    if ".npz" not in path:
-        path += ".npz"
 
     # read array file
     data = np.load(path)
@@ -177,7 +171,7 @@ def read_uncompressed(path, verbose=False):
 
 
 def read_cell_extracted(path, verbose=False):
-    """Read a NpzFile object with 'npz' extension, previously written with
+    """Read a NpzFile object with .npz extension, previously written with
     bigfish.stack.save_cell_extracted.
 
     Parameters
@@ -214,7 +208,7 @@ def save_image(image, path, extension="tif"):
     """Save an image.
 
     The input image should have between 2 and 5 dimensions, with boolean,
-    8-bit, 16-bit or 32-bit (unsigned) integer, 16-bit, 32-bit or 64-bit float.
+    (unsigned) integer, or float.
 
     The dimensions should be in the following order: (round, channel, z, y, x).
 
@@ -246,18 +240,29 @@ def save_image(image, path, extension="tif"):
     check_parameter(path=str,
                     extension=str)
     check_array(image,
-                dtype=[np.uint8, np.uint16, np.uint32,
-                       np.int8, np.int16, np.int32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64,
                        bool],
                 ndim=[2, 3, 4, 5],
                 allow_nan=False)
 
     # check extension and build path
-    if "." in path:
-        extension = path.split(".")[-1]
+    if "/" in path:
+        path_ = path.split("/")
+        filename = path_[-1]
+
+        if "." in filename:
+            extension = filename.split(".")[-1]
+        else:
+            filename += ".{0}".format(extension)
+        path_[-1] = filename
+        path = "/".join(path_)
     else:
-        path += ".{0}".format(extension)
+        if "." in path:
+            extension = path.split(".")[-1]
+        else:
+            path += ".{0}".format(extension)
     if extension not in ["png", "jpg", "jpeg", "tif", "tiff"]:
         raise ValueError("{0} extension is not supported, please choose among "
                          "'png', 'jpg', 'jpeg', 'tif' or 'tiff'."
@@ -300,11 +305,10 @@ def save_image(image, path, extension="tif"):
 
 
 def save_array(array, path):
-    """Save an array.
+    """Save an array in a .npy extension file.
 
     The input array should have between 2 and 5 dimensions, with boolean,
-    8-bit, 16-bit or 32-bit (unsigned) integer, 64-bit integer, 16-bit, 32-bit
-    or 64-bit float.
+    (unsigned) integer, or float.
 
     Parameters
     ----------
@@ -320,14 +324,15 @@ def save_array(array, path):
     # check array and path
     check_parameter(path=str)
     check_array(array,
-                dtype=[np.uint8, np.uint16, np.uint32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                        np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64,
                        bool],
                 ndim=[2, 3, 4, 5])
-    if "." in path and ".npy" not in path:
-        path_ = path.split(".")[0]
-        path = path_ + ".npy"
+
+    # add extension if necessary
+    if ".npy" not in path:
+        path += ".npy"
 
     # save array
     np.save(path, array)
@@ -338,9 +343,7 @@ def save_array(array, path):
 def save_array_to_csv(array, path):
     """Save an array into a csv file.
 
-    The input array should have 2 dimensions, with 8-bit, 16-bit or 32-bit
-    (unsigned) integer, 64-bit integer, 16-bit, 32-bit or 64-bit
-    float.
+    The input array should have 2 dimensions, with (unsigned) integer or float.
 
     Parameters
     ----------
@@ -356,17 +359,16 @@ def save_array_to_csv(array, path):
     # check array and path
     check_parameter(path=str)
     check_array(array,
-                dtype=[np.uint8, np.uint16, np.uint32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                        np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64],
                 ndim=2)
 
-    # save csv file
-    if "." in path and ".csv" not in path:
-        path_ = path.split(".")[0]
-        path = path_ + ".csv"
-    elif "." not in path:
+    # add extension if necessary
+    if ".csv" not in path:
         path += ".csv"
+
+    # save csv file
     if array.dtype == np.float16:
         fmt = "%.4f"
     elif array.dtype == np.float32:
@@ -382,7 +384,7 @@ def save_array_to_csv(array, path):
 
 def save_cell_extracted(cell_results, path):
     """Save cell-level results from bigfish.stack.extract_cell in a NpzFile
-    object with 'npz' extension.
+    object with .npz extension.
 
     Parameters
     ----------
@@ -403,10 +405,11 @@ def save_cell_extracted(cell_results, path):
     check_parameter(cell_results=dict,
                     path=str)
 
+    # add extension if necessary
+    if ".npz" not in path:
+        path += ".npz"
+
     # save compressed file
-    if "." in path and ".npz" not in path:
-        path_ = path.split(".")[0]
-        path = path_ + ".npz"
     np.savez(path, **cell_results)
 
     return

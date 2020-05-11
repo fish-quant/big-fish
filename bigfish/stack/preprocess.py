@@ -243,8 +243,8 @@ def build_stack(recipe, input_folder, input_dimension=None, sanity_check=False,
     # check the validity of the loaded tensor
     if sanity_check:
         check_array(tensor,
-                    dtype=[np.uint8, np.uint16, np.uint32,
-                           np.int8, np.int16, np.int32,
+                    dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                           np.int8, np.int16, np.int32, np.int64,
                            np.float16, np.float32, np.float64,
                            bool],
                     ndim=5,
@@ -697,7 +697,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
+    tensor : np.ndarray
         Tensor to rescale.
     channel_to_stretch : int, List[int] or Tuple[int]
         Channel to stretch. If None, minimum and maximum of each channel are
@@ -759,7 +759,7 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
+    tensor : np.ndarray
         Tensor to rescale.
     channel_to_stretch : int, List[int] or Tuple[int]
         Channel to stretch. If None, minimum and maximum of each channel are
@@ -835,18 +835,19 @@ def cast_img_uint8(tensor, catch_warning=False):
     # check tensor dtype
     check_array(tensor,
                 ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32,
-                       np.int8, np.int16, np.int32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64])
     if tensor.dtype in [np.float16, np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
-    elif tensor.dtype in [np.int8, np.int16, np.int32]:
+    elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
         check_range_value(tensor, min_=0)
 
     if tensor.dtype == np.uint8:
         return tensor
 
-    if (tensor.dtype in [np.uint16, np.uint32, np.int16, np.int32]
+    if (tensor.dtype in [np.uint16, np.uint32, np.uint64,
+                         np.int16, np.int32, np.int64]
             and tensor.max() <= 255):
         raise ValueError("Tensor values are between {0} and {1}. It fits in 8 "
                          "bits and won't be scaled between 0 and 255. Use "
@@ -886,18 +887,19 @@ def cast_img_uint16(tensor, catch_warning=False):
     # check tensor dtype
     check_array(tensor,
                 ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32,
-                       np.int8, np.int16, np.int32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64])
     if tensor.dtype in [np.float16, np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
-    elif tensor.dtype in [np.int8, np.int16, np.int32]:
+    elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
         check_range_value(tensor, min_=0)
 
     if tensor.dtype == np.uint16:
         return tensor
 
-    if tensor.dtype in [np.uint32, np.int32] and tensor.max() <= 65535:
+    if (tensor.dtype in [np.uint32, np.uint64, np.int32, np.int64]
+            and tensor.max() <= 65535):
         raise ValueError("Tensor values are between {0} and {1}. It fits in "
                          "16 bits and won't be scaled between 0 and 65535. "
                          "Use 'tensor.astype(np.uint16)' instead."
@@ -936,8 +938,8 @@ def cast_img_float32(tensor, catch_warning=False):
     # check tensor dtype
     check_array(tensor,
                 ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32,
-                       np.int8, np.int16, np.int32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64])
 
     # cast tensor
@@ -971,8 +973,8 @@ def cast_img_float64(tensor):
     # check tensor dtype
     check_array(tensor,
                 ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32,
-                       np.int8, np.int16, np.int32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64,
                        np.float16, np.float32, np.float64])
 
     # cast tensor

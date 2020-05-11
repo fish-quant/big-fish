@@ -250,8 +250,8 @@ def test_stretching():
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
-    np.int8, np.int16, np.int32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64])
 def test_cast_uint8(dtype):
     # from integer to np.uint8
@@ -275,8 +275,8 @@ def test_cast_uint8(dtype):
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
-    np.int8, np.int16, np.int32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64])
 def test_cast_uint16(dtype):
     # from integer to np.uint16
@@ -291,7 +291,7 @@ def test_cast_uint16(dtype):
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
 
     # cast in uint16
-    if dtype in [np.uint8, np.int8, np.uint16, np.int16]:
+    if dtype in [np.uint8, np.int8, np.uint16, np.int16, np.float16]:
         tensor_uint16 = stack.cast_img_uint16(tensor)
     else:
         with pytest.warns(UserWarning):
@@ -300,8 +300,8 @@ def test_cast_uint16(dtype):
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
-    np.int8, np.int16, np.int32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64])
 def test_cast_float32(dtype):
     # from integer to np.float32
@@ -316,7 +316,7 @@ def test_cast_float32(dtype):
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
 
     # cast in float32
-    if dtype in [np.uint32, np.int32, np.float64]:
+    if dtype == np.float64:
         with pytest.warns(UserWarning):
             tensor_float32 = stack.cast_img_float32(tensor)
     else:
@@ -325,8 +325,8 @@ def test_cast_float32(dtype):
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
-    np.int8, np.int16, np.int32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64])
 def test_cast_float64(dtype):
     # from integer to np.float64

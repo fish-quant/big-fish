@@ -484,7 +484,7 @@ def _one_hot_3d(indices, depth, return_boolean=False):
     check_parameter(depth=int)
     check_array(indices,
                 ndim=2,
-                dtype=[np.uint8, np.uint16, np.uint32,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                        np.int8, np.int16, np.int32, np.int64])
 
     # initialize the 3-d one-hot matrix

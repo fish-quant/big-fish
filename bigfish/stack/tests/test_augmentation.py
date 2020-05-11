@@ -128,7 +128,7 @@ def test_rotation_270():
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
+    np.uint8, np.uint16, np.uint32,np.uint64,
     np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64,
     bool])

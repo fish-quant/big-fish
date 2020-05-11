@@ -135,7 +135,7 @@ def test_median_projection():
 # ### test focus selection ###
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64])
 def test_one_hot_3d(dtype):
     # integer
@@ -180,7 +180,7 @@ def test_one_hot_3d(dtype):
     assert_array_equal(one_hot, expected_one_hot)
     assert one_hot.dtype == bool
 
-
+# TODO remove test bigfish.stack.test_one_hot_3d
 # TODO test bigfish.stack.focus_projection
 # TODO test bigfish.stack.focus_projection_fast
 # TODO test bigfish.stack.in_focus_selection

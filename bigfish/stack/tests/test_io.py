@@ -25,8 +25,8 @@ from numpy.testing import assert_array_equal
 @pytest.mark.parametrize("shape", [
     (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
-    np.int8, np.int16, np.int32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64, bool])
 @pytest.mark.parametrize("extension", [
     "png", "jpg", "jpeg", "tif", "tiff"])
@@ -88,12 +88,6 @@ def test_image_specific():
         with pytest.raises(ValueError):
             stack.save_image(test, path)
 
-        # non-supported image (np.int64)
-        test = np.zeros((8, 8), dtype=np.int64)
-        path = os.path.join(tmp_dir, "test")
-        with pytest.raises(TypeError):
-            stack.save_image(test, path)
-
         # non-supported image (missing values)
         test = np.zeros((8, 8), dtype=np.float32)
         test[0, 0] = np.nan
@@ -129,7 +123,7 @@ def test_dv(dtype):
 @pytest.mark.parametrize("shape", [
     (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64, bool])
 def test_npy(shape, dtype):
@@ -146,7 +140,7 @@ def test_npy(shape, dtype):
 @pytest.mark.parametrize("shape", [
     (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
+    np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64, bool])
 def test_npz(shape, dtype):
