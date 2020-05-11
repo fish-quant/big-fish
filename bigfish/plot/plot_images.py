@@ -60,7 +60,7 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
     # check parameters
     stack.check_array(tensor,
                       ndim=[2, 3, 4, 5],
-                      dtype=[np.uint8, np.uint16,
+                      dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64,
                              bool])
     stack.check_parameter(r=int, c=int, z=int,
@@ -266,7 +266,7 @@ def plot_segmentation(image, mask, rescale=False, title=None,
     # check parameters
     stack.check_array(image,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16,
+                      dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64,
                              bool])
     stack.check_array(mask,
@@ -364,7 +364,7 @@ def plot_segmentation_boundary(image, cell_mask=None, nuc_mask=None,
     # check parameters
     stack.check_array(image,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16,
+                      dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64,
                              bool])
     if cell_mask is not None:
@@ -467,11 +467,9 @@ def plot_spot_detection(image, spots, radius_yx, rescale=False,
     # check parameters
     stack.check_array(image,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16,
+                      dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64])
-    stack.check_array(spots,
-                      ndim=2,
-                      dtype=np.int64)
+    stack.check_array(spots, ndim=2, dtype=np.int64)
     stack.check_parameter(radius_yx=(float, int),
                           rescale=bool,
                           title=(str, type(None)),
@@ -562,7 +560,7 @@ def plot_reference_spot(reference_spot, rescale=False, title=None,
     # check parameters
     stack.check_array(reference_spot,
                       ndim=[2,  3],
-                      dtype=[np.uint8, np.uint16,
+                      dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64])
     stack.check_parameter(rescale=bool,
                           title=(str, type(None)),
@@ -647,11 +645,9 @@ def plot_foci_detection(image, spots, foci, radius_spots_yx,
     # check parameters
     stack.check_array(image,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16,
+                      dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64])
-    stack.check_array(foci,
-                      ndim=2,
-                      dtype=np.int64)
+    stack.check_array(foci, ndim=2, dtype=np.int64)
     stack.check_parameter(spots=(np.ndarray, type(None)),
                           radius_spots_yx=(float, int),
                           rescale=bool,
@@ -662,9 +658,7 @@ def plot_foci_detection(image, spots, foci, radius_spots_yx,
                           ext=(str, list),
                           show=bool)
     if spots is not None:
-        stack.check_array(spots,
-                          ndim=2,
-                          dtype=np.int64)
+        stack.check_array(spots, ndim=2, dtype=np.int64)
 
     # get minimum and maximum value of the image
     vmin, vmax = None, None
@@ -785,7 +779,10 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
 
     """
     # check parameters
-    stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    stack.check_array(image,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64,
+                             np.float32, np.float64])
     stack.check_parameter(spots=(list, np.ndarray),
                           shape=(list, str),
                           radius=(list, int, float),
@@ -1013,7 +1010,9 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
     if other_coord is not None:
         stack.check_array(other_coord, ndim=2, dtype=np.int64)
     if image is not None:
-        stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+        stack.check_array(image, ndim=2,
+                          dtype=[np.uint8, np.uint16, np.int64,
+                                 np.float32, np.float64])
     if cell_mask is not None:
         stack.check_array(cell_mask,
                           ndim=2,
@@ -1162,362 +1161,3 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         plt.close()
 
     return
-
-
-def plot_cell_image(ndim, cell_coord=None, nuc_coord=None,
-                    rna_coord=None, rna_size=3, foci_coord=None, foci_size=3,
-                    other_coord=None, other_size=3,
-                    image=None, cell_mask=None, nuc_mask=None, title=None,
-                    remove_frame=False, rescale=False, framesize=(15, 10),
-                    path_output=None, ext="png", show=True):
-    """
-    Plot image and coordinates extracted for a specific cell.
-
-    Parameters
-    ----------
-    ndim : int
-        Number of spatial dimensions to consider (2 or 3).
-    cell_coord : np.ndarray, np.int64
-        Coordinates of the cell border with shape (nb_points, 2). If None,
-        coordinate representation of the cell is not shown.
-    nuc_coord : np.ndarray, np.int64
-        Coordinates of the nucleus border with shape (nb_points, 2).
-    rna_coord : np.ndarray, np.int64
-        Coordinates of the detected spots with shape (nb_spots, 4) or
-        (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
-        plus the index of the cluster assigned to the spot. If no cluster was
-        assigned, value is -1. If only coordinates of spatial dimensions are
-        available, only centroid of foci can be shown.
-    rna_size : int
-        Size in pixels of the rna is calculated from the formula
-        2 * rna_size - 1.
-    foci_coord : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx dimensions), the number of
-        spots detected in the foci and its index.
-    foci_size : int
-        Size in pixels of the foci is calculated from the formula
-        2 * foci_size - 1.
-    other_coord : np.ndarray, np.int64
-        Coordinates of the detected elements with shape (nb_elements, 3) or
-        (nb_elements, 2). One coordinate per dimension (zyx or yx dimensions).
-    other_size : int
-        Size in pixels of the element is calculated from the formula
-        2 * other_size - 1.
-    image : np.ndarray, np.uint
-        Original image of the cell with shape (y, x). If None, original image
-        of the cell is not shown.
-    cell_mask : np.ndarray, np.uint
-        Mask of the cell.
-    nuc_mask : np.ndarray, np.uint
-        Mask of the nucleus.
-    title : str
-        Title of the image.
-    remove_frame : bool
-        Remove axes and frame.
-    rescale : bool
-        Rescale pixel values of the image (made by default in matplotlib).
-    framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    show : bool
-        Show the figure or not.
-
-    Returns
-    -------
-
-    """
-    if cell_coord is None and image is None:
-        return
-
-    # check parameters
-    if cell_coord is not None:
-        stack.check_array(cell_coord, ndim=2, dtype=np.int64)
-    if nuc_coord is not None:
-        stack.check_array(nuc_coord, ndim=2, dtype=np.int64)
-    if rna_coord is not None:
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-    if foci_coord is not None:
-        stack.check_array(foci_coord, ndim=2, dtype=np.int64)
-    if other_coord is not None:
-        stack.check_array(other_coord, ndim=2, dtype=np.int64)
-    if image is not None:
-        stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
-    if cell_mask is not None:
-        stack.check_array(cell_mask,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
-    if nuc_mask is not None:
-        stack.check_array(nuc_mask,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
-    stack.check_parameter(ndim=int,
-                          rna_size=int,
-                          foci_size=int,
-                          other_size = int,
-                          title=(str, type(None)),
-                          remove_frame=bool,
-                          rescale=bool,
-                          framesize=tuple,
-                          path_output=(str, type(None)),
-                          ext=(str, list))
-
-    # get shape of image built from coordinates
-    image_shape, min_y, min_x, marge = stack.from_coord_to_frame(cell_coord)
-
-    # get cell layer
-    cell = np.zeros(image_shape, dtype=bool)
-    cell_coord[:, 0] = cell_coord[:, 0] - min_y + marge
-    cell_coord[:, 1] = cell_coord[:, 1] - min_x + marge
-    cell[cell_coord[:, 0], cell_coord[:, 1]] = True
-
-    # get nucleus layer
-    nuc = np.zeros(image_shape, dtype=bool)
-    if nuc_coord is not None:
-        nuc_coord[:, 0] = nuc_coord[:, 0] - min_y + marge
-        nuc_coord[:, 1] = nuc_coord[:, 1] - min_x + marge
-        nuc[nuc_coord[:, 0], nuc_coord[:, 1]] = True
-
-    # get rna layer
-    rna = np.zeros(image_shape, dtype=bool)
-    if rna_coord is not None:
-        rna_coord[:, ndim - 2] = rna_coord[:, ndim - 2] - min_y + marge
-        rna_coord[:, ndim - 1] = rna_coord[:, ndim - 1] - min_x + marge
-        rna[rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]] = True
-        rna = stack.dilation_filter(rna, "square", rna_size)
-
-    # get foci layer
-    foci = np.zeros(image_shape, dtype=bool)
-    if foci_coord is not None:
-        foci_coord[:, ndim - 2] = foci_coord[:, ndim - 2] - min_y + marge
-        foci_coord[:, ndim - 1] = foci_coord[:, ndim - 1] - min_x + marge
-
-        # case where we know which rna belong to a foci
-        if rna_coord.shape[1] == ndim + 1:
-            foci_indices = foci_coord[:, ndim + 1]
-            mask_rna_in_foci = np.isin(rna_coord[:, ndim], foci_indices)
-            rna_in_foci = rna_coord[mask_rna_in_foci, :].copy()
-            foci[rna_in_foci[:, ndim - 2], rna_in_foci[:, ndim - 1]] = True
-            foci = stack.dilation_filter(foci, "square", rna_size)
-
-        # case when only the foci centroid is known
-        else:
-            foci[foci_coord[:, ndim - 2], foci_coord[:, ndim - 1]] = True
-            foci = stack.dilation_filter(foci, "square", foci_size)
-
-    # get other layer
-    other = np.zeros(image_shape, dtype=bool)
-    if other_coord is not None:
-        other_coord[:, ndim - 2] = other_coord[:, ndim - 2] - min_y + marge
-        other_coord[:, ndim - 1] = other_coord[:, ndim - 1] - min_x + marge
-        other[other_coord[:, ndim - 2], other_coord[:, ndim - 1]] = True
-        other = stack.dilation_filter(other, "square", other_size)
-
-    # build image coordinate
-    image_coord = np.ones(shape=(image_shape[0], image_shape[1], 3),
-                          dtype=np.float32)
-    image_coord[cell, :] = [0, 0, 0]  # black
-    image_coord[nuc, :] = [43 / 255, 131 / 255, 186 / 255]  # blue
-    image_coord[rna, :] = [165 / 255, 0 / 255, 38 / 255]  # red
-    image_coord[foci, :] = [244 / 255, 109 / 255, 67 / 255]  # orange
-    image_coord[other, :] = [102 / 255, 204 / 255, 0 / 255]  # green
-
-    # plot original image and coordinate representation
-    if cell_coord is not None and image is not None:
-        fig, ax = plt.subplots(1, 2, sharey=True, figsize=framesize)
-
-        # original image
-        if remove_frame:
-            ax[0].axis("off")
-        if not rescale:
-            vmin, vmax = get_minmax_values(image)
-            ax[0].imshow(image, vmin=vmin, vmax=vmax)
-        else:
-            ax[0].imshow(image)
-        if cell_mask is not None:
-            cell_boundaries = stack.from_surface_to_boundaries(cell_mask)
-            cell_boundaries = np.ma.masked_where(cell_boundaries == 0,
-                                                 cell_boundaries)
-            ax[0].imshow(cell_boundaries, cmap=ListedColormap(['red']))
-        if nuc_mask is not None:
-            nuc_boundaries = stack.from_surface_to_boundaries(nuc_mask)
-            nuc_boundaries = np.ma.masked_where(nuc_boundaries == 0,
-                                                nuc_boundaries)
-            ax[0].imshow(nuc_boundaries, cmap=ListedColormap(['blue']))
-
-        # coordinate image
-        ax[1].imshow(image_coord)
-        if foci_coord is not None:
-            if ndim == 3:
-                foci_coord_2d = foci_coord[:, 1:].copy()
-            else:
-                foci_coord_2d = foci_coord.copy()
-            for (y, x, nb_rna, _) in foci_coord_2d:
-                ax[1].text(x+5, y-5, str(nb_rna), color="#fdae61", size=20)
-
-        # titles and frames
-        if remove_frame:
-            ax[0].axis("off")
-            ax[1].axis("off")
-        if title is not None:
-            ax[0].set_title("Original image ({0})".format(title),
-                            fontweight="bold", fontsize=10)
-            ax[1].set_title("Coordinate representation ({0})".format(title),
-                            fontweight="bold", fontsize=10)
-        plt.tight_layout()
-
-    # plot coordinate representation only
-    elif cell_coord is not None and image is None:
-
-        # title and frame
-        if remove_frame:
-            fig = plt.figure(figsize=framesize, frameon=False)
-            ax = fig.add_axes([0, 0, 1, 1])
-            ax.axis('off')
-        else:
-            plt.figure(figsize=framesize)
-            if title is not None:
-                plt.title("Coordinate representation ({0})".format(title),
-                          fontweight="bold", fontsize=10)
-
-        # coordinate image
-        plt.imshow(image_coord)
-        if foci_coord is not None:
-            if ndim == 3:
-                foci_coord_2d = foci_coord[:, 1:].copy()
-            else:
-                foci_coord_2d = foci_coord.copy()
-            for (y, x, nb_rna, _) in foci_coord_2d:
-                plt.text(x+5, y-5, str(nb_rna), color="#fdae61", size=20)
-
-        if not remove_frame:
-            plt.tight_layout()
-
-    # plot original image only
-    elif cell_coord is None and image is not None:
-        plot_segmentation_boundary(
-            image=image, cell_mask=cell_mask, nuc_mask=nuc_mask,
-            rescale=rescale, title=title, framesize=framesize,
-            remove_frame=remove_frame, path_output=path_output,
-            ext=ext, show=show)
-
-    # output
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    return
-
-
-def plot_cell_coordinates(cell_coord, nuc_coord, rna_coord, foci_coord,
-                          other_coord, title=None, remove_frame=False,
-                          framesize=(15, 10), path_output=None, ext="png",
-                          show=True):
-    """
-
-    Parameters
-    ----------
-    cell_coord : np.ndarray, np.int64
-        Coordinates of the cell border with shape (nb_points, 2).
-    nuc_coord : np.ndarray, np.int64
-        Coordinates of the nucleus border with shape (nb_points, 2).
-    rna_coord : np.ndarray, np.int64
-        Coordinates of the detected spots with shape (nb_spots, 4) or
-        (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
-        plus the index of the cluster assigned to the spot. If no cluster was
-        assigned, value is -1. If only coordinates of spatial dimensions are
-        available, only centroid of foci can be shown.
-    foci_coord : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx dimensions), the number of
-        spots detected in the foci and its index.
-    other_coord : np.ndarray, np.int64
-        Coordinates of the detected elements with shape (nb_elements, 3) or
-        (nb_elements, 2). One coordinate per dimension (zyx or yx dimensions).
-    title : str
-        Title of the image.
-    remove_frame : bool
-        Remove axes and frame.
-    framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    show : bool
-        Show the figure or not.
-
-    Returns
-    -------
-
-    """
-    # check parameters
-    if cell_coord is not None:
-        stack.check_array(cell_coord, ndim=2, dtype=np.int64)
-    if nuc_coord is not None:
-        stack.check_array(nuc_coord, ndim=2, dtype=np.int64)
-    if rna_coord is not None:
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-    if foci_coord is not None:
-        stack.check_array(foci_coord, ndim=2, dtype=np.int64)
-    if other_coord is not None:
-        stack.check_array(other_coord, ndim=2, dtype=np.int64)
-    stack.check_parameter(title=(str, type(None)),
-                          remove_frame=bool,
-                          framesize=tuple,
-                          path_output=(str, type(None)),
-                          ext=(str, list))
-
-    #cell_coord, others = stack.center_mask_coord(
-    #    main=cell_coord,
-    #    others=[nuc_coord, rna_coord, foci_coord, other_coord])
-    #shape, min_y, min_x, marge = stack.from_coord_to_frame(cell_coord)
-
-    # initialize plot
-    if remove_frame:
-        fig = plt.figure(figsize=framesize, frameon=False)
-        ax = fig.add_axes([0, 0, 1, 1])
-        ax.axis('off')
-    else:
-        plt.figure(figsize=framesize)
-        if title is not None:
-            plt.title(title, fontweight="bold", fontsize=10)
-
-    # plot
-    plt.plot(cell_coord[:, 1], cell_coord[:, 0], c="black", linewidth=2)
-    plt.plot(nuc_coord[:, 1], nuc_coord[:, 0], c="steelblue", linewidth=2)
-    plt.scatter(rna_coord[:, 2], rna_coord[:, 1], s=25, c="firebrick",
-                marker=".")
-
-    if foci_coord is not None:
-        plt.scatter(foci_coord[:, 2], foci_coord[:, 1], s=30, c="forestgreen",
-                    marker="x")
-        for (_, y, x, nb_rna, _) in foci_coord:
-            plt.text(x + 5, y - 5, str(nb_rna), color="#66cc00", size=20)
-
-    # format plot
-    _, _, min_y, max_y = plt.axis()
-    plt.ylim(max_y, min_y)
-    plt.axis('scaled')
-    if not remove_frame:
-        plt.tight_layout()
-
-    # output
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    return
-
-
