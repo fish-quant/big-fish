@@ -18,17 +18,13 @@ from skimage.morphology import watershed
 def cell_watershed(image, nuc_label, threshold, alpha=0.8):
     """Apply watershed algorithm to segment cell instances.
 
-    Cells are represented as watershed, with a low values to the center and
-    maximum values at their boundaries. We flood these watersheds sequentially.
-    The flooded area correspond to the cell segmentation.
-
-    A image of cells ('relief') is built as a combination of pixel intensity
-    and distance to nuclei, following the equation:
-
-        relief = alpha * pixel_intensity + (1 - alpha) * distance_to_nucleus
-
-    The watershed representation of cells is the opposite of this combined
-    image 'relief'.
+    In a watershed algorithm we consider cells as watershed to be flooded. The
+    watershed relief is inversely proportional to both the pixel intensity and
+    the closeness to nuclei. Pixels with a high intensity or close to labelled
+    nuclei have a low watershed relief value. They will be flooded in priority.
+    Flooding the watersheds allows to propagate nuclei labels through potential
+    cytoplasm areas. The lines separating watershed are the final segmentation
+    of the cells.
 
     Parameters
     ----------
@@ -40,7 +36,7 @@ def cell_watershed(image, nuc_label, threshold, alpha=0.8):
     threshold : int or float
         Threshold to discriminate cells surfaces from background.
     alpha : float or int
-        Weight of the pixel intensity values to compute the relief.
+        Weight of the pixel intensity values to compute the watershed relief.
 
     Returns
     -------
@@ -72,18 +68,13 @@ def cell_watershed(image, nuc_label, threshold, alpha=0.8):
 def get_watershed_relief(image, nuc_label, alpha):
     """Build a representation of cells as watershed.
 
-    Cells are represented as watershed, with a low values to the center and
-    maximum values at their boundaries. We flood these watersheds sequentially.
-    The flooded area correspond to the cell segmentation.
-
-    A image of cells ('relief') is built as a combination of pixel intensity
-    and distance to nuclei, following the equation:
-
-        relief = alpha * pixel_intensity + (1 - alpha) * distance_to_nucleus
-
-    The watershed representation of cells is the opposite of this combined
-    image 'relief'.
-
+    In a watershed algorithm we consider cells as watershed to be flooded. The
+    watershed relief is inversely proportional to both the pixel intensity and
+    the closeness to nuclei. Pixels with a high intensity or close to labelled
+    nuclei have a low watershed relief value. They will be flooded in priority.
+    Flooding the watersheds allows to propagate nuclei labels through potential
+    cytoplasm areas. The lines separating watershed are the final segmentation
+    of the cells.
 
     Parameters
     ----------
@@ -97,7 +88,7 @@ def get_watershed_relief(image, nuc_label, alpha):
 
     Returns
     -------
-    relief : np.ndarray, np.uint16
+    watershed_relief : np.ndarray, np.uint16
         Watershed representation of cells with shape (y, x).
 
     """
@@ -108,27 +99,43 @@ def get_watershed_relief(image, nuc_label, alpha):
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_parameter(alpha=(int, float))
 
-    # if a 3-d image is provided we sum its pixel values
-    image = image.astype(np.int64)
-    if image.ndim == 3:
-        image = image.sum(axis=0)
-
     # use pixel intensity of the cells image
     if alpha == 1:
-        relief = image.max() - image
-        relief[nuc_label > 0] = 0
-        relief = np.true_divide(relief, relief.max(), dtype=np.float64)
-        relief = stack.cast_img_uint16(relief, catch_warning=True)
+        # if a 3-d image is provided we sum its pixel values
+        image = stack.cast_img_float64(image)
+        if image.ndim == 3:
+            image = image.sum(axis=0)
+        # rescale image
+        image = stack.rescale(image)
+        # build watershed relief
+        watershed_relief = image.max() - image
+        watershed_relief[nuc_label > 0] = 0
+        watershed_relief = np.true_divide(watershed_relief,
+                                          watershed_relief.max(),
+                                          dtype=np.float64)
+        watershed_relief = stack.cast_img_uint16(watershed_relief,
+                                                 catch_warning=True)
 
     # use distance from the nuclei
     elif alpha == 0:
+        # build watershed relief
         nuc_mask = nuc_label > 0
-        relief = ndi.distance_transform_edt(~nuc_mask)
-        relief = np.true_divide(relief, relief.max(), dtype=np.float64)
-        relief = stack.cast_img_uint16(relief, catch_warning=True)
+        watershed_relief = ndi.distance_transform_edt(~nuc_mask)
+        watershed_relief = np.true_divide(watershed_relief,
+                                          watershed_relief.max(),
+                                          dtype=np.float64)
+        watershed_relief = stack.cast_img_uint16(watershed_relief,
+                                                 catch_warning=True)
 
     # use a combination of both previous methods
     elif 0 < alpha < 1:
+        # if a 3-d image is provided we sum its pixel values
+        image = stack.cast_img_float64(image)
+        if image.ndim == 3:
+            image = image.sum(axis=0)
+        # rescale image
+        image = stack.rescale(image)
+        # build watershed relief
         relief_pixel = image.max() - image
         relief_pixel[nuc_label > 0] = 0
         relief_pixel = np.true_divide(relief_pixel,
@@ -139,35 +146,32 @@ def get_watershed_relief(image, nuc_label, alpha):
         relief_distance = np.true_divide(relief_distance,
                                          relief_distance.max(),
                                          dtype=np.float64)
-        relief = alpha * relief_pixel + (1 - alpha) * relief_distance
-        relief = stack.cast_img_uint16(relief, catch_warning=True)
+        watershed_relief = alpha * relief_pixel + (1 - alpha) * relief_distance
+        watershed_relief = stack.cast_img_uint16(watershed_relief,
+                                                 catch_warning=True)
 
     else:
         raise ValueError("Parameter 'alpha' is wrong. It must be comprised "
                          "between 0 and 1. Currently 'alpha' is {0}"
                          .format(alpha))
 
-    return relief
+    return watershed_relief
 
 
-def apply_watershed(relief, nuc_label, cell_mask):
+def apply_watershed(watershed_relief, nuc_label, cell_mask):
     """Apply watershed algorithm to segment cell instances.
 
-    Cells are represented as watershed, with a low values to the center and
-    maximum values at their boundaries. We flood these watersheds sequentially.
-    The flooded area correspond to the cell segmentation.
-
-    A image of cells ('relief') is built as a combination of pixel intensity
-    and distance to nuclei, following the equation:
-
-        relief = alpha * pixel_intensity + (1 - alpha) * distance_to_nucleus
-
-    The watershed representation of cells is the opposite of this combined
-    image 'relief'.
+    In a watershed algorithm we consider cells as watershed to be flooded. The
+    watershed relief is inversely proportional to both the pixel intensity and
+    the closeness to nuclei. Pixels with a high intensity or close to labelled
+    nuclei have a low watershed relief value. They will be flooded in priority.
+    Flooding the watersheds allows to propagate nuclei labels through potential
+    cytoplasm areas. The lines separating watershed are the final segmentation
+    of the cells.
 
     Parameters
     ----------
-    relief : np.ndarray, np.uint or np.int
+    watershed_relief : np.ndarray, np.uint or np.int
         Watershed representation of cells with shape (y, x).
     nuc_label : np.ndarray, np.int64
         Result of the nuclei segmentation with shape (y, x) and nuclei
@@ -182,12 +186,14 @@ def apply_watershed(relief, nuc_label, cell_mask):
 
     """
     # check parameters
-    stack.check_array(relief, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(watershed_relief,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_array(cell_mask, ndim=2, dtype=bool)
 
     # segment cells
-    cell_label = watershed(relief, markers=nuc_label, mask=cell_mask)
+    cell_label = watershed(watershed_relief, markers=nuc_label, mask=cell_mask)
     cell_label = cell_label.astype(np.int64)
 
     return cell_label
