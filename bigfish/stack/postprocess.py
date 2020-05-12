@@ -131,7 +131,7 @@ def remove_transcription_site(rna, transcription_site):
 # ### Cell extraction ###
 
 def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
-                 image=None):
+                 image=None, remove_cropped_cell=True, check_nuc_in_cell=True):
     """Extract cell-level results of a FoV.
 
     The function gathers different segmentation and detection results obtained
@@ -161,6 +161,10 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
     image : np.ndarray, np.uint
         Image in 2-d of the FoV. If None, image of the individual cells are not
         extracted.
+    remove_cropped_cell : bool
+        Remove cells cropped by the FOv frame.
+    check_nuc_in_cell : bool
+        Check that each nucleus is entirely localized within a cell.
 
     Returns
     -------
@@ -175,7 +179,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
     """
     # check parameters
     check_parameter(ndim=int,
-                    others=(dict, type(None)))
+                    others=(dict, type(None)),
+                    remove_cropped_cell=bool,
+                    check_nuc_in_cell=bool)
     check_array(cell_label,
                 ndim=2,
                 dtype=[np.uint8, np.uint16, np.int64])
@@ -213,10 +219,11 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
 
     # initialize a mask to detect cells at the FoV borders
     fov_borders = np.zeros(cell_label.shape, dtype=bool)
-    fov_borders[:, 0] = True
-    fov_borders[0, :] = True
-    fov_borders[:, cell_label.shape[1] - 1] = True
-    fov_borders[cell_label.shape[0] - 1, :] = True
+    if remove_cropped_cell:
+        fov_borders[:, 0] = True
+        fov_borders[0, :] = True
+        fov_borders[:, cell_label.shape[1] - 1] = True
+        fov_borders[cell_label.shape[0] - 1, :] = True
 
     # iterate over each segmented cell
     cells = regionprops(cell_label)
@@ -235,7 +242,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
         cell_mask = (cell_mask == label)
 
         # check if cell is not cropped by the borders
-        if _check_cropped_cell(cell_mask, fov_borders):
+        if remove_cropped_cell and _check_cropped_cell(cell_mask, fov_borders):
             continue
 
         # get boundaries coordinates for cell
@@ -254,8 +261,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
             nuc_mask = nuc_label.copy()
             nuc_mask = (nuc_mask == label)
 
-            # check if nucleus is in the cytoplasm
-            if not _check_nucleus_in_cell(cell_mask, nuc_mask):
+            # check if nucleus is in the cell
+            if (check_nuc_in_cell
+                    and not _check_nucleus_in_cell(cell_mask, nuc_mask)):
                 continue
 
             # get boundaries coordinates for nucleus
