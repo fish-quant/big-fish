@@ -432,300 +432,6 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
 
 # ### Detection plot ###
 
-def plot_spot_detection(image, spots, radius_yx, rescale=False,
-                        title=None, framesize=(15, 5), remove_frame=False,
-                        path_output=None, ext="png", show=True):
-    """Plot detected spot on a 2-d image.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        A 2-d image with shape (y, x).
-    spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    radius_yx : float or int
-        Radius yx of the detected spots.
-    rescale : bool
-        Rescale pixel values of the image (made by default in matplotlib).
-    title : str
-        Title of the image.
-    framesize : tuple
-        Size of the frame used to plot (plt.figure(figsize=framesize).
-    remove_frame : bool
-        Remove axes and frame.
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    show : bool
-        Show the figure or not.
-
-    Returns
-    -------
-
-    """
-    # check parameters
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(radius_yx=(float, int),
-                          rescale=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
-
-    # get minimum and maximum value of the image
-    vmin, vmax = None, None
-    if not rescale:
-        vmin, vmax = get_minmax_values(image)
-
-    # plot
-    fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
-
-    # image
-    if not rescale:
-        ax[0].imshow(image, vmin=vmin, vmax=vmax)
-    else:
-        ax[0].imshow(image)
-    if title is not None:
-        ax[0].set_title(title, fontweight="bold", fontsize=10)
-    if remove_frame:
-        ax[0].axis("off")
-
-    # spots
-    if not rescale:
-        ax[1].imshow(image, vmin=vmin, vmax=vmax)
-    else:
-        ax[1].imshow(image)
-    if spots.shape[1] == 3:
-        spots_2d = spots[:, 1:]
-    else:
-        spots_2d = spots
-    for y, x in spots_2d:
-        c = plt.Circle((x, y), radius_yx,
-                       color="red",
-                       linewidth=1,
-                       fill=False)
-        ax[1].add_patch(c)
-    if title is not None:
-        ax[1].set_title("All detected spots", fontweight="bold", fontsize=10)
-    if remove_frame:
-        ax[1].axis("off")
-
-    plt.tight_layout()
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    return
-
-
-def plot_reference_spot(reference_spot, rescale=False, title=None,
-                        framesize=(8, 8), remove_frame=False,
-                        path_output=None, ext="png", show=True):
-    """Plot the selected yx plan of the selected dimensions of an image.
-
-    Parameters
-    ----------
-    reference_spot : np.ndarray
-        Spot image with shape (z, y, x) or (y, x).
-    rescale : bool
-        Rescale pixel values of the image (made by default in matplotlib).
-    title : str
-        Title of the image.
-    framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
-    remove_frame : bool
-        Remove axes and frame.
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    show : bool
-        Show the figure or not.
-
-    Returns
-    -------
-
-    """
-    # check parameters
-    stack.check_array(reference_spot,
-                      ndim=[2,  3],
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64])
-    stack.check_parameter(rescale=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
-
-    # project spot in 2-d if necessary
-    if reference_spot.ndim == 3:
-        reference_spot = stack.maximum_projection(reference_spot)
-
-    # get minimum and maximum value of the image
-    vmin, vmax = None, None
-    if not rescale:
-        vmin, vmax = get_minmax_values(reference_spot)
-
-    # plot reference spot
-    if remove_frame:
-        fig = plt.figure(figsize=framesize, frameon=False)
-        ax = fig.add_axes([0, 0, 1, 1])
-        ax.axis('off')
-    else:
-        plt.figure(figsize=framesize)
-    if not rescale:
-        plt.imshow(reference_spot, vmin=vmin, vmax=vmax)
-    else:
-        plt.imshow(reference_spot)
-    if title is not None and not remove_frame:
-        plt.title(title, fontweight="bold", fontsize=25)
-    if not remove_frame:
-        plt.tight_layout()
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    return
-
-
-def plot_foci_detection(image, spots, foci, radius_spots_yx,
-                        rescale=False, title=None, framesize=(15, 10),
-                        remove_frame=False, path_output=None, ext="png",
-                        show=True):
-    """Plot detected spots and foci on a 2-d image.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        A 2-d image with shape (y, x).
-    spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension (zyx or  yx coordinates), number of RNAs in the foci and
-        index of the foci.
-    radius_spots_yx : float or int
-        Radius yx of the detected spots.
-    rescale : bool
-        Rescale pixel values of the image (made by default in matplotlib).
-    title : str
-        Title of the image.
-    framesize : tuple
-        Size of the frame used to plot (plt.figure(figsize=framesize).
-    remove_frame : bool
-        Remove axes and frame.
-    path_output : str
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    show : bool
-        Show the figure or not.
-
-    Returns
-    -------
-
-    """
-    # check parameters
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64])
-    stack.check_array(foci, ndim=2, dtype=np.int64)
-    stack.check_parameter(spots=(np.ndarray, type(None)),
-                          radius_spots_yx=(float, int),
-                          rescale=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
-    if spots is not None:
-        stack.check_array(spots, ndim=2, dtype=np.int64)
-
-    # get minimum and maximum value of the image
-    vmin, vmax = None, None
-    if not rescale:
-        vmin, vmax = get_minmax_values(image)
-
-    # plot
-    fig, ax = plt.subplots(1, 2, sharex='col', figsize=framesize)
-
-    # image
-    if not rescale:
-        ax[0].imshow(image, vmin=vmin, vmax=vmax)
-    else:
-        ax[0].imshow(image)
-    if title is not None:
-        ax[0].set_title(title, fontweight="bold", fontsize=10)
-    if remove_frame:
-        ax[0].axis("off")
-
-    # spots and foci
-    if not rescale:
-        ax[1].imshow(image, vmin=vmin, vmax=vmax)
-    else:
-        ax[1].imshow(image)
-    if spots is not None:
-        if spots.shape[1] == 3:
-            spots_2d = spots[:, 1:]
-        else:
-            spots_2d = spots
-        for y, x in spots_2d:
-            c = plt.Circle((x, y), radius_spots_yx,
-                           color="red",
-                           linewidth=1,
-                           fill=False)
-            ax[1].add_patch(c)
-        title_ = "Detected spots and foci"
-    else:
-        title_ = "Detected foci"
-    if foci.shape[1] == 5:
-        foci_2d = foci[:, 1:3]
-    else:
-        foci_2d = foci[:, :2]
-    for y, x in foci_2d:
-        c = plt.Circle((x, y), radius_spots_yx * 2,
-                       color="blue",
-                       linewidth=2,
-                       fill=False)
-        ax[1].add_patch(c)
-    if title is not None:
-        ax[1].set_title(title_,
-                        fontweight="bold",
-                        fontsize=10)
-    if remove_frame:
-        ax[1].axis("off")
-
-    plt.tight_layout()
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    return
-
-
 def plot_detection(image, spots, shape="circle", radius=3, color="red",
                    linewidth=1, fill=False, rescale=False, title=None,
                    framesize=(15, 10), remove_frame=False, path_output=None,
@@ -936,6 +642,82 @@ def _define_patch(x, y, shape, radius, color, linewidth, fill):
                       "'polygon', but not {0}".format(shape), UserWarning)
 
     return x
+
+
+def plot_reference_spot(reference_spot, rescale=False, title=None,
+                        framesize=(8, 8), remove_frame=False,
+                        path_output=None, ext="png", show=True):
+    """Plot the selected yx plan of the selected dimensions of an image.
+
+    Parameters
+    ----------
+    reference_spot : np.ndarray
+        Spot image with shape (z, y, x) or (y, x).
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
+    title : str
+        Title of the image.
+    framesize : tuple
+        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+    remove_frame : bool
+        Remove axes and frame.
+    path_output : str
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+    show : bool
+        Show the figure or not.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    stack.check_array(reference_spot,
+                      ndim=[2,  3],
+                      dtype=[np.uint8, np.uint16, np.int64,
+                             np.float32, np.float64])
+    stack.check_parameter(rescale=bool,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list),
+                          show=bool)
+
+    # project spot in 2-d if necessary
+    if reference_spot.ndim == 3:
+        reference_spot = stack.maximum_projection(reference_spot)
+
+    # get minimum and maximum value of the image
+    vmin, vmax = None, None
+    if not rescale:
+        vmin, vmax = get_minmax_values(reference_spot)
+
+    # plot reference spot
+    if remove_frame:
+        fig = plt.figure(figsize=framesize, frameon=False)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+    else:
+        plt.figure(figsize=framesize)
+    if not rescale:
+        plt.imshow(reference_spot, vmin=vmin, vmax=vmax)
+    else:
+        plt.imshow(reference_spot)
+    if title is not None and not remove_frame:
+        plt.title(title, fontweight="bold", fontsize=25)
+    if not remove_frame:
+        plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return
 
 
 # ### Individual cell plot ###
