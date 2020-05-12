@@ -15,6 +15,7 @@ import numpy as np
 
 from .utils import save_plot, get_minmax_values
 
+from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import RegularPolygon
 
@@ -327,7 +328,7 @@ def plot_segmentation(image, mask, rescale=False, title=None,
     return
 
 
-def plot_segmentation_boundary(image, cell_mask=None, nuc_mask=None,
+def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
                                rescale=False, title=None, framesize=(10, 10),
                                remove_frame=False, path_output=None,
                                ext="png", show=True):
@@ -337,9 +338,9 @@ def plot_segmentation_boundary(image, cell_mask=None, nuc_mask=None,
     ----------
     image : np.ndarray
         A 2-d image with shape (y, x).
-    cell_mask : np.ndarray
+    cell_label : np.ndarray
         A 2-d image with shape (y, x).
-    nuc_mask : np.ndarray
+    nuc_label : np.ndarray
         A 2-d image with shape (y, x).
     rescale : bool
         Rescale pixel values of the image (made by default in matplotlib).
@@ -367,12 +368,12 @@ def plot_segmentation_boundary(image, cell_mask=None, nuc_mask=None,
                       dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64,
                              bool])
-    if cell_mask is not None:
-        stack.check_array(cell_mask,
+    if cell_label is not None:
+        stack.check_array(cell_label,
                           ndim=2,
                           dtype=[np.uint8, np.uint16, np.int64, bool])
-    if nuc_mask is not None:
-        stack.check_array(nuc_mask,
+    if nuc_label is not None:
+        stack.check_array(nuc_label,
                           ndim=2,
                           dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(rescale=bool,
@@ -391,12 +392,12 @@ def plot_segmentation_boundary(image, cell_mask=None, nuc_mask=None,
     # get boundaries
     cell_boundaries = None
     nuc_boundaries = None
-    if cell_mask is not None:
-        cell_boundaries = stack.from_surface_to_boundaries(cell_mask)
+    if cell_label is not None:
+        cell_boundaries = find_boundaries(cell_label, mode='thick')
         cell_boundaries = np.ma.masked_where(cell_boundaries == 0,
                                              cell_boundaries)
-    if nuc_mask is not None:
-        nuc_boundaries = stack.from_surface_to_boundaries(nuc_mask)
+    if nuc_label is not None:
+        nuc_boundaries = find_boundaries(nuc_label, mode='thick')
         nuc_boundaries = np.ma.masked_where(nuc_boundaries == 0,
                                             nuc_boundaries)
 
@@ -411,9 +412,9 @@ def plot_segmentation_boundary(image, cell_mask=None, nuc_mask=None,
         plt.imshow(image, vmin=vmin, vmax=vmax)
     else:
         plt.imshow(image)
-    if cell_mask is not None:
+    if cell_label is not None:
         plt.imshow(cell_boundaries, cmap=ListedColormap(['red']))
-    if nuc_mask is not None:
+    if nuc_label is not None:
         plt.imshow(nuc_boundaries, cmap=ListedColormap(['blue']))
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
