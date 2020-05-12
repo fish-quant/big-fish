@@ -432,6 +432,7 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
 
 # ### Detection plot ###
 
+# TODO allow textual annotations
 def plot_detection(image, spots, shape="circle", radius=3, color="red",
                    linewidth=1, fill=False, rescale=False, title=None,
                    framesize=(15, 10), remove_frame=False, path_output=None,
