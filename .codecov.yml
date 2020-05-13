@@ -3,6 +3,10 @@ comment: false
 ignore:
   - "setup.py"
   - "python_scripts"
+  - "bigfish/plot"
+  - "bigfish/deep_learning"
+  - "data"
+  - "weights"
 
 coverage:
   status:
