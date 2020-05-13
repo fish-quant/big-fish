@@ -21,6 +21,10 @@ from bigfish.stack.utils import get_nb_element_per_dimension
 from bigfish.stack.utils import count_nb_fov
 
 
+# TODO add test for bigfish.stack.load_and_save_url
+# TODO add test for bigfish.stack.check_hash
+# TODO add test for bigfish.stack.compute_hash
+
 # ### Test sanity check functions ###
 
 def test_check_parameter():
@@ -339,7 +343,7 @@ def test_check_datamap():
             stack.check_datamap(datamap)
 
 
-# ### Others ###
+# ### Constants ###
 
 def test_margin_value():
     # test margin value

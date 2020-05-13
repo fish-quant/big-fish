@@ -10,9 +10,12 @@ import os
 import re
 import copy
 import inspect
+import hashlib
 
 import numpy as np
 import pandas as pd
+
+from urllib.request import urlretrieve
 
 
 # ### Sanity checks dataframe ###
@@ -615,7 +618,7 @@ def check_parameter(**kwargs):
     return True
 
 
-# ### Others ###
+# ### Constants ###
 
 def get_margin_value():
     """Return the margin pixel around a cell coordinate used to define its
@@ -641,3 +644,104 @@ def get_eps_float32():
 
     """
     return np.finfo(np.float32).eps
+
+
+# ### Fetch data ###
+
+def load_and_save_url(remote_url, directory, filename=None):
+    """Download remote data and save them
+
+    Parameters
+    ----------
+    remote_url : str
+        Remote url of the data to download.
+    directory : str
+        Directory to save the download content.
+    filename : str
+        Filename of the object to save.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    check_parameter(remote_url=str,
+                    directory=str,
+                    filename=(str, type(None)))
+
+    # get output path
+    if filename is None:
+        filename = remote_url.split("/")[-1]
+    path = os.path.join(directory, filename)
+
+    # download and save data
+    urlretrieve(remote_url, path)
+
+    return
+
+
+def check_hash(path, expected_hash):
+    """Check hash value of a file.
+
+    Parameters
+    ----------
+    path : str
+        Path of the file to check.
+    expected_hash : str
+        Expected hash value.
+
+    Returns
+    -------
+    _ : bool
+        True if hash values match.
+
+    """
+    # check parameter
+    check_parameter(path=str,
+                    expected_hash=str)
+
+    # compute hash value
+    hash_value = compute_hash(path)
+
+    # compare checksum
+    if hash_value != expected_hash:
+        raise IOError("File {0} has an SHA256 checksum ({1}) differing from "
+                      "expected ({2}). File may be corrupted."
+                      .format(path, hash_value, expected_hash))
+
+    return True
+
+
+def compute_hash(path):
+    """Compute sha256 hash of a file.
+
+    Parameters
+    ----------
+    path : str
+        Path to read the file.
+
+    Returns
+    -------
+    sha256 : str
+        Hash value of the file.
+
+    """
+    # check parameters
+    check_parameter(path=str)
+
+    # initialization
+    sha256hash = hashlib.sha256()
+    chunk_size = 8192
+
+    # open and read file
+    with open(path, "rb") as f:
+        while True:
+            buffer = f.read(chunk_size)
+            if not buffer:
+                break
+            sha256hash.update(buffer)
+
+    # compute hash
+    sha256 = sha256hash.hexdigest()
+
+    return sha256
