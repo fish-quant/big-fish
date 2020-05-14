@@ -50,11 +50,11 @@ pip install .
 ## Usage
 
 Big-FISH provides a toolbox for the full analysis pipeline of smFISH images:
-- Use `bigfish.stack` submodule for I/O operations, preprocessing and postprocessing.
-- Use `bigfish.segmentation` submodule for nucleus and cell segmentation.
-- Use `bigfish.detection` submodule for mRNAs detection.
-- Use `bigfish.plot` submodule for plotting routines.
-- Use `bigfish.classification` submodule for pattern recognition tasks.
+- Use `bigfish.stack` subpackage for I/O operations, preprocessing and postprocessing.
+- Use `bigfish.segmentation` subpackage for nucleus and cell segmentation.
+- Use `bigfish.detection` subpackage for mRNAs detection.
+- Use `bigfish.plot` subpackage for plotting routines.
+- Use `bigfish.classification` subpackage for pattern recognition tasks.
 
 Several examples are developed in the [examples](https://github.com/fish-quant/big-fish/tree/master/examples) directory.
 
@@ -65,7 +65,7 @@ If you have any question relative to the repository, please open an [issue](http
 ## Roadmap (suggestion)
 
 Version 0.4.0:
-- Refactor `bigfish.classification` submodule.
+- Refactor `bigfish.classification` subpackage.
 - Add pattern recognition examples.
 
 Version 0.5.0:
