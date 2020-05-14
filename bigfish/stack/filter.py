@@ -2,7 +2,7 @@
 # Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
 # License: BSD 3 clause
 
-"""Filter functions."""
+"""Filtering functions."""
 
 import numpy as np
 

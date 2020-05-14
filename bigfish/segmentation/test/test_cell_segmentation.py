@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.segmentation.cell_segmentation submodule.
+Unitary tests for bigfish.segmentation.cell_segmentation module.
 """
 
 

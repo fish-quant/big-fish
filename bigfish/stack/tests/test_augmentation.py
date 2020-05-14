@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.augmentation submodule.
+Unitary tests for bigfish.stack.augmentation module.
 """
 
 import pytest

@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Utility functions for bigfish.stack submodule.
+Utility functions for bigfish.stack subpackage.
 """
 
 import os

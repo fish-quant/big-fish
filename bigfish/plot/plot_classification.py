@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions to plot results from classification model.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 

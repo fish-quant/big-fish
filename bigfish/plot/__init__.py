@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-The bigfish.plot module includes functions to plot images and results.
+The bigfish.plot subpackage includes functions to plot images and results.
 """
 
 from .plot_images import plot_yx

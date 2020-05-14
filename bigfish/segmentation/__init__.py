@@ -3,8 +3,8 @@
 # License: BSD 3 clause
 
 """
-The bigfish.segmentation module includes functions to segment or label nuclei
-and cells.
+The bigfish.segmentation subpackage includes functions to segment or label
+nuclei and cells.
 """
 
 from .utils import label_instances

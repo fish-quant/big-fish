@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.postprocess submodule.
+Unitary tests for bigfish.stack.postprocess module.
 """
 
 # TODO add test bigfish.stack.identify_transcription_site

@@ -10,10 +10,10 @@ import warnings
 
 import bigfish.stack as stack
 
+from .utils import save_plot, get_minmax_values
+
 import matplotlib.pyplot as plt
 import numpy as np
-
-from .utils import save_plot, get_minmax_values
 
 from skimage.segmentation import find_boundaries
 from matplotlib.colors import ListedColormap

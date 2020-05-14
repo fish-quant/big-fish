@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Utility functions for nuclei and cytoplasm segmentation.
+Utility functions for bigfish.segmentation subpackage.
 """
 
 import bigfish.stack as stack

@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.spot_detection submodule.
+Unitary tests for bigfish.stack.spot_detection module.
 """
 
 # TODO test bigfish.detection.spot_detector

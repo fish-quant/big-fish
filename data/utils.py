@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Utility functions for bigfish.data submodule.
+Utility functions for bigfish.data subpackage.
 """
 
 import os
@@ -29,6 +29,7 @@ def check_input_data(input_directory):
     -------
     input_directory : str
         Path of the input data directory.
+
     """
     # check if input dapi image exists
     path = os.path.join(input_directory, filename_input_dapi)

@@ -17,9 +17,9 @@ from .utils import check_array, check_parameter, get_margin_value
 from skimage.measure import regionprops, find_contours
 from skimage.draw import polygon_perimeter
 
+
 # TODO extract cell-RNAs matrix
 # TODO sum up extraction results in a (csv) file
-
 
 # ### Transcription sites ###
 

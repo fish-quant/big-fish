@@ -3,8 +3,8 @@
 # License: BSD 3 clause
 
 """
-The bigfish.detection module includes function to detect RNA spot in 2-d and
-3-d.
+The bigfish.detection subpackage includes function to detect RNA spot in 2-d
+and 3-d.
 """
 
 from .utils import get_sigma

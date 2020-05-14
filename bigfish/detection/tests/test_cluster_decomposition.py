@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.cluster_decomposition submodule.
+Unitary tests for bigfish.stack.cluster_decomposition module.
 """
 
 # TODO test bigfish.detection.decompose_cluster

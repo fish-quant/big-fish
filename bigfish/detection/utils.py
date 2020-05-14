@@ -3,15 +3,15 @@
 # License: BSD 3 clause
 
 """
-Utility functions for bigfish.stack submodule.
+Utility functions for bigfish.stack subpackage.
 """
 
 import bigfish.stack as stack
 import numpy as np
 
+
 # TODO add function to calibrate psf
 # TODO add function to compute signal-to-noise ratio
-
 
 # ### Signal-to-Noise ratio ###
 

@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-The bigfish.data module includes functions to load data.
+The bigfish.data subpackage includes functions to load data.
 """
 
 from .utils import check_input_data

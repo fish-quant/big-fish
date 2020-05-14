@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.projection submodule.
+Unitary tests for bigfish.stack.projection module.
 """
 
 import pytest

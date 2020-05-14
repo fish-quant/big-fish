@@ -27,9 +27,9 @@ from skimage import img_as_float64
 from skimage import img_as_uint
 from skimage.exposure import rescale_intensity
 
+
 # TODO only read in memory one or several channels (and not the entire image)
 # TODO allow new keys to define a recipe
-
 
 # ### Building stack ###
 

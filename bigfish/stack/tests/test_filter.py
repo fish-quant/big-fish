@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.filter submodule.
+Unitary tests for bigfish.stack.filter module.
 """
 
 import pytest

@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.preprocess submodule.
+Unitary tests for bigfish.stack.preprocess module.
 """
 
 import os

@@ -3,8 +3,8 @@
 # License: BSD 3 clause
 
 """
-The bigfish.stack module includes functions to read data, preprocess them and
-build stack of images.
+The bigfish.stack subpackage includes functions to read data, preprocess them
+and build stack of images.
 """
 
 from .utils import check_array

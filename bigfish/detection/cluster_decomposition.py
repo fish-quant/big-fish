@@ -20,10 +20,11 @@ from skimage.measure import regionprops
 from skimage.measure import label
 
 
-# ### Main function ###
-
 # TODO add parameter to detect more or less clusters
 # TODO add parameter to fit more or less spots in a cluster
+
+# ### Main function ###
+
 def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
                       psf_z=None, psf_yx=200):
     """Detect potential regions with clustered spots and fit as many reference
