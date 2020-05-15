@@ -1,76 +1,386 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions used to format and clean any intermediate results loaded in or
 returned by a bigfish method.
 """
 
+import warnings
+
 import numpy as np
 from scipy import ndimage as ndi
 
-from .utils import check_array, check_parameter, get_offset_value
+from .utils import check_array, check_parameter, get_margin_value
 
 from skimage.measure import regionprops, find_contours
 from skimage.draw import polygon_perimeter
 
 
+# TODO extract cell-RNAs matrix
+# TODO sum up extraction results in a (csv) file
+
 # ### Transcription sites ###
 
-def remove_transcription_site(mask_nuc, spots_in_foci, foci):
-    """We define a transcription site as a foci detected in the nucleus.
+def identify_transcription_site(nuc_mask, foci):
+    """A transcription site is defined as as a foci detected within the
+    nucleus.
 
     Parameters
     ----------
-    mask_nuc : np.ndarray, bool
+    nuc_mask : np.ndarray, bool
         Binary mask of the nuclei with shape (y, x).
-    spots_in_foci : np.ndarray, np.int64
-        Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
-        One coordinate per dimension (zyx coordinates) plus the index of the
-        foci.
     foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension for the
-        foci centroid (zyx coordinates), the number of RNAs detected in the
-        foci and its index.
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension for the foci centroid (zyx or yx coordinates), the number of
+        RNAs detected in the foci and its index.
 
     Returns
     -------
-    spots_in_foci_cleaned : np.ndarray, np.int64
-        Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
-        One coordinate per dimension (zyx coordinates) plus the index of the
-        foci. Transcription sites are removed.
-    foci_cleaned : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension for the
-        foci centroid (zyx coordinates), the number of RNAs detected in the
-        foci and its index. Transcription sites are removed.
+    foci : np.ndarray, np.int64
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension for the foci centroid (zyx or yx coordinates), the number of
+        RNAs detected in the foci and its index. Transcription site are
+        removed.
+    transcription_site : np.ndarray, np.int64
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension for the transcription site centroid (zyx or yx coordinates),
+        the number of RNAs detected in the transcription site and its index.
 
     """
     # check parameters
-    check_array(mask_nuc,
+    check_array(nuc_mask,
                 ndim=2,
-                dtype=[bool],
-                allow_nan=False)
-    check_array(spots_in_foci,
-                ndim=2,
-                dtype=[np.int64],
-                allow_nan=False)
+                dtype=[np.uint8, np.uint16, np.int64,
+                       bool])
     check_array(foci,
                 ndim=2,
-                dtype=[np.int64],
-                allow_nan=False)
+                dtype=np.int64)
+
+    # check number of dimensions
+    ndim = foci.shape[1] - 2
+    if ndim not in [2, 3]:
+        raise ValueError("Foci array should be in 4 or 5 dimensions (one "
+                         "coordinate per dimension for the foci centroid, the "
+                         "number of RNAs detected in the foci and its "
+                         "index), not {0}.".format(foci.shape[1]))
+
+    # binarize nuclei mask if needed
+    if nuc_mask.dtype != bool:
+        nuc_mask = nuc_mask.astype(bool)
 
     # remove foci inside nuclei
-    mask_transcription_site = mask_nuc[foci[:, 1], foci[:, 2]]
-    foci_cleaned = foci[~mask_transcription_site]
+    mask_transcription_site = nuc_mask[foci[:, ndim - 2], foci[:, ndim - 1]]
+    transcription_site = foci[mask_transcription_site]
+    foci = foci[~mask_transcription_site]
 
-    # filter spots in transcription sites
-    spots_to_keep = foci_cleaned[:, 4]
-    mask_spots_to_keep = np.isin(spots_in_foci[:, 3], spots_to_keep)
-    spots_in_foci_cleaned = spots_in_foci[mask_spots_to_keep]
+    return foci, transcription_site
 
-    return spots_in_foci_cleaned, foci_cleaned
+
+def remove_transcription_site(rna, transcription_site):
+    """A transcription site is defined as as a foci detected within the
+    nucleus.
+
+    Parameters
+    ----------
+    rna : np.ndarray, np.int64
+        Coordinates of the detected RNAs with shape (nb_spots, 4) or
+        (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
+        plus the index of the foci assigned to the RNA. If no foci was
+        assigned, value is -1.
+    transcription_site : np.ndarray, np.int64
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension for the transcription site centroid (zyx or yx coordinates),
+        the number of RNAs detected in the transcription site and its index.
+
+    Returns
+    -------
+    rna_out_ts : np.ndarray, np.int64
+        Coordinates of the detected RNAs with shape (nb_spots, 4) or
+        (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
+        plus the index of the foci assigned to the RNA. If no foci was
+        assigned, value is -1. RNAs from transcription sites are removed.
+
+    """
+    # check parameters
+    check_array(rna,
+                ndim=2,
+                dtype=np.int64)
+    check_array(transcription_site,
+                ndim=2,
+                dtype=np.int64)
+
+    # check number of dimensions
+    ndim = transcription_site.shape[1] - 2
+    if ndim not in [2, 3]:
+        raise ValueError("transcription_site array should be in 4 or 5 "
+                         "dimensions (one coordinate per dimension for the "
+                         "cluster centroid, the number of spots detected in "
+                         "the cluster and its index), not {0}."
+                         .format(transcription_site.shape[1]))
+
+    # filter out rna from transcription sites
+    rna_in_ts = transcription_site[:, ndim + 1]
+    mask_rna_in_ts = np.isin(rna[:, ndim], rna_in_ts)
+    rna_out_ts = rna[~mask_rna_in_ts]
+
+    return rna_out_ts
 
 
 # ### Cell extraction ###
+
+def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
+                 image=None, remove_cropped_cell=True, check_nuc_in_cell=True):
+    """Extract cell-level results of a FoV.
+
+    The function gathers different segmentation and detection results obtained
+    at the FoV level and assigns each of them to the individual cells.
+
+    Parameters
+    ----------
+    cell_label : np.ndarray, np.uint or np.int
+        Image with labelled cells and shape (y, x).
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
+    nuc_label : np.ndarray, np.uint or np.int
+        Image with labelled nuclei and shape (y, x). If None, individual
+        nuclei are not assigned to each cell.
+    rna_coord : np.ndarray, np.int64
+        Coordinates of the detected RNAs with zyx or yx coordinates in the
+        first 3 or 2 columns. If None, RNAs are not assigned to individual
+        cells.
+    others : Dict[np.ndarray]
+        Dictionary of coordinates arrays. For each array of the dictionary,
+        the different elements are assigned to individual cells. Arrays should
+        be organized the same way than spots: zyx or yx coordinates in the
+        first 3 or 2 columns, np.int64 dtype, one element per row. Can be used
+        to assign different detected elements to the segmented cells along with
+        the spots. If None, no others elements are assigned to the individual
+        cells.
+    image : np.ndarray, np.uint
+        Image in 2-d of the FoV. If None, image of the individual cells are not
+        extracted.
+    remove_cropped_cell : bool
+        Remove cells cropped by the FOv frame.
+    check_nuc_in_cell : bool
+        Check that each nucleus is entirely localized within a cell.
+
+    Returns
+    -------
+    fov_results : List[Dict]
+        List of dictionaries, one per cell segmented in the FoV. Each
+        dictionary includes information about the cell (image, masks,
+        coordinates arrays). Minimal information are :
+        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord : boundary coordinates of the cell.
+        - cell_mask : mask of the cell.
+
+    """
+    # check parameters
+    check_parameter(ndim=int,
+                    others=(dict, type(None)),
+                    remove_cropped_cell=bool,
+                    check_nuc_in_cell=bool)
+    check_array(cell_label,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64])
+    if nuc_label is not None:
+        check_array(nuc_label,
+                    ndim=2,
+                    dtype=[np.uint8, np.uint16, np.int64])
+    if rna_coord is not None:
+        check_array(rna_coord,
+                    ndim=2,
+                    dtype=np.int64)
+    if image is not None:
+        check_array(image,
+                    ndim=2,
+                    dtype=[np.uint8, np.uint16])
+    if others is not None:
+        for key in others:
+            array = others[key]
+            check_array(array,
+                        ndim=2,
+                        dtype=np.int64)
+            if array.shape[1] < ndim:
+                warnings.warn("array in 'others' have less coordinates ({0}) "
+                              "than the minimum number of spatial dimension "
+                              "we consider ({1})".format(array.shape[1], ndim),
+                              UserWarning)
+    if rna_coord.shape[1] < ndim:
+        warnings.warn("'rna_coord' have less coordinates ({0}) than the "
+                      "minimum number of spatial dimension we "
+                      "consider ({1})".format(rna_coord.shape[1], ndim),
+                      UserWarning)
+
+    # initialize FoV results
+    fov_results = []
+
+    # initialize a mask to detect cells at the FoV borders
+    fov_borders = np.zeros(cell_label.shape, dtype=bool)
+    if remove_cropped_cell:
+        fov_borders[:, 0] = True
+        fov_borders[0, :] = True
+        fov_borders[:, cell_label.shape[1] - 1] = True
+        fov_borders[cell_label.shape[0] - 1, :] = True
+
+    # iterate over each segmented cell
+    cells = regionprops(cell_label)
+    for cell in cells:
+
+        # initialize cell results
+        cell_results = {}
+
+        # get the bounding box of the cell
+        label = cell.label
+        (min_y, min_x, max_y, max_x) = cell.bbox
+        cell_results["bbox"] = cell.bbox
+
+        # get binary masks of the cell
+        cell_mask = cell_label.copy()
+        cell_mask = (cell_mask == label)
+
+        # check if cell is not cropped by the borders
+        if remove_cropped_cell and _check_cropped_cell(cell_mask, fov_borders):
+            continue
+
+        # get boundaries coordinates for cell
+        cell_coord = from_binary_to_coord(cell_mask)
+        cell_coord = complete_coord_boundaries(cell_coord)
+        cell_coord[:, 0] -= min_y
+        cell_coord[:, 1] -= min_x
+        cell_results["cell_coord"] = cell_coord
+
+        # crop binary mask of the cell
+        cell_mask_cropped = cell_mask[min_y: max_y, min_x: max_x]
+        cell_results["cell_mask"] = cell_mask_cropped
+
+        # get binary mask of the nucleus
+        if nuc_label is not None:
+            nuc_mask = nuc_label.copy()
+            nuc_mask = (nuc_mask == label)
+
+            # check if nucleus is in the cell
+            if (check_nuc_in_cell
+                    and not _check_nucleus_in_cell(cell_mask, nuc_mask)):
+                continue
+
+            # get boundaries coordinates for nucleus
+            nuc_coord = from_binary_to_coord(nuc_mask)
+            nuc_coord = complete_coord_boundaries(nuc_coord)
+            nuc_coord[:, 0] -= min_y
+            nuc_coord[:, 1] -= min_x
+            cell_results["nuc_coord"] = nuc_coord
+
+            # crop binary mask of the nucleus
+            nuc_mask_cropped = nuc_mask[min_y: max_y, min_x: max_x]
+            cell_results["nuc_mask"] = nuc_mask_cropped
+
+        # get coordinates of the spots detected in the cell
+        if rna_coord is not None:
+            spots_in_cell = _extract_elements(cell_mask, rna_coord, ndim)
+            spots_in_cell[:, ndim - 2] -= min_y
+            spots_in_cell[:, ndim - 1] -= min_x
+            cell_results["rna_coord"] = spots_in_cell
+
+        # get coordinates of the other detected elements
+        if others is not None:
+            for key in others:
+                array = others[key]
+                elements_in_cell = _extract_elements(cell_mask, array, ndim)
+                elements_in_cell[:, ndim - 2] -= min_y
+                elements_in_cell[:, ndim - 1] -= min_x
+                cell_results[key] = elements_in_cell
+
+        # crop cell image
+        if image is not None:
+            image_cropped = image[min_y: max_y, min_x: max_x]
+            cell_results["image"] = image_cropped
+
+        fov_results.append(cell_results)
+
+    return fov_results
+
+
+def _check_cropped_cell(cell_mask, border_frame):
+    """
+    Check if a cell is cropped by the border frame.
+
+    Parameters
+    ----------
+    cell_mask : np.ndarray, bool
+        Binary mask of the cell cytoplasm.
+
+    border_frame : np.ndarray, bool
+        Binary mask of the border frame.
+
+    Returns
+    -------
+    _ : bool
+        True if cell is cropped.
+
+    """
+    # check cell is not cropped by the borders
+    crop = cell_mask & border_frame
+    if np.any(crop):
+        return True
+    else:
+        return False
+
+
+def _check_nucleus_in_cell(cell_mask, nuc_mask):
+    """
+    Check if the nucleus is properly contained in the cell cytoplasm.
+
+    Parameters
+    ----------
+    cell_mask : np.ndarray, bool
+        Binary mask of the cell cytoplasm.
+
+    nuc_mask : np.ndarray, bool
+        Binary mask of the nucleus cytoplasm.
+
+    Returns
+    -------
+    _ : bool
+        True if the nucleus is in the cell.
+
+    """
+    diff = cell_mask | nuc_mask
+    if np.any(diff != cell_mask):
+        return False
+    else:
+        return True
+
+
+def _extract_elements(cell_mask, array, ndim):
+    """Assign elements detected in a the FoV to specific individual cells.
+
+    Parameters
+    ----------
+    cell_mask : np.ndarray, bool
+        Binary mask of the cell with shape (y, x).
+    array : np.ndarray, np.int64
+        Coordinates of the detected elements. The spatial coordinates (zyx or
+        yx coordinates) should be in the first 3 or 2 columns.
+    ndim : int
+        Number of spatial dimension to consider (2 or 3).
+
+    Returns
+    -------
+    spots_out_foci_cell : np.ndarray, np.int64
+        Coordinate of the spots detected outside foci in the cell, with shape
+        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
+        index of the foci.
+
+    """
+    # get coordinates of the elements within the specific cell
+    mask_elements_in_cell = cell_mask[array[:, ndim - 2], array[:, ndim - 1]]
+    elements_in_cell = array[mask_elements_in_cell]
+
+    return elements_in_cell
+
 
 def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     """Get spots coordinates within a given frame.
@@ -123,312 +433,6 @@ def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     return extracted_spots
 
 
-def extract_coordinates_image(cyt_labelled, nuc_labelled, spots_out, spots_in,
-                              foci):
-    """Extract relevant coordinates from an image, based on segmentation and
-    detection results.
-
-    For each cell in an image we return the coordinates of the cytoplasm, the
-    nucleus, the RNA spots and information about the detected foci. We extract
-    2-d coordinates for the cell and 3-d coordinates for the spots and foci.
-
-    Parameters
-    ----------
-    cyt_labelled : np.ndarray, np.uint or np.int
-        Labelled cytoplasms image with shape (y, x).
-    nuc_labelled : np.ndarray, np.uint or np.int
-        Labelled nuclei image with shape (y, x).
-    spots_out : np.ndarray, np.int64
-        Coordinate of the spots detected outside foci, with shape
-        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus a
-        default index (-1 for mRNAs spotted outside a foci).
-    spots_in : np.ndarray, np.int64
-        Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
-        One coordinate per dimension (zyx coordinates) plus the index of the
-        foci.
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension for the
-        foci centroid (zyx coordinates), the number of RNAs detected in the
-        foci and its index.
-
-    Returns
-    -------
-    results : List[(cyt_coord, nuc_coord, rna_coord, cell_foci, cell)]
-        - cyt_coord : np.ndarray, np.int64
-            Coordinates of the cytoplasm border with shape (nb_points, 2).
-        - nuc_coord : np.ndarray, np.int64
-            Coordinates of the nuclei border with shape (nb_points, 2).
-        - rna_coord : np.ndarray, np.int64
-            Coordinates of the RNA spots with shape (nb_spots, 4). One
-            coordinate per dimension (zyx dimension), plus the index of a
-            potential foci.
-        - cell_foci : np.ndarray, np.int64
-            Array with shape (nb_foci, 5). One coordinate per dimension for the
-            foci centroid (zyx coordinates), the number of RNAs detected in the
-            foci and its index.
-        - cell : Tuple[int]
-            Box coordinate of the cell in the original image (min_y, min_x,
-            max_y and max_x).
-
-    """
-    # check parameters
-    check_array(cyt_labelled,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64],
-                allow_nan=True)
-    check_array(nuc_labelled,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64],
-                allow_nan=True)
-    check_array(spots_out,
-                ndim=2,
-                dtype=[np.int64],
-                allow_nan=False)
-    check_array(spots_in,
-                ndim=2,
-                dtype=[np.int64],
-                allow_nan=False)
-    check_array(foci,
-                ndim=2,
-                dtype=[np.int64],
-                allow_nan=False)
-
-    # initialize results
-    results = []
-    borders = np.zeros(cyt_labelled.shape, dtype=bool)
-    borders[:, 0] = True
-    borders[0, :] = True
-    borders[:, cyt_labelled.shape[1] - 1] = True
-    borders[cyt_labelled.shape[0] - 1, :] = True
-    cells = regionprops(cyt_labelled)
-    for cell in cells:
-
-        # get information about the cell
-        label = cell.label
-        (min_y, min_x, max_y, max_x) = cell.bbox
-
-        # get masks of the cell
-        cyt = cyt_labelled.copy()
-        cyt = (cyt == label)
-        nuc = nuc_labelled.copy()
-        nuc = (nuc == label)
-
-        # check if cell is not cropped by the borders
-        if _check_cropped_cell(cyt, borders):
-            continue
-
-        # check if nucleus is in the cytoplasm
-        if not _check_nucleus_in_cell(cyt, nuc):
-            continue
-
-        # get boundaries coordinates
-        cyt_coord, nuc_coord = _get_boundaries_coordinates(cyt, nuc)
-
-        # filter foci
-        foci_cell, spots_in_foci_cell = _extract_foci(foci, spots_in, cyt)
-
-        # get rna coordinates
-        spots_out_foci_cell = _extract_spots_outside_foci(cyt, spots_out)
-        rna_coord = np.concatenate([spots_out_foci_cell, spots_in_foci_cell],
-                                   axis=0)
-
-        # filter cell without enough spots
-        if len(rna_coord) < 30:
-            continue
-
-        # initialize cell coordinates
-        cyt_coord[:, 0] -= min_y
-        cyt_coord[:, 1] -= min_x
-        nuc_coord[:, 0] -= min_y
-        nuc_coord[:, 1] -= min_x
-        rna_coord[:, 1] -= min_y
-        rna_coord[:, 2] -= min_x
-        foci_cell[:, 1] -= min_y
-        foci_cell[:, 2] -= min_x
-
-        results.append((cyt_coord, nuc_coord, rna_coord, foci_cell, cell.bbox))
-
-    return results
-
-
-def _check_cropped_cell(cell_cyt_mask, border_frame):
-    """
-    Check if a cell is cropped by the border frame.
-
-    Parameters
-    ----------
-    cell_cyt_mask : np.ndarray, bool
-        Binary mask of the cell cytoplasm.
-
-    border_frame : np.ndarray, bool
-        Binary mask of the border frame.
-
-    Returns
-    -------
-    _ : bool
-        True if cell is cropped.
-
-    """
-    # check cell is not cropped by the borders
-    crop = cell_cyt_mask & border_frame
-    if np.any(crop):
-        return True
-    else:
-        return False
-
-
-def _check_nucleus_in_cell(cell_cyt_mask, cell_nuc_mask):
-    """
-    Check if the nucleus is properly contained in the cell cytoplasm.
-
-    Parameters
-    ----------
-    cell_cyt_mask : np.ndarray, bool
-        Binary mask of the cell cytoplasm.
-
-    cell_nuc_mask : np.ndarray, bool
-        Binary mask of the nucleus cytoplasm.
-
-    Returns
-    -------
-    _ : bool
-        True if the nucleus is in the cell.
-
-    """
-    diff = cell_cyt_mask | cell_nuc_mask
-    if np.any(diff != cell_cyt_mask):
-        return False
-    else:
-        return True
-
-
-def _get_boundaries_coordinates(cell_cyt_mask, cell_nuc_mask):
-    """
-    Find boundaries coordinates for cytoplasm and nucleus.
-
-    Parameters
-    ----------
-    cell_cyt_mask : np.ndarray, bool
-        Mask of the cell cytoplasm.
-    cell_nuc_mask : np.ndarray, bool
-        Mask of the cell nucleus.
-
-    Returns
-    -------
-    cyt_coord : np.ndarray, np.int64
-        Coordinates of the cytoplasm in 2-d (yx dimension).
-    nuc_coord : np.ndarray, np.int64
-        Coordinates of the nucleus in 2-d (yx dimension).
-
-    """
-    cyt_coord = np.array([], dtype=np.int64).reshape((0, 2))
-    nuc_coord = np.array([], dtype=np.int64).reshape((0, 2))
-
-    # cyt coordinates
-    cell_cyt_coord = find_contours(cell_cyt_mask, level=0)
-    if len(cell_cyt_coord) == 0:
-        pass
-    elif len(cell_cyt_coord) == 1:
-        cyt_coord = cell_cyt_coord[0].astype(np.int64)
-    else:
-        m = 0
-        for coord in cell_cyt_coord:
-            if len(coord) > m:
-                m = len(coord)
-                cyt_coord = coord.astype(np.int64)
-
-    # nuc coordinates
-    cell_nuc_coord = find_contours(cell_nuc_mask, level=0)
-    if len(cell_nuc_coord) == 0:
-        pass
-    elif len(cell_nuc_coord) == 1:
-        nuc_coord = cell_nuc_coord[0].astype(np.int64)
-    else:
-        m = 0
-        for coord in cell_nuc_coord:
-            if len(coord) > m:
-                m = len(coord)
-                nuc_coord = coord.astype(np.int64)
-
-    return cyt_coord, nuc_coord
-
-
-def _extract_foci(foci, spots_in_foci, cell_cyt_mask):
-    """
-    Extract foci and related spots detected in a specific cell.
-
-    Parameters
-    ----------
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension for the
-        foci centroid (zyx coordinates), the number of RNAs detected in the
-        foci and its index.
-
-    spots_in_foci : : np.ndarray, np.int64
-        Coordinate of the spots detected inside foci, with shape (nb_spots, 4).
-        One coordinate per dimension (zyx coordinates) plus the index of the
-        foci.
-    cell_cyt_mask : np.ndarray, bool
-        Binary mask of the cell with shape (y, x).
-
-    Returns
-    -------
-    spots_in_foci_cell : np.ndarray, np.int64
-        Coordinate of the spots detected inside foci in the cell, with shape
-        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
-        index of the foci.
-    foci_cell : np.ndarray, np.int64
-        Array with shape (nb_foci, 5). One coordinate per dimension for the
-        foci centroid (zyx coordinates), the number of RNAs detected in the
-        foci and its index.
-
-    """
-    # filter foci
-    mask_foci_cell = cell_cyt_mask[foci[:, 1], foci[:, 2]]
-    if mask_foci_cell.sum() == 0:
-        foci_cell = np.array([], dtype=np.int64).reshape((0, 5))
-        spots_in_foci_cell = np.array([], dtype=np.int64).reshape((0, 4))
-        return foci_cell, spots_in_foci_cell
-
-    foci_cell = foci[mask_foci_cell]
-
-    # filter spots in foci
-    spots_to_keep = foci_cell[:, 4]
-    mask_spots_to_keep = np.isin(spots_in_foci[:, 3], spots_to_keep)
-    spots_in_foci_cell = spots_in_foci[mask_spots_to_keep]
-
-    return foci_cell, spots_in_foci_cell
-
-
-def _extract_spots_outside_foci(cell_cyt_mask, spots_out_foci):
-    """
-    Extract spots detected outside foci, in a specific cell.
-
-    Parameters
-    ----------
-    cell_cyt_mask : np.ndarray, bool
-        Binary mask of the cell with shape (y, x).
-    spots_out_foci : np.ndarray, np.int64
-        Coordinate of the spots detected outside foci, with shape
-        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus a
-        default index (-1 for mRNAs spotted outside a foci).
-
-    Returns
-    -------
-    spots_out_foci_cell : np.ndarray, np.int64
-        Coordinate of the spots detected outside foci in the cell, with shape
-        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
-        index of the foci.
-
-    """
-    # get coordinates of rna outside foci
-    mask_spots_to_keep = cell_cyt_mask[spots_out_foci[:, 1],
-                                       spots_out_foci[:, 2]]
-    spots_out_foci_cell = spots_out_foci[mask_spots_to_keep]
-
-    return spots_out_foci_cell
-
-
 # ### Segmentation postprocessing ###
 
 def center_mask_coord(main, others=None):
@@ -473,7 +477,7 @@ def center_mask_coord(main, others=None):
                         dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # initialize parameter
-    marge = get_offset_value()
+    marge = get_margin_value()
 
     # compute by how much we need to move the main object to center it
     if main.shape[1] == 2:
@@ -670,7 +674,7 @@ def from_coord_to_frame(coord, external_coord=True):
     Parameters
     ----------
     coord : np.ndarray, np.int64
-        Array of cytoplasm boundaries coordinates with shape (nb_points, 2) or
+        Array of cell boundaries coordinates with shape (nb_points, 2) or
         (nb_points, 3).
     external_coord : bool
         Coordinates represent external boundaries of object.
@@ -691,7 +695,7 @@ def from_coord_to_frame(coord, external_coord=True):
     check_parameter(external_coord=bool)
 
     # initialize marge
-    marge = get_offset_value()
+    marge = get_margin_value()
 
     # from 2D coordinates boundaries to binary boundaries
     if external_coord:

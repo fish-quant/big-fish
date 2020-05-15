@@ -1,27 +1,41 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
-The bigfish.segmentation module includes function to segment nucleus,
-cytoplasm and label them, in 2-d and 3-d.
+The bigfish.segmentation subpackage includes functions to segment or label
+nuclei and cells.
 """
 
-from .utils import (label_instances, compute_mean_size_object, merge_labels,
-                    dilate_erode_labels)
-from .nuc_segmentation import (filtered_threshold, remove_segmented_nuc)
-from .cyt_segmentation import (build_cyt_relief, build_cyt_binary_mask,
-                               cyt_watershed)
-# from .unet import get_input_size_unet
+from .utils import label_instances
+from .utils import merge_labels
+from .utils import thresholding
+from .utils import clean_segmentation
+from .utils import compute_instances_mean_diameter
+from .utils import match_nuc_cell
 
-_nuc = ["filtered_threshold", "remove_segmented_nuc"]
+from .nuc_segmentation import remove_segmented_nuc
 
-_cyt = ["build_cyt_relief", "build_cyt_binary_mask", "cyt_watershed"]
+from .cell_segmentation import cell_watershed
+from .cell_segmentation import get_watershed_relief
+from .cell_segmentation import apply_watershed
 
-# _unet = ["get_input_size_unet"]
 
-_utils = ["label_instances", "compute_mean_size_object", "merge_labels",
-          "dilate_erode_labels", "center_binary_mask",
-          "from_binary_surface_to_coord_2d", "complete_coord_2d",
-          "from_coord_2d_to_binary_surface",
-          "from_binary_boundaries_to_binary_surface"]
+_utils = [
+    "label_instances",
+    "merge_labels",
+    "thresholding",
+    "clean_segmentation",
+    "compute_instances_mean_diameter",
+    "match_nuc_cell"]
+
+_nuc = [
+    "remove_segmented_nuc"]
+
+_cyt = [
+    "cell_watershed",
+    "get_watershed_relief",
+    "apply_watershed"]
+
 
 __all__ = _utils + _nuc + _cyt

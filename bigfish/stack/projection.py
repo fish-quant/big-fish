@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """2-d projection functions."""
 
 import numpy as np
 
-from .utils import check_array, check_parameter
+from .utils import check_array
+from .utils import check_parameter
+
 from .preprocess import cast_img_uint8
+from .preprocess import cast_img_uint16
+
 from .filter import mean_filter
 
 
@@ -27,7 +33,7 @@ def maximum_projection(tensor):
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
 
     # project tensor along the z axis
     projected_tensor = tensor.max(axis=0)
@@ -35,7 +41,7 @@ def maximum_projection(tensor):
     return projected_tensor
 
 
-def mean_projection(tensor):
+def mean_projection(tensor, return_float=False):
     """Project the z-dimension of a tensor, computing the mean intensity of
     each yx pixel.
 
@@ -43,18 +49,23 @@ def mean_projection(tensor):
     ----------
     tensor : np.ndarray, np.uint
         A 3-d tensor with shape (z, y, x).
+    return_float : bool
+        Return a (potentially more accurate) float array.
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.float
+    projected_tensor : np.ndarray
         A 2-d tensor with shape (y, x).
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
 
     # project tensor along the z axis
-    projected_tensor = tensor.mean(axis=0)
+    if return_float:
+        projected_tensor = tensor.mean(axis=0)
+    else:
+        projected_tensor = tensor.mean(axis=0).astype(tensor.dtype)
 
     return projected_tensor
 
@@ -75,7 +86,7 @@ def median_projection(tensor):
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
 
     # project tensor along the z axis
     projected_tensor = np.median(tensor, axis=0)
@@ -85,8 +96,8 @@ def median_projection(tensor):
 
 
 def focus_projection(tensor):
-    """Project the z-dimension of a tensor as describe in Aubin's thesis
-    (part 5.3, strategy 5).
+    """Project the z-dimension of a tensor as describe in Samacoits Aubin's
+    thesis (part 5.3, strategy 5).
 
     1) We keep 75% best in-focus z-slices.
     2) Compute a focus value for each voxel zyx with a 7x7 neighborhood window.
@@ -104,7 +115,7 @@ def focus_projection(tensor):
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
 
     # remove out-of-focus z-slices
     in_focus_image = in_focus_selection(tensor,
@@ -141,9 +152,9 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7,
                           method="median"):
     """Project the z-dimension of a tensor.
 
-    Inspired from Aubin's thesis (part 5.3, strategy 5). Compare to the
-    original algorithm we use the same focus levels to select the in-focus
-    z-slices and project our tensor.
+    Inspired from Samacoits Aubin's thesis (part 5.3, strategy 5). Compare to
+    the original algorithm we use the same focus measures to select the
+    in-focus z-slices and project our tensor.
 
     1) Compute a focus value for each voxel zyx with a fixed neighborhood size.
     2) We keep 75% best in-focus z-slices (based on a global focus score).
@@ -156,7 +167,7 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7,
         A 3-d tensor with shape (z, y, x).
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
-        z-slices to keep (integer above 1).
+        z-slices to keep (positive integer).
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
     method : str
@@ -168,9 +179,8 @@ def focus_projection_fast(tensor, proportion=0.75, neighborhood_size=7,
         A 2-d tensor with shape (y, x).
 
     """
-    # TODO case where proportion = {0, 1}
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16], allow_nan=False)
+    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
     check_parameter(proportion=(float, int),
                     neighborhood_size=int)
     if isinstance(proportion, float) and 0 <= proportion <= 1:
@@ -232,7 +242,7 @@ def in_focus_selection(image, proportion, neighborhood_size=30):
         A 3-d tensor with shape (z, y, x).
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
-        z-slices to keep (integer above 1).
+        z-slices to keep (positive integer).
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
 
@@ -246,8 +256,7 @@ def in_focus_selection(image, proportion, neighborhood_size=30):
     # check parameters
     check_array(image,
                 ndim=3,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64],
-                allow_nan=False)
+                dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(proportion=(float, int),
                     neighborhood_size=int)
     if isinstance(proportion, float) and 0 <= proportion <= 1:
@@ -268,7 +277,7 @@ def in_focus_selection(image, proportion, neighborhood_size=30):
     return in_focus_image
 
 
-def focus_measurement(image, neighborhood_size=30):
+def focus_measurement(image, neighborhood_size=30, cast_8bit=False):
     """Helmli and Scherer’s mean method used as a focus metric.
 
     For each pixel xy in an image, we compute the ratio:
@@ -286,6 +295,9 @@ def focus_measurement(image, neighborhood_size=30):
         A 2-d or 3-d tensor with shape (y, x) or (z, y, x).
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
+    cast_8bit : bool
+        Cast image in 8 bit before measuring the focus scores. Can speed up
+        the computation, but vanish the signal as well.
 
     Returns
     -------
@@ -305,8 +317,13 @@ def focus_measurement(image, neighborhood_size=30):
                 allow_nan=False)
     check_parameter(neighborhood_size=int)
 
-    # cast image in np.uint8
-    image = cast_img_uint8(image)
+    # cast image in np.uint
+    if image.dtype == np.uint8:
+        pass
+    elif cast_8bit:
+        image = cast_img_uint8(image, catch_warning=True)
+    else:
+        image = cast_img_uint16(image)
 
     if image.ndim == 2:
         ratio, global_focus = _focus_measurement_2d(image, neighborhood_size)
@@ -330,7 +347,7 @@ def _focus_measurement_2d(image, neighborhood_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.np.uint8
+    image : np.ndarray, np.uint
         A 2-d tensor with shape (y, x).
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
@@ -374,7 +391,7 @@ def _focus_measurement_3d(image, neighborhood_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
+    image : np.ndarray, np.uint
         A 3-d tensor with shape (z, y, x).
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
@@ -417,22 +434,18 @@ def get_in_focus_indices(global_focus, proportion):
         is (z,) for a 3-d image or () for a 2-d image.
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
-        z-slices to keep (integer above 1).
+        z-slices to keep (positive integer).
 
     Returns
     -------
     indices_to_keep : List[int]
-        Sorted indices of slices with the best focus score (decreasing score).
+        Indices of slices with the best focus score.
 
     """
     # check parameters
     check_parameter(global_focus=(np.ndarray, np.float32),
                     proportion=(float, int))
-    if isinstance(global_focus, np.ndarray):
-        check_array(global_focus,
-                    ndim=[0, 1],
-                    dtype=np.float32,
-                    allow_nan=False)
+    check_array(global_focus, ndim=[0, 1], dtype=np.float32, allow_nan=False)
     if isinstance(proportion, float) and 0 <= proportion <= 1:
         n = int(len(global_focus) * proportion)
     elif isinstance(proportion, int) and 0 <= proportion:
@@ -444,11 +457,12 @@ def get_in_focus_indices(global_focus, proportion):
     # select the best z-slices
     n = min(n, global_focus.size)
     indices_to_keep = list(np.argsort(-global_focus)[:n])
+    indices_to_keep = sorted(indices_to_keep)
 
     return indices_to_keep
 
 
-def _one_hot_3d(indices, depth):
+def _one_hot_3d(indices, depth, return_boolean=False):
     """Build a 3-d one-hot matrix from a 2-d indices matrix.
 
     Parameters
@@ -457,15 +471,24 @@ def _one_hot_3d(indices, depth):
         A 2-d tensor with integer indices and shape (y, x).
     depth : int
         Depth of the 3-d one-hot matrix.
+    return_boolean : bool
+        Return a boolean one-hot encoded matrix.
 
     Returns
     -------
-    one_hot : np.ndarray, np.uint8
+    one_hot : np.ndarray
         A 3-d binary tensor with shape (depth, y, x)
 
     """
+    # check parameters
+    check_parameter(depth=int)
+    check_array(indices,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64])
+
     # initialize the 3-d one-hot matrix
-    one_hot = np.zeros((indices.size, depth), dtype=np.uint8)
+    one_hot = np.zeros((indices.size, depth), dtype=indices.dtype)
 
     # flatten the matrix to easily one-hot encode it, then reshape it
     one_hot[np.arange(indices.size), indices.ravel()] = 1
@@ -473,5 +496,8 @@ def _one_hot_3d(indices, depth):
 
     # rearrange the axis
     one_hot = np.moveaxis(one_hot, source=2, destination=0)
+
+    if return_boolean:
+        one_hot = one_hot.astype(bool)
 
     return one_hot

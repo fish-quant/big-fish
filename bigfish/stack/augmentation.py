@@ -1,41 +1,76 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Functions to augment the data (images or coordinates).
 """
 
 import numpy as np
+from .preprocess import check_parameter
+from .preprocess import check_array
 
 
-def identity(image):
+def augment_2d(image):
+    """Augment an image applying a random operation.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to augment with shape (y, x, channels).
+
+    Returns
+    -------
+    image_augmented : np.ndarray
+        Image augmented with shape (y, x, channels).
+
+    """
+    # check input image
+    check_parameter(image=np.ndarray)
+    check_array(image, ndim=[2, 3])
+
+    # randomly choose an operator
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_90, _rotation_180, _rotation_270]
+    random_operation = np.random.choice(operations)
+
+    # augment the image
+    image_augmented = random_operation(image)
+
+    return image_augmented
+
+
+def _identity(image):
     """Do not apply any operation to the image.
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
+    image : np.ndarray
         Image with shape (x, y, channels).
 
     Returns
     -------
-    image : np.ndarray, np.float32
+    image : np.ndarray
         Image with shape (x, y, channels).
 
     """
     return image
 
 
-def flip_h(image):
+def _flip_h(image):
     """Flip an image horizontally.
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to flip with shape (x, y, channels).
+    image : np.ndarray
+        Image to flip with shape (y, x, channels).
 
     Returns
     -------
-    image_flipped : np.ndarray, np.float32
-        Image flipped with shape (x, y, channels).
+    image_flipped : np.ndarray
+        Image flipped with shape (y, x, channels).
 
     """
     image_flipped = np.flip(image, axis=0)
@@ -43,18 +78,18 @@ def flip_h(image):
     return image_flipped
 
 
-def flip_v(image):
+def _flip_v(image):
     """Flip an image vertically.
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to flip with shape (x, y, channels).
+    image : np.ndarray
+        Image to flip with shape (y, x, channels).
 
     Returns
     -------
-    image_flipped : np.ndarray, np.float32
-        Image flipped with shape (x, y, channels).
+    image_flipped : np.ndarray
+        Image flipped with shape (y, x, channels).
 
     """
     image_flipped = np.flip(image, axis=1)
@@ -62,127 +97,103 @@ def flip_v(image):
     return image_flipped
 
 
-def transpose(image):
-    """Transpose an image.
+def _transpose(image):
+    """Transpose an image (flip it along the top left - bottom right diagonal).
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to transpose with shape (x, y, channels).
+    image : np.ndarray
+        Image to transpose with shape (y, x, channels).
 
     Returns
     -------
-    image_transposed : np.ndarray, np.float32
-        Image transposed with shape (x, y, channels).
+    image_transposed : np.ndarray
+        Image transposed with shape (y, x, channels).
 
     """
-    image_transposed = np.transpose(image, axes=(1, 0, 2))
+    if image.ndim == 3:
+        image_transposed = np.transpose(image, axes=(1, 0, 2))
+    else:
+        image_transposed = np.transpose(image)
 
     return image_transposed
 
 
-def rotation_90(image):
-    """Rotate an image with 90 degrees.
+def _rotation_90(image):
+    """Rotate an image with 90 degrees (clockwise).
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to rotate with shape (x, y, channels).
+    image : np.ndarray
+        Image to rotate with shape (y, x, channels).
 
     Returns
     -------
-    image_rotated : np.ndarray, np.float32
-        Image rotated with shape (x, y, channels).
+    image_rotated : np.ndarray
+        Image rotated with shape (y, x, channels).
 
     """
-    image_rotated = flip_h(image)
-    image_rotated = transpose(image_rotated)
+    image_rotated = _flip_h(image)
+    image_rotated = _transpose(image_rotated)
 
     return image_rotated
 
 
-def rotation_180(image):
-    """Rotate an image with 90 degrees.
+def _rotation_180(image):
+    """Rotate an image with 180 degrees.
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to rotate with shape (x, y, channels).
+    image : np.ndarray
+        Image to rotate with shape (y, x, channels).
 
     Returns
     -------
-    image_rotated : np.ndarray, np.float32
-        Image rotated with shape (x, y, channels).
+    image_rotated : np.ndarray
+        Image rotated with shape (y, x, channels).
 
     """
-    image_rotated = flip_v(image)
-    image_rotated = flip_h(image_rotated)
+    image_rotated = _flip_v(image)
+    image_rotated = _flip_h(image_rotated)
 
     return image_rotated
 
 
-def rotation_270(image):
-    """Rotate an image with 90 degrees.
+def _rotation_270(image):
+    """Rotate an image with 270 degrees (clockwise).
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to rotate with shape (x, y, channels).
+    image : np.ndarray
+        Image to rotate with shape (y, x, channels).
 
     Returns
     -------
-    image_rotated : np.ndarray, np.float32
-        Image rotated with shape (x, y, channels).
+    image_rotated : np.ndarray
+        Image rotated with shape (y, x, channels).
 
     """
-    image_rotated = flip_v(image)
-    image_rotated = transpose(image_rotated)
+    image_rotated = _flip_v(image)
+    image_rotated = _transpose(image_rotated)
 
     return image_rotated
 
 
-def transpose_inverse(image):
-    """Transpose an image from the other diagonal.
+def _transpose_inverse(image):
+    """Flip an image along the bottom left - top right diagonal.
 
     Parameters
     ----------
-    image : np.ndarray, np.float32
-        Image to transpose with shape (x, y, channels).
+    image : np.ndarray
+        Image to transpose with shape (y, x, channels).
 
     Returns
     -------
-    image_transposed : np.ndarray, np.float32
-        Image transposed with shape (x, y, channels).
+    image_transposed : np.ndarray
+        Image transposed with shape (y, x, channels).
 
     """
-    image_transposed = rotation_270(image)
-    image_transposed = transpose(image_transposed)
+    image_transposed = _transpose(image)
+    image_transposed = _rotation_180(image_transposed)
 
     return image_transposed
-
-
-def augment(image):
-    """Augment an image applying a random operation.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.float32
-        Image to augment with shape (x, y, channels).
-
-    Returns
-    -------
-    image_augmented : np.ndarray, np.float32
-        Image augmented with shape (x, y, channels).
-
-    """
-    # randomly choose an operator
-    operations = [identity,
-                  flip_h, flip_v,
-                  transpose, transpose_inverse,
-                  rotation_90, rotation_180, rotation_270]
-    random_operation = np.random.choice(operations)
-
-    # augment the image
-    image_augmented = random_operation(image)
-
-    return image_augmented

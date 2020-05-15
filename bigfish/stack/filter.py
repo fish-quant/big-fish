@@ -1,17 +1,29 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
-"""Filter functions."""
+"""Filtering functions."""
 
 import numpy as np
 
-from .utils import check_array, check_parameter
-from .preprocess import (cast_img_float32, cast_img_float64, cast_img_uint8,
-                         cast_img_uint16)
+from .utils import check_array
+from .utils import check_parameter
 
-from skimage.morphology.selem import square, diamond, rectangle, disk
-from skimage.morphology import (binary_dilation, dilation, binary_erosion,
-                                erosion)
-from skimage.filters import rank, gaussian
+from .preprocess import cast_img_float32
+from .preprocess import cast_img_float64
+from .preprocess import cast_img_uint8
+from .preprocess import cast_img_uint16
+
+from skimage.morphology.selem import square
+from skimage.morphology.selem import diamond
+from skimage.morphology.selem import rectangle
+from skimage.morphology.selem import disk
+from skimage.morphology import binary_dilation
+from skimage.morphology import dilation
+from skimage.morphology import binary_erosion
+from skimage.morphology import erosion
+from skimage.filters import rank
+from skimage.filters import gaussian
 
 from scipy.ndimage import gaussian_laplace
 
@@ -28,7 +40,7 @@ def _define_kernel(shape, size, dtype):
         'rectangle' or 'square').
     size : int, Tuple(int) or List(int)
         The size of the kernel:
-            - For the rectangle we expect two values (width, height).
+            - For the rectangle we expect two values (height, width).
             - For the square one value (width).
             - For the disk and the diamond one value (radius).
     dtype : type
@@ -50,7 +62,9 @@ def _define_kernel(shape, size, dtype):
     elif shape == "square":
         kernel = square(size, dtype=dtype)
     else:
-        raise ValueError("Kernel definition is wrong.")
+        raise ValueError("Kernel definition is wrong. Shape of the kernel "
+                         "should be 'diamond', 'disk', 'rectangle' or "
+                         "'square'. Not {0}.".format(shape))
 
     return kernel
 
@@ -67,7 +81,7 @@ def mean_filter(image, kernel_shape, kernel_size):
         'rectangle' or 'square').
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width).
 
     Returns
     -------
@@ -105,7 +119,7 @@ def median_filter(image, kernel_shape, kernel_size):
         'rectangle' or 'square').
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width).
 
     Returns
     -------
@@ -143,7 +157,7 @@ def maximum_filter(image, kernel_shape, kernel_size):
         'rectangle' or 'square').
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width).
 
     Returns
     -------
@@ -181,7 +195,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
         'rectangle' or 'square').
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width).
 
     Returns
     -------
@@ -207,7 +221,7 @@ def minimum_filter(image, kernel_shape, kernel_size):
     return image_filtered
 
 
-def log_filter(image, sigma, keep_dtype=False):
+def log_filter(image, sigma):
     """Apply a Laplacian of Gaussian filter to a 2-d or 3-d image.
 
     The function returns the inverse of the filtered image such that the pixels
@@ -221,9 +235,7 @@ def log_filter(image, sigma, keep_dtype=False):
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
-    keep_dtype : bool
-        Cast output image as input image.
+        scalar, the same sigma is applied to every dimensions.
 
     Returns
     -------
@@ -259,36 +271,33 @@ def log_filter(image, sigma, keep_dtype=False):
     image_filtered = np.clip(-image_filtered, a_min=0, a_max=None)
 
     # cast filtered image
-    if keep_dtype:
-        if image.dtype == np.uint8:
-            image_filtered = cast_img_uint8(image_filtered)
-        elif image.dtype == np.uint16:
-            image_filtered = cast_img_uint16(image_filtered)
-        else:
-            pass
+    if image.dtype == np.uint8:
+        image_filtered = cast_img_uint8(image_filtered, catch_warning=True)
+    elif image.dtype == np.uint16:
+        image_filtered = cast_img_uint16(image_filtered, catch_warning=True)
+    else:
+        pass
 
     return image_filtered
 
 
-def gaussian_filter(image, sigma, allow_negative=False, keep_dtype=False):
+def gaussian_filter(image, sigma, allow_negative=False):
     """Apply a Gaussian filter to a 2-d or 3-d image.
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions.
     allow_negative : bool
-        Allow negative values after the filtering or clip them to 0.
-    keep_dtype : bool
-        Cast output image as input image. Integer output can't allow negative
-        values.
+        Allow negative values after the filtering or clip them to 0. Not
+        compatible with unsigned integer images.
 
     Returns
     -------
-    image_filtered : np.ndarray, np.float
+    image_filtered : np.ndarray
         Filtered image.
 
     """
@@ -299,12 +308,17 @@ def gaussian_filter(image, sigma, allow_negative=False, keep_dtype=False):
     check_parameter(sigma=(float, int, tuple, list),
                     allow_negative=bool)
 
+    if image.dtype in [np.uint8, np.uint16] and allow_negative:
+        raise ValueError("Negative values are impossible with unsigned "
+                         "integer image.")
+
     # we cast the data in np.float to allow negative values
-    image_float = None
     if image.dtype == np.uint8:
         image_float = cast_img_float32(image)
     elif image.dtype == np.uint16:
         image_float = cast_img_float64(image)
+    else:
+        image_float = image
 
     # we apply gaussian filter
     image_filtered = gaussian(image_float, sigma=sigma)
@@ -314,13 +328,12 @@ def gaussian_filter(image, sigma, allow_negative=False, keep_dtype=False):
         image_filtered = np.clip(image_filtered, a_min=0, a_max=None)
 
     # cast filtered image
-    if keep_dtype and not allow_negative:
-        if image.dtype == np.uint8:
-            image_filtered = cast_img_uint8(image_filtered)
-        elif image.dtype == np.uint16:
-            image_filtered = cast_img_uint16(image_filtered)
-        else:
-            pass
+    if image.dtype == np.uint8:
+        image_filtered = cast_img_uint8(image_filtered, catch_warning=True)
+    elif image.dtype == np.uint16:
+        image_filtered = cast_img_uint16(image_filtered, catch_warning=True)
+    else:
+        pass
 
     return image_filtered
 
@@ -330,15 +343,14 @@ def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint8
-        Image to process with shape (y, x). Casting in np.uint8 makes the
-        computation faster.
+    image : np.ndarray, np.uint
+        Image to process with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
         'rectangle' or 'square').
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width).
 
     Returns
     -------
@@ -346,14 +358,6 @@ def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
         Image processed.
 
     """
-    # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8])
-    # TODO allow np.uint16 ?
-    check_parameter(kernel_shape=str,
-                    kernel_size=(int, tuple, list))
-
     # compute background noise with a large mean filter
     background = mean_filter(image,
                              kernel_shape=kernel_shape,
@@ -379,7 +383,7 @@ def remove_background_gaussian(image, sigma):
         Image to process with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        float, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions.
 
     Returns
     -------
@@ -387,16 +391,9 @@ def remove_background_gaussian(image, sigma):
         Image processed with shape (z, y, x) or (y, x).
 
     """
-    # check parameters
-    check_array(image,
-                ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    check_parameter(sigma=(float, int, tuple, list))
-
     # apply a gaussian filter
     image_filtered = gaussian_filter(image, sigma,
-                                     allow_negative=False,
-                                     keep_dtype=True)
+                                     allow_negative=False)
 
     # substract the gaussian filter
     out = np.zeros_like(image)
@@ -417,22 +414,23 @@ def dilation_filter(image, kernel_shape=None, kernel_size=None):
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
+        'rectangle' or 'square'). If None, use cross-shaped structuring
+        element (connectivity=1).
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width). If None, use cross-shaped structuring element
+        (connectivity=1).
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint
+    image_filtered : np.ndarray
         Filtered 2-d image with shape (y, x).
 
     """
-    # TODO check dtype
     # check parameters
     check_array(image,
                 ndim=2,
-                dtype=[np.uint8, np.uint16, bool])
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
     check_parameter(kernel_shape=(str, type(None)),
                     kernel_size=(int, tuple, list, type(None)))
 
@@ -462,22 +460,23 @@ def erosion_filter(image, kernel_shape=None, kernel_size=None):
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
+        'rectangle' or 'square'). If None, use cross-shaped structuring
+        element (connectivity=1).
     kernel_size : int or Tuple(int)
         The size of the kernel. For the rectangle we expect two integers
-        (width, height).
+        (height, width). If None, use cross-shaped structuring element
+        (connectivity=1).
 
     Returns
     -------
-    image_filtered : np.ndarray, np.uint
+    image_filtered : np.ndarray
         Filtered 2-d image with shape (y, x).
 
     """
-    # TODO check dtype
     # check parameters
     check_array(image,
                 ndim=2,
-                dtype=[np.uint8, np.uint16, bool])
+                dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
     check_parameter(kernel_shape=(str, type(None)),
                     kernel_size=(int, tuple, list, type(None)))
 

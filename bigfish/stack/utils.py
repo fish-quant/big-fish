@@ -1,30 +1,35 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
-Utility functions for bigfish.stack submodule.
+Utility functions for bigfish.stack subpackage.
 """
 
-import inspect
-import re
 import os
+import re
 import copy
+import inspect
+import hashlib
 
 import numpy as np
 import pandas as pd
 
+from urllib.request import urlretrieve
+
 
 # ### Sanity checks dataframe ###
 
-def check_df(df, features=None, features_nan=None):
+def check_df(df, features=None, features_without_nan=None):
     """Full safety check of a dataframe.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Dataframe to check.
+    df : pd.DataFrame or pd.Series
+        Dataframe or Series to check.
     features : List[str]
         Names of the expected features.
-    features_nan : List[str]
+    features_without_nan : List[str]
         Names of the features to check for the missing values
 
     Returns
@@ -34,24 +39,18 @@ def check_df(df, features=None, features_nan=None):
 
     """
     # check parameters
-    check_parameter(features=(list, type(None)),
-                    features_nan=(list, type(None)))
-
-    # check the dataframe itself
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Data should be a pd.DataFrame instead of {0}."
-                         .format(type(df)))
+    check_parameter(df=(pd.DataFrame, pd.Series),
+                    features=(list, type(None)),
+                    features_without_nan=(list, type(None)))
 
     # check features
     if features is not None:
         _check_features_df(df, features)
 
     # check NaN values
-    if features_nan is not None:
-        _check_features_df(df, features_nan)
-        _check_nan_df(df, features_nan)
-
-    # TODO complete the checks for the dataframe (dtype).
+    if features_without_nan is not None:
+        _check_features_df(df, features_without_nan)
+        _check_nan_df(df, features_without_nan)
 
     return True
 
@@ -74,19 +73,19 @@ def _check_features_df(df, features):
     if not set(features).issubset(df.columns):
         raise ValueError("The dataframe does not seem to have the right "
                          "features. {0} instead of {1}"
-                         .format(df.columns, features))
+                         .format(list(df.columns.values), features))
 
     return
 
 
-def _check_nan_df(df, features_nan=None):
-    """
+def _check_nan_df(df, features_to_check=None):
+    """Check specific columns of the dataframe do not have any missing values.
 
     Parameters
     ----------
     df : pd.DataFrame
         Dataframe to check.
-    features_nan : List[str]
+    features_to_check : List[str]
         Names of the checked features.
 
     Returns
@@ -97,14 +96,14 @@ def _check_nan_df(df, features_nan=None):
     nan_count = df.isnull().sum()
 
     # for the full dataframe...
-    if features_nan is None:
+    if features_to_check is None:
         x = nan_count.sum()
         if x > 0:
             raise ValueError("The dataframe has {0} NaN values.".format(x))
 
     # ...or for some features
     else:
-        nan_count = nan_count[features_nan]
+        nan_count = nan_count[features_to_check]
         x = nan_count.sum()
         if x > 0:
             raise ValueError("The dataframe has {0} NaN values for the "
@@ -114,7 +113,7 @@ def _check_nan_df(df, features_nan=None):
 
 
 # ### Sanity checks array ###
-# TODO fix the problem with _check_nan_array (too many calls, too slow)
+
 def check_array(array, ndim=None, dtype=None, allow_nan=True):
     """Full safety check of an array.
 
@@ -207,7 +206,7 @@ def _check_dim_array(array, ndim):
 
 
 def _check_nan_array(array):
-    """Check that the array does not have NaN values.
+    """Check that the array does not have missing values.
 
     Parameters
     ----------
@@ -261,7 +260,7 @@ def check_range_value(array, min_=None, max_=None):
 def check_recipe(recipe, data_directory=None):
     """Check and validate a recipe.
 
-    Checking a recipe consist in validating its filename pattern and the
+    Checking a recipe consists in validating its filename pattern and the
     content of the dictionary.
 
     Parameters
@@ -276,20 +275,22 @@ def check_recipe(recipe, data_directory=None):
 
     Returns
     -------
+    _ : bool
+        Assert if the recipe is well formatted.
 
     """
-    # check recipe is a dictionary
-    if not isinstance(recipe, dict):
-        raise Exception("The recipe is not valid. It should be a dictionary.")
+    # check parameters
+    check_parameter(recipe=dict,
+                    data_directory=(str, type(None)))
 
     # check the filename pattern
     if "pattern" not in recipe:
-        raise ValueError("A recipe should have a filename pattern "
-                         "('pattern' keyword).")
+        raise KeyError("A recipe should have a filename pattern "
+                       "('pattern' keyword).")
     recipe_pattern = recipe["pattern"]
     if not isinstance(recipe_pattern, str):
-        raise ValueError("'pattern' should be a string, not a {0}."
-                         .format(type(recipe_pattern)))
+        raise TypeError("'pattern' should be a string, not a {0}."
+                        .format(type(recipe_pattern)))
 
     # count the different dimensions to combinate in the recipe (among
     # 'fov', 'r', 'c' and 'z')
@@ -303,9 +304,9 @@ def check_recipe(recipe, data_directory=None):
     # check keys and values of the recipe
     for key, value in recipe.items():
         if key not in ['fov', 'r', 'c', 'z', 'ext', 'opt', 'pattern']:
-            raise ValueError("The recipe can only contain the keys 'fov', "
-                             "'r', 'c', 'z', 'ext', 'opt' or 'pattern'. "
-                             "Not '{0}'.".format(key))
+            raise KeyError("The recipe can only contain the keys 'fov', 'r', "
+                           "'c', 'z', 'ext', 'opt' or 'pattern'. Not '{0}'."
+                           .format(key))
         if not isinstance(value, (list, str)):
             raise TypeError("A recipe can only contain lists or strings, "
                             "not {0}.".format(type(value)))
@@ -313,8 +314,8 @@ def check_recipe(recipe, data_directory=None):
     # check that requested files exist
     if data_directory is not None:
         if not os.path.isdir(data_directory):
-            raise ValueError("Directory does not exist: {0}"
-                             .format(data_directory))
+            raise NotADirectoryError("Directory does not exist: {0}"
+                                     .format(data_directory))
         recipe = fit_recipe(recipe)
         nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
         nb_fov = count_nb_fov(recipe)
@@ -325,10 +326,10 @@ def check_recipe(recipe, data_directory=None):
                         path = get_path_from_recipe(recipe, data_directory,
                                                     fov=fov, r=r, c=c, z=z)
                         if not os.path.isfile(path):
-                            raise ValueError("File does not exist: {0}"
-                                             .format(path))
+                            raise FileNotFoundError("File does not exist: {0}"
+                                                    .format(path))
 
-    return
+    return True
 
 
 def fit_recipe(recipe):
@@ -354,6 +355,9 @@ def fit_recipe(recipe):
         necessary.
 
     """
+    # check parameters
+    check_parameter(recipe=dict)
+
     # initialize recipe
     new_recipe = copy.deepcopy(recipe)
 
@@ -371,6 +375,39 @@ def fit_recipe(recipe):
             new_recipe[key] = ""
 
     return new_recipe
+
+
+def _is_recipe_fitted(recipe):
+    """Check if a recipe is ready to be used.
+
+    Fitting a recipe consists in wrapping every values of 'fov', 'r', 'c' and
+    'z' in a list (an empty one if necessary). Values for 'ext' and 'opt' are
+    also initialized.
+
+    Parameters
+    ----------
+    recipe : dict
+        Map the images according to their field of view, their round,
+        their channel and their spatial dimensions. Can only contain the keys
+        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+
+    Returns
+    -------
+    _ : bool
+        Indicates if the recipe is fitted or not
+
+    """
+    # all keys should be initialized in the new recipe, with a list or a string
+    for key in ['fov', 'r', 'c', 'z']:
+        if key not in recipe or not isinstance(recipe[key], list):
+            return False
+    for key in ['ext', 'opt']:
+        if key not in recipe or not isinstance(recipe[key], str):
+            return False
+    if 'pattern' not in recipe or not isinstance(recipe['pattern'], str):
+        return False
+
+    return True
 
 
 def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
@@ -400,6 +437,18 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
         Path of the file to load.
 
     """
+    # check parameters
+    check_parameter(recipe=dict,
+                    input_folder=str,
+                    fov=int,
+                    r=int,
+                    c=int,
+                    z=int)
+
+    # check if the recipe is fitted
+    if not _is_recipe_fitted(recipe):
+        recipe = fit_recipe(recipe)
+
     # build a map of the elements' indices
     map_element_index = {"fov": fov, "r": r, "c": c, "z": z}
 
@@ -411,14 +460,17 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
     # get filename recombining elements of the recipe
     filename = path_separators[0]  # usually an empty string
     for (element_name, separator) in zip(path_elements, path_separators[1:]):
+
         # if we need an element from a list of elements of the same dimension
         # (eg. to pick a specific channel 'c' among a list of channels)
         if element_name in map_element_index:
             element_index = map_element_index[element_name]
             element = recipe[element_name][element_index]
+
         # if this element is unique for all the recipe (eg. 'fov')
         else:
             element = recipe[element_name]
+
         # the filename is built ensuring the order of apparition of the
         # different morphemes and their separators
         filename += element
@@ -451,6 +503,13 @@ def get_nb_element_per_dimension(recipe):
         Number of z layers to be stacked.
 
     """
+    # check parameters
+    check_parameter(recipe=dict)
+
+    # check if the recipe is fitted
+    if not _is_recipe_fitted(recipe):
+        recipe = fit_recipe(recipe)
+
     return len(recipe["r"]), len(recipe["c"]), len(recipe["z"])
 
 
@@ -471,26 +530,55 @@ def count_nb_fov(recipe):
         Number of different fields of view in the recipe.
 
     """
-    # check recipe is a dictionary
-    if not isinstance(recipe, dict):
-        raise Exception("The recipe is not valid. It should be a dictionary.")
+    # check parameters
+    check_parameter(recipe=dict)
 
-    # check the fov key exists
-    if "fov" not in recipe:
-        return 1
+    # check if the recipe is fitted
+    if not _is_recipe_fitted(recipe):
+        recipe = fit_recipe(recipe)
 
-    # case where fov is directly a string
-    elif isinstance(recipe["fov"], str):
-        return 1
-
-    # case where fov is a list of strings
-    elif isinstance(recipe["fov"], list):
+    # a good recipe should have a list in the 'fov' key
+    if not isinstance(recipe["fov"], list):
+        raise TypeError("'fov' should be a List or a str, not {0}"
+                        .format(type(recipe["fov"])))
+    else:
         return len(recipe["fov"])
 
-    # non valid cases
-    else:
-        raise ValueError("'fov' should be a List or a str, not {0}"
-                         .format(type(recipe["fov"])))
+
+def check_datamap(data_map):
+    """Check and validate a data map.
+
+    Checking a data map consists in validating the recipe-folder pairs.
+
+    Parameters
+    ----------
+    data_map : List[tuple]
+        Map between input directories and recipes.
+
+    Returns
+    -------
+    _ : bool
+        Assert if the data map is well formatted.
+
+    """
+    check_parameter(data_map=list)
+    for pair in data_map:
+        if not isinstance(pair, (tuple, list)):
+            raise TypeError("A data map is a list with tuples or lists. "
+                            "Not {0}".format(type(pair)))
+        if len(pair) != 2:
+            raise ValueError("Elements of a data map are tuples or lists that "
+                             "map a recipe (dict) to an input directory "
+                             "(string). Here {0} elements are given {1}"
+                             .format(len(pair), pair))
+        (recipe, input_folder) = pair
+        if not isinstance(input_folder, str):
+            raise TypeError("A data map map a recipe (dict) to an input "
+                            "directory (string). Not ({0}, {1})"
+                            .format(type(recipe), type(input_folder)))
+        check_recipe(recipe, data_directory=input_folder)
+
+    return True
 
 
 # ### Sanity checks parameters ###
@@ -505,6 +593,8 @@ def check_parameter(**kwargs):
 
     Returns
     -------
+    _ : bool
+        Assert if the array is well formatted.
 
     """
     # get the frame and the parameters of the function
@@ -516,17 +606,21 @@ def check_parameter(**kwargs):
         expected_dtype = kwargs[arg]
         parameter = values[arg]
         if not isinstance(parameter, expected_dtype):
-            # TODO improve the error: raise 'Parameter array' when it comes from 'check_array'.
-            raise ValueError("Parameter {0} should be cast in {1}. It is a {2}"
-                             "instead."
-                             .format(arg, expected_dtype, type(parameter)))
+            actual = "'{0}'".format(type(parameter).__name__)
+            if isinstance(expected_dtype, tuple):
+                target = ["'{0}'".format(x.__name__) for x in expected_dtype]
+                target = "(" + ", ".join(target) + ")"
+            else:
+                target = expected_dtype.__name__
+            raise TypeError("Parameter {0} should be a {1}. It is a {2} "
+                            "instead.".format(arg, target, actual))
 
-    return
+    return True
 
 
-# ### Others ###
+# ### Constants ###
 
-def get_offset_value():
+def get_margin_value():
     """Return the margin pixel around a cell coordinate used to define its
     bounding box.
 
@@ -536,8 +630,7 @@ def get_offset_value():
         Margin value (in pixels).
 
     """
-    # TODO rename it 'get_margin_value'
-    # should be greater than 2 (maybe 1 is enough)
+    # should be greater or equal to 2 (maybe 1 is enough)
     return 5
 
 
@@ -550,5 +643,105 @@ def get_eps_float32():
         Epsilon value.
 
     """
-
     return np.finfo(np.float32).eps
+
+
+# ### Fetch data ###
+
+def load_and_save_url(remote_url, directory, filename=None):
+    """Download remote data and save them
+
+    Parameters
+    ----------
+    remote_url : str
+        Remote url of the data to download.
+    directory : str
+        Directory to save the download content.
+    filename : str
+        Filename of the object to save.
+
+    Returns
+    -------
+
+    """
+    # check parameters
+    check_parameter(remote_url=str,
+                    directory=str,
+                    filename=(str, type(None)))
+
+    # get output path
+    if filename is None:
+        filename = remote_url.split("/")[-1]
+    path = os.path.join(directory, filename)
+
+    # download and save data
+    urlretrieve(remote_url, path)
+
+    return
+
+
+def check_hash(path, expected_hash):
+    """Check hash value of a file.
+
+    Parameters
+    ----------
+    path : str
+        Path of the file to check.
+    expected_hash : str
+        Expected hash value.
+
+    Returns
+    -------
+    _ : bool
+        True if hash values match.
+
+    """
+    # check parameter
+    check_parameter(path=str,
+                    expected_hash=str)
+
+    # compute hash value
+    hash_value = compute_hash(path)
+
+    # compare checksum
+    if hash_value != expected_hash:
+        raise IOError("File {0} has an SHA256 checksum ({1}) differing from "
+                      "expected ({2}). File may be corrupted."
+                      .format(path, hash_value, expected_hash))
+
+    return True
+
+
+def compute_hash(path):
+    """Compute sha256 hash of a file.
+
+    Parameters
+    ----------
+    path : str
+        Path to read the file.
+
+    Returns
+    -------
+    sha256 : str
+        Hash value of the file.
+
+    """
+    # check parameters
+    check_parameter(path=str)
+
+    # initialization
+    sha256hash = hashlib.sha256()
+    chunk_size = 8192
+
+    # open and read file
+    with open(path, "rb") as f:
+        while True:
+            buffer = f.read(chunk_size)
+            if not buffer:
+                break
+            sha256hash.update(buffer)
+
+    # compute hash
+    sha256 = sha256hash.hexdigest()
+
+    return sha256
