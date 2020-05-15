@@ -1,0 +1,20 @@
+# Dot files
+.idea/
+.DS_Store
+
+# Packaging related files
+MANIFEST
+build/
+dist/
+big_fish.egg-info/
+
+# Notebooks
+notebooks/old
+notebooks/.ipynb_checkpoints
+
+# Data
+data/input/*
+data/output/*
+
+# Cache
+__pycache__/
