@@ -251,7 +251,7 @@ def _smooth_instance(image, radius):
 
 
 def _delimit_instance(image):
-    """Substract an eroded image to a dilated one in order to prevent
+    """Subtract an eroded image to a dilated one in order to prevent
     boundaries contact.
 
     Parameters
@@ -273,7 +273,7 @@ def _delimit_instance(image):
     # erode-dilate mask
     image_dilated = stack.dilation_filter(image, "disk", 1)
     image_eroded = stack.erosion_filter(image, "disk", 1)
-    if original_dtype  == bool:
+    if original_dtype == bool:
         borders = image_dilated & ~image_eroded
         image_cleaned = image.copy()
         image_cleaned[borders] = False

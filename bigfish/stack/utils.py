@@ -588,7 +588,7 @@ def check_parameter(**kwargs):
 
     Parameters
     ----------
-    kwargs : dict
+    kwargs : Type or Tuple[Type]
         Map of each parameter with its expected dtype.
 
     Returns

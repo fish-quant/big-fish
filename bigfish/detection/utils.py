@@ -218,5 +218,3 @@ def get_radius(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
     radius = tuple(radius)
 
     return radius
-
-

@@ -931,7 +931,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
     # plot original image only
     elif cell_coord is None and image is not None:
         plot_segmentation_boundary(
-            image=image, cell_mask=cell_mask, nuc_mask=nuc_mask,
+            image=image, cell_label=cell_mask, nuc_label=nuc_mask,
             rescale=rescale, title=title, framesize=framesize,
             remove_frame=remove_frame, path_output=path_output,
             ext=ext, show=show)

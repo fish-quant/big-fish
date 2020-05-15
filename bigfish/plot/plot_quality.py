@@ -79,7 +79,7 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
             plt.plot(focus_measure, y)
 
     # axes
-    if title is not None :
+    if title is not None:
         plt.title(title, fontweight="bold", fontsize=size_title)
     plt.xlabel("sharpness measure", fontweight="bold", fontsize=size_axes)
     plt.ylabel("z-slices", fontweight="bold", fontsize=size_axes)
@@ -145,4 +145,3 @@ def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
     plt.show()
 
     return
-
