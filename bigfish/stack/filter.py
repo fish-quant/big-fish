@@ -395,7 +395,7 @@ def remove_background_gaussian(image, sigma):
     image_filtered = gaussian_filter(image, sigma,
                                      allow_negative=False)
 
-    # substract the gaussian filter
+    # subtract the gaussian filter
     out = np.zeros_like(image)
     image_no_background = np.subtract(image, image_filtered,
                                       out=out,

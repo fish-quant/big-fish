@@ -162,7 +162,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
         Image in 2-d of the FoV. If None, image of the individual cells are not
         extracted.
     remove_cropped_cell : bool
-        Remove cells cropped by the FOv frame.
+        Remove cells cropped by the FoV frame.
     check_nuc_in_cell : bool
         Check that each nucleus is entirely localized within a cell.
 
