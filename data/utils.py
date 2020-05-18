@@ -12,6 +12,7 @@ import bigfish.stack as stack
 
 # ### Global variables ###
 
+# TODO rename 'experience' in 'experiment'
 filename_input_dapi = "experience_1_dapi_fov_1.tif"
 url_input_dapi = "https://github.com/fish-quant/big-fish/releases/download/data/experience_1_dapi_fov_1.tif"
 hash_input_dapi = "3ce6dcfbece75da41326943432ada4cc9bacd06750e59dc2818bb253b6e7fdcd"
