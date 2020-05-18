@@ -242,11 +242,9 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # build reference spot
     if image.ndim == 3:
-        reference_spot = _build_reference_spot_3d(image, spots, radius,
-                                                  method="median")
+        reference_spot = _build_reference_spot_3d(image, spots, radius, method)
     else:
-        reference_spot = _build_reference_spot_2d(image, spots, radius,
-                                                  method="median")
+        reference_spot = _build_reference_spot_2d(image, spots, radius, method)
 
     return reference_spot
 
