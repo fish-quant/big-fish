@@ -20,13 +20,10 @@ from skimage.measure import regionprops
 from skimage.measure import label
 
 
-# TODO add parameter to detect more or less clusters
-# TODO add parameter to fit more or less spots in a cluster
-
 # ### Main function ###
 
 def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                      psf_z=None, psf_yx=200):
+                      psf_z=None, psf_yx=200, alpha=0.5, beta=0.5):
     """Detect potential regions with clustered spots and fit as many reference
     spots as possible in these regions.
 
@@ -54,6 +51,15 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     psf_z : int or float
         Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. The higher,
+        the brighter are the spots fit in the clusters. Consequently, a high
+        intensity score reduces the number of spots per cluster. Default is
+        0.5.
+    beta : int or float
+        Intensity score of the cluster, between 0 and 1. The higher, the
+        brighter are filtered clusters. Consequently, a high intensity score
+        reduces the number of clusters detected. Default is 0.5.
 
     Returns
     -------
@@ -77,7 +83,15 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     stack.check_parameter(voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
-                          psf_yx=(int, float))
+                          psf_yx=(int, float),
+                          alpha=(int, float),
+                          beta=(int, float))
+    if alpha < 0 or alpha > 1:
+        raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
+                         .format(alpha))
+    if beta < 0 or beta > 1:
+        raise ValueError("'beta' should be a value between 0 and 1, not {0}"
+                         .format(beta))
 
     # check number of dimensions
     ndim = image.ndim
@@ -107,8 +121,8 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     reference_spot = build_reference_spot(
         image_denoised,
         spots,
-        voxel_size_z, voxel_size_yx, psf_z, psf_yx)
-    threshold_cluster = int(reference_spot.max())
+        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        alpha)
 
     # case where no spot were detected
     if spots.size == 0:
@@ -134,7 +148,10 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # use connected components to detect potential clusters
     cluster_regions, spots_out_cluster, cluster_size = get_clustered_region(
-        image_denoised, spots, threshold_cluster)
+        image_denoised,
+        spots,
+        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        beta)
 
     # case where no cluster where detected
     if cluster_regions.size == 0:
@@ -176,7 +193,7 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 # ### Reference spot ###
 
 def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                         psf_z=None, psf_yx=200, method="median"):
+                         psf_z=None, psf_yx=200, alpha=0.5):
     """Build a median or mean spot in 3 or 2 dimensions as reference.
 
     Reference spot is computed from a sample of uncropped detected spots. If
@@ -199,8 +216,11 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
     psf_z : int or float
         Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
-    method : str
-        Method use to compute the reference spot (a 'mean' or 'median' spot).
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. If 0, reference
+        spot approximates the spot with the lowest intensity. If 1, reference
+        spot approximates the brightest spot. Default is 0.5.
+
 
     Returns
     -------
@@ -217,10 +237,10 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
                           psf_yx=(int, float),
-                          method=str)
-    if method not in ['mean', 'median']:
-        raise ValueError("'{0}' is not a valid value for parameter 'method'. "
-                         "Use 'mean' or 'median' instead.".format(method))
+                          alpha=(int, float))
+    if alpha < 0 or alpha > 1:
+        raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
+                         .format(alpha))
 
     # check number of dimensions
     ndim = image.ndim
@@ -242,14 +262,14 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # build reference spot
     if image.ndim == 3:
-        reference_spot = _build_reference_spot_3d(image, spots, radius, method)
+        reference_spot = _build_reference_spot_3d(image, spots, radius, alpha)
     else:
-        reference_spot = _build_reference_spot_2d(image, spots, radius, method)
+        reference_spot = _build_reference_spot_2d(image, spots, radius, alpha)
 
     return reference_spot
 
 
-def _build_reference_spot_3d(image, spots, radius, method="median"):
+def _build_reference_spot_3d(image, spots, radius, alpha):
     """Build a median or mean spot in 3 dimensions as reference.
 
     Reference spot is computed from a sample of uncropped detected spots. If
@@ -263,8 +283,10 @@ def _build_reference_spot_3d(image, spots, radius, method="median"):
         Coordinate of the spots with shape (nb_spots, 3) for 3-d images.
     radius : Tuple[float]
         Radius in pixels of the detected spots, one element per dimension.
-    method : str
-        Method use to compute the reference spot (a 'mean' or 'median' spot).
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. If 0, reference
+        spot approximates the spot with the lowest intensity. If 1, reference
+        spot approximates the brightest spot.
 
     Returns
     -------
@@ -311,10 +333,8 @@ def _build_reference_spot_3d(image, spots, radius, method="median"):
 
     # project the different spot images
     l_reference_spot = np.stack(l_reference_spot, axis=0)
-    if method == "mean":
-        reference_spot = np.mean(l_reference_spot, axis=0)
-    else:
-        reference_spot = np.median(l_reference_spot, axis=0)
+    alpha_ = alpha * 100
+    reference_spot = np.percentile(l_reference_spot, alpha_, axis=0)
     reference_spot = reference_spot.astype(image.dtype)
 
     return reference_spot
@@ -360,7 +380,7 @@ def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     return image_spot
 
 
-def _build_reference_spot_2d(image, spots, radius, method="median"):
+def _build_reference_spot_2d(image, spots, radius, alpha):
     """Build a median or mean spot in 2 dimensions as reference.
 
     Reference spot is computed from a sample of uncropped detected spots. If
@@ -374,8 +394,10 @@ def _build_reference_spot_2d(image, spots, radius, method="median"):
         Coordinate of the spots with shape (nb_spots, 2) for 2-d images.
     radius : Tuple[float]
         Radius in pixels of the detected spots, one element per dimension.
-    method : str
-        Method use to compute the reference spot (a 'mean' or 'median' spot).
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. If 0, reference
+        spot approximates the spot with the lowest intensity. If 1, reference
+        spot approximates the brightest spot.
 
     Returns
     -------
@@ -418,10 +440,8 @@ def _build_reference_spot_2d(image, spots, radius, method="median"):
 
     # project the different spot images
     l_reference_spot = np.stack(l_reference_spot, axis=0)
-    if method == "mean":
-        reference_spot = np.mean(l_reference_spot, axis=0)
-    else:
-        reference_spot = np.median(l_reference_spot, axis=0)
+    alpha_ = alpha * 100
+    reference_spot = np.percentile(l_reference_spot, alpha_, axis=0)
     reference_spot = reference_spot.astype(image.dtype)
 
     return reference_spot
@@ -1280,7 +1300,8 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 
 # ### Clustered regions ###
 
-def get_clustered_region(image, spots, threshold):
+def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
+                         psf_z=None, psf_yx=200, beta=0.5):
     """Detect and filter potential clustered regions.
 
     A candidate region follows two criteria:
@@ -1293,8 +1314,19 @@ def get_clustered_region(image, spots, threshold):
         Image with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    threshold : int or float
-        A threshold to detect peaks.
+    voxel_size_z : int or float
+        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+    psf_z : int or float
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer.
+    beta : int or float
+        Intensity score of the cluster, between 0 and 1. The higher, the
+        brighter are filtered clusters. Default is 0.5.
 
     Returns
     -------
@@ -1313,20 +1345,44 @@ def get_clustered_region(image, spots, threshold):
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(threshold=(int, float))
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float),
+                          beta=(int, float))
+    if beta < 0 or beta > 1:
+        raise ValueError("'beta' should be a value between 0 and 1, not {0}"
+                         .format(beta))
 
     # check number of dimensions
-    if image.ndim != spots.shape[1]:
+    ndim = image.ndim
+    if ndim == 3 and voxel_size_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'voxel_size_z' parameter is missing.".format(ndim))
+    if ndim == 3 and psf_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'psf_z' parameter is missing.".format(ndim))
+    if ndim != spots.shape[1]:
         raise ValueError("Provided image has {0} dimensions but spots are "
                          "detected in {1} dimensions."
-                         .format(image.ndim, spots.shape[1]))
+                         .format(ndim, spots.shape[1]))
+    if ndim == 2:
+        voxel_size_z, psf_z = None, None
+
+    # estimate median spot value
+    median_spot = build_reference_spot(
+        image,
+        spots,
+        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        alpha=0.5)
+    threshold = int(median_spot.max())
 
     # get connected regions
     connected_regions = _get_connected_region(image, threshold)
 
     # filter connected regions
     (cluster_regions, spots_out_region, max_size) = _filter_connected_region(
-        image, connected_regions, spots)
+        image, connected_regions, spots, beta)
 
     return cluster_regions, spots_out_region, max_size
 
@@ -1356,7 +1412,7 @@ def _get_connected_region(image, threshold):
     return cc
 
 
-def _filter_connected_region(image, connected_component, spots):
+def _filter_connected_region(image, connected_component, spots, beta):
     """Filter clustered regions (defined as connected component regions).
 
     A candidate region follows two criteria:
@@ -1371,6 +1427,9 @@ def _filter_connected_region(image, connected_component, spots):
         Image labelled with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
+    beta : int or float
+        Intensity score of the cluster, between 0 and 1. The higher, the
+        brighter are filtered clusters. Default is 0.5.
 
     Returns
     -------
@@ -1411,7 +1470,9 @@ def _filter_connected_region(image, connected_component, spots):
         return regions_filtered, spots, 0
 
     # keep the brightest regions
-    high_intensity = intensity >= np.median(intensity)
+    beta_ = beta * 100
+    intensity_threshold = np.percentile(intensity, beta_)
+    high_intensity = intensity >= intensity_threshold
     regions_filtered = regions[high_intensity]
     bbox = bbox[high_intensity]
 
