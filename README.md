@@ -1,7 +1,7 @@
 # Big-FISH
 
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
-[![codecov](https://codecov.io/gh/fish-quant/big-fish/branch/master/graph/badge.svg?token=kEnikxXOxP)](https://codecov.io/gh/fish-quant/big-fish)
+[![codecov](https://codecov.io/gh/fish-quant/big-fish/branch/master/graph/badge.svg)](https://codecov.io/gh/fish-quant/big-fish)
 ![License](https://img.shields.io/badge/python-3.6-blue)
 
 **Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **manipulate microscopic images**, **detect spots** and **segment relevant area** of the cells. The package allows the user to extract specific signal from images and build a coordinate representation of the cells. The ultimate goal is to ease **large scale statistical analysis** and quantification.

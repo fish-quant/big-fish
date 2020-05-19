@@ -53,7 +53,7 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
         in nanometer.
     alpha : int or float
         Intensity score of the reference spot, between 0 and 1. The higher,
-        the brighter are the spots fit in the clusters. Consequently, a high
+        the brighter are the spots fitted in the clusters. Consequently, a high
         intensity score reduces the number of spots per cluster. Default is
         0.5.
     beta : int or float
