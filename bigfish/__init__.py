@@ -11,5 +11,5 @@ The bigfish package.
 # MAJOR: major API changes
 # MINOR: new features
 # PATCH: backwards compatible bug fixes
-
-__version__ = "0.3.0"
+# MAJOR.MINOR.PATCHdev means a version under development
+__version__ = "0.4.0dev"

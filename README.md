@@ -22,7 +22,7 @@ Big-FISH requires Python 3.6 or newer. Additionally, it has the following depend
 - scikit-image (>= 0.14.2)
 - matplotlib (>= 3.0.2)
 - pandas (>= 0.24.0)
-- mrc (>= (0.1.5)
+- mrc (>= 0.1.5)
 - pip (>= 18.1)
 
 ### User installation

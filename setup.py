@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
 Setup script.
@@ -7,11 +9,11 @@ Setup script.
 from setuptools import setup, find_packages
 
 # package description
-VERSION = "0.3.0"
 DESCRIPTION = "Toolbox for the analysis of smFISH images."
 
 
 # package version
+VERSION = None
 with open('bigfish/__init__.py') as f:
     for row in f:
         if row.startswith('__version__'):
@@ -61,7 +63,7 @@ setup(name='big-fish',
       author_email='arthur.imbert.pro@gmail.com',
       url='https://github.com/fish-quant/big-fish',
       packages=find_packages(),
-      license='MIT',
+      license='BSD 3-Clause License',
       python_requires='>=3.6.0',
       install_requires=REQUIREMENTS,
       extras_require={'deeplearning': DEEPLEARNING_REQUIREMENTS},
