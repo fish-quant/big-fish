@@ -23,7 +23,7 @@ from skimage.measure import label
 # ### Main function ###
 
 def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                      psf_z=None, psf_yx=200, alpha=0.5, beta=0.5):
+                      psf_z=None, psf_yx=200, alpha=0.5, beta=1):
     """Detect potential regions with clustered spots and fit as many reference
     spots as possible in these regions.
 
@@ -57,9 +57,9 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
         intensity score reduces the number of spots per cluster. Default is
         0.5.
     beta : int or float
-        Intensity score of the cluster, between 0 and 1. The higher, the
-        brighter are filtered clusters. Consequently, a high intensity score
-        reduces the number of clusters detected. Default is 0.5.
+        Multiplicative factor for the intensity threshold of a cluster region.
+        Default is 1. Threshold is computed with the formula :
+            threshold = beta * max(median_spot)
 
     Returns
     -------
@@ -89,8 +89,8 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     if alpha < 0 or alpha > 1:
         raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
                          .format(alpha))
-    if beta < 0 or beta > 1:
-        raise ValueError("'beta' should be a value between 0 and 1, not {0}"
+    if beta < 0:
+        raise ValueError("'beta' should be a positive value, not {0}"
                          .format(beta))
 
     # check number of dimensions
@@ -1301,12 +1301,11 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 # ### Clustered regions ###
 
 def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                         psf_z=None, psf_yx=200, beta=0.5):
+                         psf_z=None, psf_yx=200, beta=1):
     """Detect and filter potential clustered regions.
 
-    A candidate region follows two criteria:
-        - at least 2 connected pixels above a specific threshold.
-        - among the 50% brightest regions.
+    A candidate region follows has at least 2 connected pixels above a
+    specific threshold.
 
     Parameters
     ----------
@@ -1325,8 +1324,9 @@ def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
         Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
     beta : int or float
-        Intensity score of the cluster, between 0 and 1. The higher, the
-        brighter are filtered clusters. Default is 0.5.
+        Multiplicative factor for the intensity threshold of a cluster region.
+        Default is 1. Threshold is computed with the formula :
+            threshold = beta * max(median_spot)
 
     Returns
     -------
@@ -1350,8 +1350,8 @@ def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
                           psf_z=(int, float, type(None)),
                           psf_yx=(int, float),
                           beta=(int, float))
-    if beta < 0 or beta > 1:
-        raise ValueError("'beta' should be a value between 0 and 1, not {0}"
+    if beta < 0:
+        raise ValueError("'beta' should be a positive value, not {0}"
                          .format(beta))
 
     # check number of dimensions
@@ -1369,20 +1369,20 @@ def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
     if ndim == 2:
         voxel_size_z, psf_z = None, None
 
-    # estimate median spot value
+    # estimate median spot value and a threshold to detect clustered regions
     median_spot = build_reference_spot(
         image,
         spots,
         voxel_size_z, voxel_size_yx, psf_z, psf_yx,
         alpha=0.5)
-    threshold = int(median_spot.max())
+    threshold = int(median_spot.max() * beta)
 
     # get connected regions
     connected_regions = _get_connected_region(image, threshold)
 
     # filter connected regions
     (cluster_regions, spots_out_region, max_size) = _filter_connected_region(
-        image, connected_regions, spots, beta)
+        image, connected_regions, spots)
 
     return cluster_regions, spots_out_region, max_size
 
@@ -1412,12 +1412,11 @@ def _get_connected_region(image, threshold):
     return cc
 
 
-def _filter_connected_region(image, connected_component, spots, beta):
+def _filter_connected_region(image, connected_component, spots):
     """Filter clustered regions (defined as connected component regions).
 
-    A candidate region follows two criteria:
-        - at least 2 connected pixels above a specific threshold.
-        - among the 50% brightest regions.
+    A candidate region has at least 2 connected pixels
+    above a specific threshold.
 
     Parameters
     ----------
@@ -1427,9 +1426,6 @@ def _filter_connected_region(image, connected_component, spots, beta):
         Image labelled with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    beta : int or float
-        Intensity score of the cluster, between 0 and 1. The higher, the
-        brighter are filtered clusters. Default is 0.5.
 
     Returns
     -------
@@ -1447,41 +1443,26 @@ def _filter_connected_region(image, connected_component, spots, beta):
 
     # get different features of the regions
     area = []
-    intensity = []
     bbox = []
     for i, region in enumerate(regions):
         area.append(region.area)
-        intensity.append(region.mean_intensity)
         bbox.append(region.bbox)
     regions = np.array(regions)
     area = np.array(area)
-    intensity = np.array(intensity)
     bbox = np.array(bbox)
 
     # keep regions with a minimum size
     big_area = area >= 2
-    regions = regions[big_area]
-    intensity = intensity[big_area]
-    bbox = bbox[big_area]
+    regions_filtered = regions[big_area]
+    bbox_filtered = bbox[big_area]
 
     # case where no region big enough were detected
     if regions.size == 0:
         regions_filtered = np.array([])
         return regions_filtered, spots, 0
 
-    # keep the brightest regions
-    beta_ = beta * 100
-    intensity_threshold = np.percentile(intensity, beta_)
-    high_intensity = intensity >= intensity_threshold
-    regions_filtered = regions[high_intensity]
-    bbox = bbox[high_intensity]
-
-    # case where no region bright enough were detected
-    if regions_filtered.size == 0:
-        return regions_filtered, spots, 0
-
     spots_out_region, max_region_size = _filter_spot_out_candidate_regions(
-        bbox, spots, nb_dim=image.ndim)
+        bbox_filtered, spots, nb_dim=image.ndim)
 
     return regions_filtered, spots_out_region, max_region_size
 
