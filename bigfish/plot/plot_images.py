@@ -22,8 +22,8 @@ from matplotlib.patches import RegularPolygon
 
 # ### General plot ###
 
-def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
-            framesize=(8, 8), remove_frame=False, path_output=None,
+def plot_yx(tensor, r=0, c=0, z=0, rescale=False, contrast=False,
+            title=None, framesize=(8, 8), remove_frame=True, path_output=None,
             ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
@@ -40,6 +40,8 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
         Index of the z slice to keep.
     rescale : bool
         Rescale pixel values of the image (made by default in matplotlib).
+    contrast : bool
+        Contrast image.
     title : str
         Title of the image.
     framesize : tuple
@@ -66,6 +68,7 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
                              bool])
     stack.check_parameter(r=int, c=int, z=int,
                           rescale=bool,
+                          contrast=bool,
                           title=(str, type(None)),
                           framesize=tuple,
                           remove_frame=bool,
@@ -82,11 +85,6 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
     else:
         xy_tensor = tensor[r, c, z, :, :]
 
-    # get minimum and maximum value of the image
-    vmin, vmax = None, None
-    if not rescale:
-        vmin, vmax = get_minmax_values(tensor)
-
     # plot
     if remove_frame:
         fig = plt.figure(figsize=framesize, frameon=False)
@@ -94,9 +92,13 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
         ax.axis('off')
     else:
         plt.figure(figsize=framesize)
-    if not rescale:
+    if not rescale and not contrast:
+        vmin, vmax = get_minmax_values(tensor)
         plt.imshow(xy_tensor, vmin=vmin, vmax=vmax)
+    elif rescale and not contrast:
+        plt.imshow(xy_tensor)
     else:
+        xy_tensor = stack.rescale(xy_tensor, channel_to_stretch=0)
         plt.imshow(xy_tensor)
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
@@ -112,8 +114,9 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, title=None,
     return
 
 
-def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
-                remove_frame=False, path_output=None, ext="png", show=True):
+def plot_images(images, rescale=False, contrast=False, titles=None,
+                framesize=(15, 5), remove_frame=True, path_output=None,
+                ext="png", show=True):
     """Plot or subplot of 2-d images.
 
     Parameters
@@ -122,6 +125,8 @@ def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
         Images with shape (y, x).
     rescale : bool
         Rescale pixel values of the image (made by default in matplotlib).
+    contrast : bool
+        Contrast image.
     titles : List[str]
         Titles of the subplots.
     framesize : tuple
@@ -147,6 +152,7 @@ def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
     # check parameters
     stack.check_parameter(images=list,
                           rescale=bool,
+                          contrast=bool,
                           titles=(str, list, type(None)),
                           framesize=tuple,
                           remove_frame=bool,
@@ -172,6 +178,7 @@ def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
             title = None
         plot_yx(images[0],
                 rescale=rescale,
+                contrast=contrast,
                 title=title,
                 framesize=framesize,
                 remove_frame=remove_frame,
@@ -189,10 +196,13 @@ def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
         for i, tensor in enumerate(images):
             if remove_frame:
                 ax[i].axis("off")
-            if not rescale:
+            if not rescale and not contrast:
                 vmin, vmax = get_minmax_values(tensor)
                 ax[i].imshow(tensor, vmin=vmin, vmax=vmax)
+            elif rescale and not contrast:
+                ax[i].imshow(tensor)
             else:
+                tensor = stack.rescale(tensor, channel_to_stretch=0)
                 ax[i].imshow(tensor)
             if titles is not None:
                 ax[i].set_title(titles[i], fontweight="bold", fontsize=10)
@@ -211,11 +221,14 @@ def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
                 continue
             if remove_frame:
                 ax[row, col].axis("off")
-            if not rescale:
+            if not rescale and not contrast:
                 vmin, vmax = get_minmax_values(image)
                 ax[row, col].imshow(image, vmin=vmin, vmax=vmax)
+            elif rescale and not contrast:
+                ax[i].imshow(image)
             else:
-                ax[row, col].imshow(image)
+                image = stack.rescale(image, channel_to_stretch=0)
+                ax[i].imshow(image)
             if titles is not None:
                 ax[row, col].set_title(titles[i],
                                        fontweight="bold", fontsize=10)
@@ -234,7 +247,7 @@ def plot_images(images, rescale=False, titles=None, framesize=(15, 5),
 # ### Segmentation plot ###
 
 def plot_segmentation(image, mask, rescale=False, title=None,
-                      framesize=(15, 5), remove_frame=False,
+                      framesize=(15, 5), remove_frame=True,
                       path_output=None, ext="png", show=True):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
@@ -330,7 +343,7 @@ def plot_segmentation(image, mask, rescale=False, title=None,
 
 def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
                                rescale=False, title=None, framesize=(10, 10),
-                               remove_frame=False, path_output=None,
+                               remove_frame=True, path_output=None,
                                ext="png", show=True):
     """Plot the boundary of the segmented objects.
 
@@ -435,7 +448,7 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
 # TODO allow textual annotations
 def plot_detection(image, spots, shape="circle", radius=3, color="red",
                    linewidth=1, fill=False, rescale=False, title=None,
-                   framesize=(15, 10), remove_frame=False, path_output=None,
+                   framesize=(15, 10), remove_frame=True, path_output=None,
                    ext="png", show=True):
     """Plot detected spots and foci on a 2-d image.
 
@@ -646,7 +659,7 @@ def _define_patch(x, y, shape, radius, color, linewidth, fill):
 
 
 def plot_reference_spot(reference_spot, rescale=False, title=None,
-                        framesize=(8, 8), remove_frame=False,
+                        framesize=(8, 8), remove_frame=True,
                         path_output=None, ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
@@ -725,7 +738,7 @@ def plot_reference_spot(reference_spot, rescale=False, title=None,
 
 def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
               foci_coord=None, other_coord=None, image=None, cell_mask=None,
-              nuc_mask=None, title=None, remove_frame=False, rescale=False,
+              nuc_mask=None, title=None, remove_frame=True, rescale=False,
               framesize=(15, 10), path_output=None, ext="png", show=True):
     """
     Plot image and coordinates extracted for a specific cell.
