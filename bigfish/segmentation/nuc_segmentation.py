@@ -68,7 +68,7 @@ def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
     image_reconstructed = reconstruction(diff, image, selem=s)
     image_reconstructed = image_reconstructed.astype(original_dtype)
 
-    # substract the reconstructed image from the original one
+    # subtract the reconstructed image from the original one
     image_filtered = image.copy()
     image_filtered -= image_reconstructed
 
