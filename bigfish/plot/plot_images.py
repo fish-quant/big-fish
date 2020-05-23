@@ -98,7 +98,8 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, contrast=False,
     elif rescale and not contrast:
         plt.imshow(xy_tensor)
     else:
-        xy_tensor = stack.rescale(xy_tensor, channel_to_stretch=0)
+        if xy_tensor.dtype not in [np.int64, bool]:
+            xy_tensor = stack.rescale(xy_tensor, channel_to_stretch=0)
         plt.imshow(xy_tensor)
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
@@ -193,17 +194,18 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
 
     # one row
     if len(images) in [2, 3]:
-        for i, tensor in enumerate(images):
+        for i, image in enumerate(images):
             if remove_frame:
                 ax[i].axis("off")
             if not rescale and not contrast:
-                vmin, vmax = get_minmax_values(tensor)
-                ax[i].imshow(tensor, vmin=vmin, vmax=vmax)
+                vmin, vmax = get_minmax_values(image)
+                ax[i].imshow(image, vmin=vmin, vmax=vmax)
             elif rescale and not contrast:
-                ax[i].imshow(tensor)
+                ax[i].imshow(image)
             else:
-                tensor = stack.rescale(tensor, channel_to_stretch=0)
-                ax[i].imshow(tensor)
+                if image.dtype not in [np.int64, bool]:
+                    image = stack.rescale(image, channel_to_stretch=0)
+                ax[i].imshow(image)
             if titles is not None:
                 ax[i].set_title(titles[i], fontweight="bold", fontsize=10)
 
@@ -225,10 +227,11 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
                 vmin, vmax = get_minmax_values(image)
                 ax[row, col].imshow(image, vmin=vmin, vmax=vmax)
             elif rescale and not contrast:
-                ax[i].imshow(image)
+                ax[row, col].imshow(image)
             else:
-                image = stack.rescale(image, channel_to_stretch=0)
-                ax[i].imshow(image)
+                if image.dtype not in [np.int64, bool]:
+                    image = stack.rescale(image, channel_to_stretch=0)
+                ax[row, col].imshow(image)
             if titles is not None:
                 ax[row, col].set_title(titles[i],
                                        fontweight="bold", fontsize=10)
