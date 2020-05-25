@@ -12,11 +12,14 @@ import numpy as np
 import bigfish.stack as stack
 from .utils import get_sigma
 
+from skimage.measure import regionprops
+from skimage.measure import label
+
 
 # ### LoG detection ###
 
-def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
-                 psf_z=None, psf_yx=200):
+def detect_spots(image, threshold, remove_duplicate=True, voxel_size_z=None,
+                 voxel_size_yx=100, psf_z=None, psf_yx=200):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -25,6 +28,7 @@ def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
     3) A pixel which has the same value in the original and filtered images
     is a local maximum.
     4) We remove local peaks under a threshold.
+    5) We keep only one pixel coordinate per detected spot.
 
     Parameters
     ----------
@@ -32,6 +36,9 @@ def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
         Image with shape (z, y, x) or (y, x).
     threshold : float or int
         A threshold to discriminate relevant spots from noisy blobs.
+    remove_duplicate : bool
+        Remove potential duplicate coordinates for the same spots. Slow the
+        running.
     voxel_size_z : int or float
         Height of a voxel, along the z axis, in nanometer.
     voxel_size_yx : int or float
@@ -52,6 +59,7 @@ def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
     """
     # check parameters
     stack.check_parameter(threshold=(float, int),
+                          remove_duplicate=bool,
                           voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
@@ -77,7 +85,8 @@ def detect_spots(image, threshold, voxel_size_z=None, voxel_size_yx=100,
     mask_local_max = local_maximum_detection(image_filtered, sigma)
 
     # remove spots with a low intensity and return their coordinates
-    spots, _ = spots_thresholding(image_filtered, mask_local_max, threshold)
+    spots, _ = spots_thresholding(image_filtered, mask_local_max, threshold,
+                                  remove_duplicate)
 
     return spots
 
@@ -88,6 +97,9 @@ def local_maximum_detection(image, min_distance):
     1) We apply a multidimensional maximum filter.
     2) A pixel which has the same value in the original and filtered images
     is a local maximum.
+
+    Several connected pixels can have the same value. In such a case, the
+    local maximum is not unique.
 
     Parameters
     ----------
@@ -133,11 +145,14 @@ def local_maximum_detection(image, min_distance):
     return mask
 
 
-def spots_thresholding(image, mask_local_max, threshold):
+def spots_thresholding(image, mask_local_max, threshold,
+                       remove_duplicate=True):
     """Filter detected spots and get coordinates of the remaining spots.
 
     In order to make the thresholding robust, it should be applied to a
-    filtered image.
+    filtered image. If the local maximum is not unique (it can happen with
+    connected pixels with the same value), connected component algorithm is
+    applied to keep only one coordinate per spot.
 
     Parameters
     ----------
@@ -147,6 +162,9 @@ def spots_thresholding(image, mask_local_max, threshold):
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
     threshold : float or int
         A threshold to discriminate relevant spots from noisy blobs.
+    remove_duplicate : bool
+        Remove potential duplicate coordinates for the same spots. Slow the
+        running.
 
     Returns
     -------
@@ -164,13 +182,33 @@ def spots_thresholding(image, mask_local_max, threshold):
     stack.check_array(mask_local_max,
                       ndim=[2, 3],
                       dtype=[bool])
-    stack.check_parameter(threshold=(float, int))
+    stack.check_parameter(threshold=(float, int),
+                          remove_duplicate=bool)
 
     # remove peak with a low intensity
     mask = (mask_local_max & (image > threshold))
+    if mask.sum() == 0:
+        spots = np.array([], dtype=np.int64).reshape((0, image.ndim))
+        return spots, mask
 
-    # get peak coordinates
-    spots = np.nonzero(mask)
-    spots = np.column_stack(spots)
+    # make sure we detect only one coordinate per spot
+    if remove_duplicate:
+        # when several pixels are assigned to the same spot, keep the centroid
+        cc = label(mask)
+        local_max_regions = regionprops(cc)
+        spots = []
+        for local_max_region in local_max_regions:
+            spot = np.array(local_max_region.centroid)
+            spots.append(spot)
+        spots = np.stack(spots).astype(np.int64)
+
+        # built mask again
+        mask = np.zeros_like(mask)
+        mask[spots[:, 0], spots[:, 1]] = True
+
+    else:
+        # get peak coordinates
+        spots = np.nonzero(mask)
+        spots = np.column_stack(spots)
 
     return spots, mask
