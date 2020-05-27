@@ -18,8 +18,8 @@ from skimage.measure import label
 
 # ### LoG detection ###
 
-def detect_spots(image, threshold, remove_duplicate=True, voxel_size_z=None,
-                 voxel_size_yx=100, psf_z=None, psf_yx=200):
+def detect_spots(image, threshold=None, remove_duplicate=True,
+                 voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -35,7 +35,8 @@ def detect_spots(image, threshold, remove_duplicate=True, voxel_size_z=None,
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     threshold : float or int
-        A threshold to discriminate relevant spots from noisy blobs.
+        A threshold to discriminate relevant spots from noisy blobs. If None,
+        optimal threshold is selected automatically.
     remove_duplicate : bool
         Remove potential duplicate coordinates for the same spots. Slow the
         running.
@@ -58,7 +59,7 @@ def detect_spots(image, threshold, remove_duplicate=True, voxel_size_z=None,
 
     """
     # check parameters
-    stack.check_parameter(threshold=(float, int),
+    stack.check_parameter(threshold=(float, int, type(None)),
                           remove_duplicate=bool,
                           voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),
@@ -83,6 +84,10 @@ def detect_spots(image, threshold, remove_duplicate=True, voxel_size_z=None,
 
     # find local maximum
     mask_local_max = local_maximum_detection(image_filtered, sigma)
+
+    # get optimal threshold is necessary
+    if threshold is None:
+        threshold = automated_threshold_setting(image_filtered, mask_local_max)
 
     # remove spots with a low intensity and return their coordinates
     spots, _ = spots_thresholding(image_filtered, mask_local_max, threshold,
@@ -150,13 +155,14 @@ def spots_thresholding(image, mask_local_max, threshold,
     """Filter detected spots and get coordinates of the remaining spots.
 
     In order to make the thresholding robust, it should be applied to a
-    filtered image. If the local maximum is not unique (it can happen with
-    connected pixels with the same value), connected component algorithm is
-    applied to keep only one coordinate per spot.
+    filtered image (bigfish.stack.log_filter for example). If the local
+    maximum is not unique (it can happen with connected pixels with the same
+    value), connected component algorithm is applied to keep only one
+    coordinate per spot.
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     mask_local_max : np.ndarray, bool
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
@@ -212,3 +218,58 @@ def spots_thresholding(image, mask_local_max, threshold,
         spots = np.column_stack(spots)
 
     return spots, mask
+
+
+def automated_threshold_setting(image, mask_local_max):
+    """Automatically set the optimal threshold to detect spots.
+
+    In order to make the thresholding robust, it should be applied to a
+    filtered image (bigfish.stack.log_filter for example). The optimal
+    threshold is selected based on the spots distribution. The latter should
+    have a kink discriminating a fast decreasing stage from a more stable one
+    (a plateau).
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x) or (y, x).
+    mask_local_max : np.ndarray, bool
+        Mask with shape (z, y, x) or (y, x) indicating the local peaks.
+
+    Returns
+    -------
+    threshold : int
+        Optimal threshold to discriminate spots from noisy blobs.
+
+    """
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_array(mask_local_max,
+                      ndim=[2, 3],
+                      dtype=[bool])
+
+    # get threshold values x
+    start_range = 0
+    end_range = int(np.percentile(image, 99.9999))
+    x = [i for i in range(start_range, end_range + 1)]
+
+    # get spots count y and its logarithm
+    spots, mask_spots = spots_thresholding(
+        image, mask_local_max, threshold=x[0], remove_duplicate=False)
+    value_spots = image[mask_spots]
+    y = np.log([(value_spots > t).sum() for t in x])
+    y = stack.centered_moving_average(y, n=5)
+
+    # select threshold where the kink of the distribution is located
+    slope = (y[-1] - y[0]) / len(y)
+    y_grad = np.gradient(y)
+    m = list(y_grad >= slope)
+    j = m.index(False)
+    if j > 0:
+        m[:j] = [False] * j
+    i = m.index(True)
+    threshold = x[i]
+
+    return threshold

@@ -18,6 +18,8 @@ from .utils import get_eps_float32
 from .utils import load_and_save_url
 from .utils import check_hash
 from .utils import compute_hash
+from .utils import moving_average
+from .utils import centered_moving_average
 
 from .io import read_image
 from .io import read_dv
@@ -88,7 +90,9 @@ _utils = [
     "get_eps_float32",
     "load_and_save_url",
     "check_hash",
-    "compute_hash"]
+    "compute_hash",
+    "moving_average",
+    "centered_moving_average"]
 
 _io = [
     "read_image",

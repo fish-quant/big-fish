@@ -745,3 +745,68 @@ def compute_hash(path):
     sha256 = sha256hash.hexdigest()
 
     return sha256
+
+
+# ### Computation ###
+
+def moving_average(array, n):
+    """Compute a trailing average.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array used to compute moving average.
+    n : int
+        Window width of the moving average.
+
+    Returns
+    -------
+
+    """
+    # check parameter
+    check_parameter(n=int)
+    check_array(array, ndim=1)
+
+    # compute moving average
+    cumsum = [0]
+    res = []
+    for i, x in enumerate(array, 1):
+        cumsum.append(cumsum[i-1] + x)
+        if i >= n:
+            ma = (cumsum[i] - cumsum[i - n]) / n
+            res.append(ma)
+    res = np.array(res)
+
+    return res
+
+
+def centered_moving_average(array, n):
+    """Compute a centered moving average.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array used to compute moving average.
+    n : int
+        Window width of the moving average.
+
+    Returns
+    -------
+
+    """
+    # check parameter
+    check_parameter(n=int)
+    check_array(array, ndim=1)
+
+    # pad array to keep the same length and centered the outcome
+    if n % 2 == 0:
+        r = int(n / 2)
+        n += 1
+    else:
+        r = int((n - 1) / 2)
+    array_padded = np.pad(array, pad_width=r, mode="reflect")
+
+    # compute centered moving average
+    res = moving_average(array_padded, n)
+
+    return res
