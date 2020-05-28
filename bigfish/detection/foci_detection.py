@@ -69,6 +69,12 @@ def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
     if ndim == 2:
         voxel_size_z = None
 
+    # case where no spot were detected
+    if spots.size == 0:
+        clustered_spots = np.array([], dtype=np.int64).reshape((0, ndim + 1))
+        foci = np.array([], dtype=np.int64).reshape((0, ndim + 2))
+        return clustered_spots, foci
+
     # cluster spots
     clustered_spots = _cluster_spots(
         spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots)

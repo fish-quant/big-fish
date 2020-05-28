@@ -126,10 +126,8 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # case where no spot were detected
     if spots.size == 0:
-        spots_out_cluster = np.array([], dtype=np.int64).reshape((0, ndim))
-        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, ndim + 1))
         cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots_out_cluster, spots_in_cluster, cluster, reference_spot
+        return spots, cluster, reference_spot
 
     # case with an empty frame as reference spot
     if reference_spot.sum() == 0:
@@ -155,9 +153,8 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # case where no cluster where detected
     if cluster_regions.size == 0:
-        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, ndim + 1))
         cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots, spots_in_cluster, cluster, reference_spot
+        return spots, cluster, reference_spot
 
     # precompute gaussian function values
     max_grid = max(200, cluster_size + 1)
