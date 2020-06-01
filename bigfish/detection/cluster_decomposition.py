@@ -109,6 +109,12 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     if ndim == 2:
         voxel_size_z, psf_z = None, None
 
+    # case where no spot were detected
+    if spots.size == 0:
+        cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
+        reference_spot = np.zeros((5,) * ndim, dtype=image.dtype)
+        return spots, cluster, reference_spot
+
     # compute expected standard deviation of the spots
     sigma = get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
     large_sigma = tuple([sigma_ * 5 for sigma_ in sigma])
@@ -125,16 +131,10 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
         voxel_size_z, voxel_size_yx, psf_z, psf_yx,
         alpha)
 
-    # case where no spot were detected
-    if spots.size == 0:
-        cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots, cluster, reference_spot
-
     # case with an empty frame as reference spot
     if reference_spot.sum() == 0:
-        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, ndim + 1))
         cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots, spots_in_cluster, cluster, reference_spot
+        return spots, cluster, reference_spot
 
     # fit a gaussian function on the reference spot to be able to simulate it
     parameters_fitted = modelize_spot(
