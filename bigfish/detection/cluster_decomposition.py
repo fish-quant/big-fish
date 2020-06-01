@@ -41,15 +41,16 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
         for 3-d or 2-d images respectively.
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
     alpha : int or float
         Intensity score of the reference spot, between 0 and 1. The higher,
@@ -203,15 +204,16 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) for 3-d images or
         (nb_spots, 2) for 2-d images.
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
     alpha : int or float
         Intensity score of the reference spot, between 0 and 1. If 0, reference
@@ -487,15 +489,16 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
     ----------
     reference_spot : np.ndarray
         A 3-d or 2-d image with detected spot and shape (z, y, x) or (y, x).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, reference
+        spot is considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, reference spot is considered in 2-d.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
 
     Returns
@@ -592,8 +595,9 @@ def _initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
     ----------
     image_spot : np.ndarray
         An image with detected spot and shape (z, y, x) or (y, x).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image spot
+        is considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     return_centroid : bool
@@ -772,13 +776,14 @@ def _objective_function(nb_dimension, voxel_size_z, voxel_size_yx, psf_z,
     ----------
     nb_dimension : int
         Number of dimensions to consider (2 or 3).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d gaussian function.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float
+    psf_z : int or float or None
         Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
+        in nanometer. If None, we consider a 2-d gaussian function.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
@@ -1236,12 +1241,13 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 
     Parameters
     ----------
-    voxel_size_z : float, int
-        Height of a voxel, in nanometer.
-    voxel_size_yx : float, int
+    voxel_size_z : float or int or None
+        Height of a voxel, in nanometer. If None, we consider a 2-d erf.
+    voxel_size_yx : float or int
         size of a voxel, in nanometer.
-    sigma_z : float or int
-        Standard deviation of the gaussian along the z axis, in nanometer.
+    sigma_z : float or int or None
+        Standard deviation of the gaussian along the z axis, in nanometer. If
+        None, we consider a 2-d erf.
     sigma_yx : float or int
         Standard deviation of the gaussian along the yx axis, in nanometer.
     max_grid : int
@@ -1310,15 +1316,16 @@ def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
         Image with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d image.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, we consider a 2-d image.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
     beta : int or float
         Multiplicative factor for the intensity threshold of a cluster region.
@@ -1547,12 +1554,14 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
         Image with shape (z, y, x) or (y, x).
     cluster_regions : np.ndarray
         Array with filtered skimage.measure._regionprops._RegionProperties.
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d image.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    sigma_z : int or float
-        Standard deviation of the gaussian along the z axis, in nanometer.
+    sigma_z : int or float or None
+        Standard deviation of the gaussian along the z axis, in nanometer. If
+        None, we consider a 2-d image.
     sigma_yx : int or float
         Standard deviation of the gaussian along the yx axis, in nanometer.
     amplitude : float

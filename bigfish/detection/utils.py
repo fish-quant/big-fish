@@ -147,13 +147,14 @@ def get_sigma(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
 
     Parameters
     ----------
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d PSF.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float
+    psf_z : int or float or None
         Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
+        in nanometer. If None, we consider a 2-d PSF.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
@@ -193,13 +194,14 @@ def get_radius(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
 
     Parameters
     ----------
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d spot.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float
+    psf_z : int or float or None
         Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
+        in nanometer. If None, we consider a 2-d spot.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.

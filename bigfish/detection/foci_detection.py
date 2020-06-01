@@ -26,8 +26,9 @@ def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
     spots : np.ndarray, np.int64
         Coordinates of the detected spots with shape (nb_spots, 3) or
         (nb_spots, 2).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, spots are
+        considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     radius : int
