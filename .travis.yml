@@ -4,8 +4,7 @@ python:
     - "3.6"
 
 install:
-    - pip install pytest-cov codecov
-    - pip install .
+    - pip install -r requirements_dev.txt
 
 script:
     - pytest --cov=./
