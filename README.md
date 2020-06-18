@@ -1,8 +1,9 @@
 # Big-FISH
 
-[![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
+[![Build Status](https://travis-ci.com/fish-quant/big-fish.svg?branch=master)](https://travis-ci.com/fish-quant/big-fish)
 [![codecov](https://codecov.io/gh/fish-quant/big-fish/branch/master/graph/badge.svg)](https://codecov.io/gh/fish-quant/big-fish)
-![License](https://img.shields.io/badge/python-3.6-blue)
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
 **Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **manipulate microscopic images**, **detect spots** and **segment relevant area** of the cells. The package allows the user to extract specific signal from images and build a coordinate representation of the cells. The ultimate goal is to ease **large scale statistical analysis** and quantification.
 
@@ -23,7 +24,6 @@ Big-FISH requires Python 3.6 or newer. Additionally, it has the following depend
 - matplotlib (>= 3.0.2)
 - pandas (>= 0.24.0)
 - mrc (>= 0.1.5)
-- pip (>= 18.1)
 
 ### User installation
 

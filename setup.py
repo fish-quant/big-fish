@@ -14,22 +14,15 @@ DESCRIPTION = "Toolbox for the analysis of smFISH images."
 
 # package version
 VERSION = None
-with open('bigfish/__init__.py') as f:
+with open('bigfish/__init__.py', encoding='utf-8') as f:
     for row in f:
         if row.startswith('__version__'):
             VERSION = row.strip().split()[-1][1:-1]
             break
 
-# package abstract dependencies
-REQUIREMENTS = [
-    'numpy >= 1.16.0',
-    'pip >= 18.1',
-    'scikit-learn >= 0.20.2',
-    'scikit-image >= 0.14.2',
-    'scipy >= 1.2.0',
-    'matplotlib >= 3.0.2',
-    'pandas >= 0.24.0',
-    'mrc >= 0.1.5']
+# package dependencies
+with open("requirements.txt", encoding='utf-8') as f:
+    REQUIREMENTS = [l.strip() for l in f.readlines() if l]
 DEEPLEARNING_REQUIREMENTS = [
     'tensorflow >= 1.12.0, < 2.0']
 
@@ -51,7 +44,7 @@ CLASSIFIERS = [
     'Operating System :: MacOS',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.6',
-    'License :: OSI Approved :: MIT License']
+    'License :: OSI Approved :: BSD-3-Clause License']
 
 # setup
 setup(name='big-fish',
@@ -64,7 +57,7 @@ setup(name='big-fish',
       url='https://github.com/fish-quant/big-fish',
       packages=find_packages(),
       license='BSD 3-Clause License',
-      python_requires='>=3.6.0',
+      python_requires='>=3.6',
       install_requires=REQUIREMENTS,
       extras_require={'deeplearning': DEEPLEARNING_REQUIREMENTS},
       classifiers=CLASSIFIERS)
