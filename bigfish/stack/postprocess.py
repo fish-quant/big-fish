@@ -10,16 +10,14 @@ returned by a bigfish method.
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy import ndimage as ndi
 
 from .utils import check_array, check_parameter, get_margin_value
+from .io import save_data_to_csv
 
 from skimage.measure import regionprops, find_contours
 from skimage.draw import polygon_perimeter
-
-
-# TODO extract cell-RNAs matrix
-# TODO sum up extraction results in a (csv) file
 
 
 # ### Object identification to sub-cellular regions ###
@@ -97,11 +95,6 @@ def remove_transcription_site_rna(rna, transcription_site):
 
     Returns
     -------
-    rna_in_ts : np.ndarray, np.int64
-        Coordinates of the detected RNAs in transcription sites with shape
-        (nb_spots, 4) or (nb_spots, 3). One coordinate per dimension (zyx or
-        yx coordinates) plus the index of the transcription site assigned to
-        the RNA.
     rna_out_ts : np.ndarray, np.int64
         Coordinates of the detected RNAs with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
@@ -129,10 +122,9 @@ def remove_transcription_site_rna(rna, transcription_site):
     # filter out rna from transcription sites
     rna_in_ts = transcription_site[:, ndim + 1]
     mask_rna_in_ts = np.isin(rna[:, ndim], rna_in_ts)
-    rna_in_ts = rna[mask_rna_in_ts]
     rna_out_ts = rna[~mask_rna_in_ts]
 
-    return rna_in_ts, rna_out_ts
+    return rna_out_ts
 
 
 # ### Cell extraction ###
@@ -182,11 +174,11 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
     fov_results : List[Dict]
         List of dictionaries, one per cell segmented in the FoV. Each
         dictionary includes information about the cell (image, masks,
-        coordinates arrays). Minimal information are :
-        - cell_id : Unique id of the cell.
-        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
-        - cell_coord : boundary coordinates of the cell.
-        - cell_mask : mask of the cell.
+        coordinates arrays). Minimal information are:
+        - cell_id -> Unique id of the cell.
+        - bbox -> bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord -> boundary coordinates of the cell.
+        - cell_mask -> mask of the cell.
 
     """
     # check parameters
@@ -219,6 +211,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
                               "dimension we consider ({1})."
                               .format(array.shape[1], ndim),
                               UserWarning)
+    # TODO allow boolean for 'others_image'
     if others_image is not None:
         for key in others_image:
             if key in actual_keys:
@@ -305,19 +298,21 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
 
         # get coordinates of the spots detected in the cell
         if rna_coord is not None:
-            spots_in_cell = _extract_elements(cell_mask, rna_coord, ndim)
-            spots_in_cell[:, ndim - 2] -= min_y
-            spots_in_cell[:, ndim - 1] -= min_x
-            cell_results["rna_coord"] = spots_in_cell
+            rna_in_cell, _ = identify_objects_in_region(
+                cell_mask, rna_coord, ndim)
+            rna_in_cell[:, ndim - 2] -= min_y
+            rna_in_cell[:, ndim - 1] -= min_x
+            cell_results["rna_coord"] = rna_in_cell
 
         # get coordinates of the other detected elements
         if others_coord is not None:
             for key in others_coord:
                 array = others_coord[key]
-                elements_in_cell = _extract_elements(cell_mask, array, ndim)
-                elements_in_cell[:, ndim - 2] -= min_y
-                elements_in_cell[:, ndim - 1] -= min_x
-                cell_results[key] = elements_in_cell
+                element_in_cell, _ = identify_objects_in_region(
+                    cell_mask, array, ndim)
+                element_in_cell[:, ndim - 2] -= min_y
+                element_in_cell[:, ndim - 1] -= min_x
+                cell_results[key] = element_in_cell
 
         # crop cell image
         if image is not None:
@@ -387,34 +382,6 @@ def _check_nucleus_in_cell(cell_mask, nuc_mask):
         return True
 
 
-def _extract_elements(cell_mask, array, ndim):
-    """Assign elements detected in a the FoV to specific individual cells.
-
-    Parameters
-    ----------
-    cell_mask : np.ndarray, bool
-        Binary mask of the cell with shape (y, x).
-    array : np.ndarray, np.int64
-        Coordinates of the detected elements. The spatial coordinates (zyx or
-        yx coordinates) should be in the first 3 or 2 columns.
-    ndim : int
-        Number of spatial dimension to consider (2 or 3).
-
-    Returns
-    -------
-    spots_out_foci_cell : np.ndarray, np.int64
-        Coordinate of the spots detected outside foci in the cell, with shape
-        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
-        index of the foci.
-
-    """
-    # get coordinates of the elements within the specific cell
-    mask_elements_in_cell = cell_mask[array[:, ndim - 2], array[:, ndim - 1]]
-    elements_in_cell = array[mask_elements_in_cell]
-
-    return elements_in_cell
-
-
 def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     """Get spots coordinates within a given frame.
 
@@ -464,6 +431,138 @@ def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
         extracted_spots[:, 2] -= x_lim[0]
 
     return extracted_spots
+
+
+def summarize_extraction_results(fov_results, ndim, path_output=None):
+    """Summarize results extracted from a field of view and store them in a
+    dataframe.
+
+    Parameters
+    ----------
+    fov_results : List[Dict]
+        List of dictionaries, one per cell segmented in the FoV. Each
+        dictionary includes information about the cell (image, masks,
+        coordinates arrays). Minimal information are:
+        - cell_id: Unique id of the cell.
+        - bbox: bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord: boundary coordinates of the cell.
+        - cell_mask: mask of the cell.
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
+    path_output : str
+        Path to save the dataframe in a csv file.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        Dataframe with summarized results from the field of view, at the cell
+        level. A minimum number of indicators are returned, fill in with NaN
+        if necessary:
+        - cell_id -> Unique id of the cell.
+        - cell_area -> Area of the cell in pixels.
+        - nuc_area -> Area of the nucleus in pixels.
+        - nb_rna -> Number of detected rna in the cell.
+        - nb_rna_in_nuc -> Number of detected rna inside the nucleus.
+        - nb_rna_out_nuc -> Number of detected rna outside the nucleus.
+        Extra elements with detected with coordinates are counted in the cell
+        and summarized as well.
+
+    """
+    # check parameters
+    check_parameter(fov_results=list,
+                    ndim=int,
+                    path_output=(str, type(None)))
+
+    # case if no cell were detected
+    if len(fov_results) == 0:
+        df = pd.DataFrame({"cell_id": [],
+                           "cell_area": [],
+                           "nuc_area": [],
+                           "nb_rna": [],
+                           "nb_rna_in_nuc": [],
+                           "nb_rna_out_nuc": []})
+        if path_output is not None:
+            save_data_to_csv(df, path_output)
+        return df
+
+    # check extra coordinates to summarize
+    cell_results = fov_results[0]
+    _extra_coord = {}
+    for key in cell_results:
+        if key in ["cell_id", "bbox", "cell_coord", "cell_mask",
+                   "nuc_coord", "nuc_mask", "rna_coord", "image"]:
+            continue
+        others_coord = cell_results[key]
+        if (not isinstance(others_coord, np.ndarray)
+                or others_coord.dtype != np.int64):
+            continue
+        _extra_coord[key] = []
+
+    # summarize results at the cell level
+    _cell_id = []
+    _cell_area = []
+    _nuc_area = []
+    _nb_rna = []
+    _nb_rna_in_nuc = []
+    _nb_rna_out_nuc = []
+    for cell_results in fov_results:
+        # get cell id
+        _cell_id.append(cell_results["cell_id"])
+
+        # get cell mask
+        cell_mask = cell_results["cell_mask"]
+        _cell_area.append(cell_mask.sum())
+
+        # get nucleus mask
+        nuc_mask = None
+        if "nuc_mask" in cell_results:
+            nuc_mask = cell_results["nuc_mask"]
+            _nuc_area.append(nuc_mask.sum())
+
+        # get rna coordinates and relative results
+        if "rna_coord" in cell_results:
+            rna_coord = cell_results["rna_coord"]
+            _nb_rna.append(len(rna_coord))
+
+            # get rna in nucleus
+            if "nuc_mask" in cell_results:
+                rna_in_nuc, rna_out_nuc = identify_objects_in_region(
+                    nuc_mask, rna_coord, ndim)
+                _nb_rna_in_nuc.append(len(rna_in_nuc))
+                _nb_rna_out_nuc.append(len(rna_out_nuc))
+
+        # get others coordinates
+        for key in _extra_coord:
+            others_coord = cell_results[key]
+            _extra_coord[key].append(len(others_coord))
+
+    # complete missing mandatory results
+    n = len(_cell_id)
+    if len(_nuc_area) == 0:
+        _nuc_area = [np.nan] * n
+    if len(_nb_rna) == 0:
+        _nb_rna = [np.nan] * n
+    if len(_nb_rna_in_nuc) == 0:
+        _nb_rna_in_nuc = [np.nan] * n
+    if len(_nb_rna_out_nuc) == 0:
+        _nb_rna_out_nuc = [np.nan] * n
+
+    # store results in a dataframe
+    result_summary = {"cell_id": _cell_id,
+                      "cell_area": _cell_area,
+                      "nuc_area": _nuc_area,
+                      "nb_rna": _nb_rna,
+                      "nb_rna_in_nuc": _nb_rna_in_nuc,
+                      "nb_rna_out_nuc": _nb_rna_out_nuc}
+    for key in _extra_coord:
+        result_summary["nb_{0}".format(key)] = _extra_coord[key]
+    df = pd.DataFrame(result_summary)
+
+    # save dataframe
+    if path_output is not None:
+        save_data_to_csv(df, path_output)
+
+    return df
 
 
 # ### Segmentation postprocessing ###

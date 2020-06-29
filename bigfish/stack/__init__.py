@@ -69,6 +69,7 @@ from .postprocess import identify_objects_in_region
 from .postprocess import remove_transcription_site_rna
 from .postprocess import extract_cell
 from .postprocess import extract_spots_from_frame
+from .postprocess import summarize_extraction_results
 from .postprocess import center_mask_coord
 from .postprocess import from_boundaries_to_surface
 from .postprocess import from_surface_to_boundaries
@@ -149,6 +150,7 @@ _postprocess = [
     "remove_transcription_site_rna",
     "extract_cell",
     "extract_spots_from_frame",
+    "summarize_extraction_results",
     "center_mask_coord",
     "from_boundaries_to_surface",
     "from_surface_to_boundaries",
