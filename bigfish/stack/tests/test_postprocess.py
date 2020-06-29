@@ -65,8 +65,6 @@ def test_remove_transcription_site(ndim):
     rna = np.concatenate((rna_in, rna_out))
 
     # test
-    rna_in_, rna_out_ = stack.remove_transcription_site_rna(rna, ts)
-    assert_array_equal(rna_in_, rna_in)
+    rna_out_ = stack.remove_transcription_site_rna(rna, ts)
     assert_array_equal(rna_out_, rna_out)
-    assert rna_in_.dtype == rna_in.dtype
     assert rna_out_.dtype == rna_out.dtype
