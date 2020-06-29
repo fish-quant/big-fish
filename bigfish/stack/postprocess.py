@@ -456,16 +456,16 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
     -------
     df : pd.DataFrame
         Dataframe with summarized results from the field of view, at the cell
-        level. A minimum number of indicators are returned, fill in with NaN
-        if necessary:
+        level. A minimum number of indicators are returned:
         - cell_id -> Unique id of the cell.
         - cell_area -> Area of the cell in pixels.
+        Other indicators summarized if available:
         - nuc_area -> Area of the nucleus in pixels.
         - nb_rna -> Number of detected rna in the cell.
         - nb_rna_in_nuc -> Number of detected rna inside the nucleus.
         - nb_rna_out_nuc -> Number of detected rna outside the nucleus.
-        Extra elements with detected with coordinates are counted in the cell
-        and summarized as well.
+        Extra coordinates elements detected are counted in the cell and
+        summarized as well.
 
     """
     # check parameters
@@ -476,11 +476,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
     # case if no cell were detected
     if len(fov_results) == 0:
         df = pd.DataFrame({"cell_id": [],
-                           "cell_area": [],
-                           "nuc_area": [],
-                           "nb_rna": [],
-                           "nb_rna_in_nuc": [],
-                           "nb_rna_out_nuc": []})
+                           "cell_area": []})
         if path_output is not None:
             save_data_to_csv(df, path_output)
         return df
@@ -547,15 +543,29 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
     if len(_nb_rna_out_nuc) == 0:
         _nb_rna_out_nuc = [np.nan] * n
 
-    # store results in a dataframe
+    # store minimum results in a dataframe
     result_summary = {"cell_id": _cell_id,
                       "cell_area": _cell_area,
                       "nuc_area": _nuc_area,
                       "nb_rna": _nb_rna,
                       "nb_rna_in_nuc": _nb_rna_in_nuc,
                       "nb_rna_out_nuc": _nb_rna_out_nuc}
+
+    # store available results on nucleus and rna
+    if len(_nuc_area) > 0:
+        result_summary["nuc_area"] = _nuc_area
+    if len(_nb_rna) > 0:
+        result_summary["nb_rna"] = _nb_rna
+    if len(_nb_rna_in_nuc) > 0:
+        result_summary["nb_rna_in_nuc"] = _nb_rna_in_nuc
+    if len(_nb_rna_out_nuc) > 0:
+        result_summary["nb_rna_out_nuc"] = _nb_rna_out_nuc
+
+    # store results from others elements detected in the cell
     for key in _extra_coord:
         result_summary["nb_{0}".format(key)] = _extra_coord[key]
+
+    # instantiate dataframe
     df = pd.DataFrame(result_summary)
 
     # save dataframe
