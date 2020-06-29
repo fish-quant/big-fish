@@ -65,8 +65,8 @@ from .projection import get_in_focus_indices
 from .illumination import compute_illumination_surface
 from .illumination import correct_illumination_surface
 
-from .postprocess import identify_transcription_site
-from .postprocess import remove_transcription_site
+from .postprocess import identify_objects_in_region
+from .postprocess import remove_transcription_site_rna
 from .postprocess import extract_cell
 from .postprocess import extract_spots_from_frame
 from .postprocess import center_mask_coord
@@ -145,8 +145,8 @@ _illumination = [
     "correct_illumination_surface"]
 
 _postprocess = [
-    "identify_transcription_site",
-    "remove_transcription_site",
+    "identify_objects_in_region",
+    "remove_transcription_site_rna",
     "extract_cell",
     "extract_spots_from_frame",
     "center_mask_coord",

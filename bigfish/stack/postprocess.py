@@ -21,66 +21,67 @@ from skimage.draw import polygon_perimeter
 # TODO extract cell-RNAs matrix
 # TODO sum up extraction results in a (csv) file
 
-# ### Transcription sites ###
 
-def identify_transcription_site(nuc_mask, foci):
-    """A transcription site is defined as as a foci detected within the
-    nucleus.
+# ### Object identification to sub-cellular regions ###
+
+def identify_objects_in_region(mask, coord, ndim):
+    """Identify cellular objects in specific region.
 
     Parameters
     ----------
-    nuc_mask : np.ndarray, bool
-        Binary mask of the nuclei with shape (y, x).
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx coordinates), the number of
-        RNAs detected in the foci and its index.
+    mask : np.ndarray, bool
+        Binary mask of the targeted region with shape (y, x).
+    coord : np.ndarray, np.int64
+        Array with two dimensions. One object per row, zyx or yx coordinates
+        in the first 3 or 2 columns.
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
 
     Returns
     -------
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx coordinates), the number of
-        RNAs detected in the foci and its index. Transcription site are
-        removed.
-    transcription_site : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the transcription site centroid (zyx or yx coordinates),
-        the number of RNAs detected in the transcription site and its index.
+    coord_in : np.ndarray, np.int64
+        Coordinates of the objects detected inside the region.
+    coord_out : np.ndarray, np.int64
+        Coordinates of the objects detected outside the region.
 
     """
     # check parameters
-    check_array(nuc_mask,
+    check_parameter(ndim=int)
+    check_array(mask,
                 ndim=2,
                 dtype=[np.uint8, np.uint16, np.int64,
                        bool])
-    check_array(foci,
+    check_array(coord,
                 ndim=2,
                 dtype=np.int64)
 
     # check number of dimensions
-    ndim = foci.shape[1] - 2
     if ndim not in [2, 3]:
-        raise ValueError("Foci array should be in 4 or 5 dimensions (one "
-                         "coordinate per dimension for the foci centroid, the "
-                         "number of RNAs detected in the foci and its "
-                         "index), not {0}.".format(foci.shape[1]))
+        raise ValueError("The number of spatial dimension requested should be "
+                         "2 or 3, not {0}.".format(ndim))
+    if coord.shape[1] < ndim:
+        raise ValueError("Coord array should have at least {0} features to "
+                         "match the number of spatial dimensions requested. "
+                         "Currently {1} is not enough."
+                         .format(ndim, coord.shape[1]))
 
     # binarize nuclei mask if needed
-    if nuc_mask.dtype != bool:
-        nuc_mask = nuc_mask.astype(bool)
+    if mask.dtype != bool:
+        mask = mask.astype(bool)
 
-    # remove foci inside nuclei
-    mask_transcription_site = nuc_mask[foci[:, ndim - 2], foci[:, ndim - 1]]
-    transcription_site = foci[mask_transcription_site]
-    foci = foci[~mask_transcription_site]
+    # remove objects inside the region
+    mask_in = mask[coord[:, ndim - 2], coord[:, ndim - 1]]
+    coord_in = coord[mask_in]
+    coord_out = coord[~mask_in]
 
-    return foci, transcription_site
+    return coord_in, coord_out
 
 
-def remove_transcription_site(rna, transcription_site):
-    """A transcription site is defined as as a foci detected within the
-    nucleus.
+def remove_transcription_site_rna(rna, transcription_site):
+    """Distinguish RNA molecules detected in a transcription site from the
+    rest.
+
+    A transcription site is defined as as a foci detected within the nucleus.
 
     Parameters
     ----------
@@ -96,6 +97,11 @@ def remove_transcription_site(rna, transcription_site):
 
     Returns
     -------
+    rna_in_ts : np.ndarray, np.int64
+        Coordinates of the detected RNAs in transcription sites with shape
+        (nb_spots, 4) or (nb_spots, 3). One coordinate per dimension (zyx or
+        yx coordinates) plus the index of the transcription site assigned to
+        the RNA.
     rna_out_ts : np.ndarray, np.int64
         Coordinates of the detected RNAs with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
@@ -123,9 +129,10 @@ def remove_transcription_site(rna, transcription_site):
     # filter out rna from transcription sites
     rna_in_ts = transcription_site[:, ndim + 1]
     mask_rna_in_ts = np.isin(rna[:, ndim], rna_in_ts)
+    rna_in_ts = rna[mask_rna_in_ts]
     rna_out_ts = rna[~mask_rna_in_ts]
 
-    return rna_out_ts
+    return rna_in_ts, rna_out_ts
 
 
 # ### Cell extraction ###
@@ -176,6 +183,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
         List of dictionaries, one per cell segmented in the FoV. Each
         dictionary includes information about the cell (image, masks,
         coordinates arrays). Minimal information are :
+        - cell_id : Unique id of the cell.
         - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
         - cell_coord : boundary coordinates of the cell.
         - cell_mask : mask of the cell.
