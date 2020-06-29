@@ -27,10 +27,11 @@ from .io import read_array
 from .io import read_uncompressed
 from .io import read_cell_extracted
 from .io import read_array_from_csv
+from .io import read_dataframe_from_csv
 from .io import save_image
 from .io import save_array
 from .io import save_cell_extracted
-from .io import save_array_to_csv
+from .io import save_data_to_csv
 
 from .preprocess import build_stacks
 from .preprocess import build_stack
@@ -101,10 +102,11 @@ _io = [
     "read_uncompressed",
     "read_cell_extracted",
     "read_array_from_csv",
+    "read_dataframe_from_csv",
     "save_image",
     "save_array",
     "save_cell_extracted",
-    "save_array_to_csv"]
+    "save_data_to_csv"]
 
 _preprocess = [
     "build_stacks",

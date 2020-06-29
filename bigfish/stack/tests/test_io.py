@@ -12,13 +12,12 @@ import mrc
 import tempfile
 
 import numpy as np
+import pandas as pd
 import bigfish.stack as stack
 
 from numpy.testing import assert_array_equal
 
-# TODO test bigfish.stack.read_array_from_csv
 # TODO test bigfish.stack.read_cell_extracted
-# TODO test bigfish.stack.save_array_to_csv
 # TODO test bigfish.stack.save_cell_extracted
 
 
@@ -156,3 +155,47 @@ def test_npz(shape, dtype):
         assert_array_equal(test_2, data["test_2"])
         assert test_1.dtype == data["test_1"].dtype
         assert test_2.dtype == data["test_2"].dtype
+
+
+@pytest.mark.parametrize("dtype", [
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
+    np.float16, np.float32, np.float64])
+@pytest.mark.parametrize("delimiter", [";", ",", ":", "\t"])
+def test_csv_numpy(dtype, delimiter):
+    # build a temporary directory
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # save arrays in csv file
+        test_array = np.zeros((10, 2), dtype=dtype)
+        path = os.path.join(tmp_dir, "test_array.csv")
+        stack.save_data_to_csv(test_array, path, delimiter=delimiter)
+
+        # read csv file
+        array = stack.read_array_from_csv(path, delimiter=delimiter)
+        assert array.dtype == np.float64
+        array = stack.read_array_from_csv(path, dtype, delimiter)
+        assert_array_equal(test_array, array)
+        assert array.dtype == dtype
+
+
+@pytest.mark.parametrize("delimiter", [";", ",", ":", "\t"])
+def test_csv_pandas(delimiter):
+    # build a temporary directory
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # save pandas objects in csv file
+        test_series = pd.Series([0.1, 2.5, 3.7], name="a")
+        test_dataframe = pd.DataFrame({"a": [0, 2, 3],
+                                       "b": [0.1, 2.5, 3.7],
+                                       "c": ["dog", "cat", "bird"]})
+        path = os.path.join(tmp_dir, "test_series.csv")
+        stack.save_data_to_csv(test_series, path, delimiter=delimiter)
+        path = os.path.join(tmp_dir, "test_dataframe.csv")
+        stack.save_data_to_csv(test_dataframe, path, delimiter=delimiter)
+
+        # read csv files
+        path = os.path.join(tmp_dir, "test_series.csv")
+        df = stack.read_dataframe_from_csv(path, delimiter=delimiter)
+        pd.testing.assert_frame_equal(test_series.to_frame(), df)
+        path = os.path.join(tmp_dir, "test_dataframe.csv")
+        df = stack.read_dataframe_from_csv(path, delimiter=delimiter)
+        pd.testing.assert_frame_equal(test_dataframe, df)
