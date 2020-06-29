@@ -259,6 +259,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
 
         # get the bounding box of the cell
         label = cell.label
+        cell_results["cell_id"] = label
         (min_y, min_x, max_y, max_x) = cell.bbox
         cell_results["bbox"] = cell.bbox
 
