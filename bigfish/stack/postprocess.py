@@ -130,8 +130,9 @@ def remove_transcription_site(rna, transcription_site):
 
 # ### Cell extraction ###
 
-def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
-                 image=None, remove_cropped_cell=True, check_nuc_in_cell=True):
+def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
+                 others_coord=None, image=None, others_image=None,
+                 remove_cropped_cell=True, check_nuc_in_cell=True):
     """Extract cell-level results of a FoV.
 
     The function gathers different segmentation and detection results obtained
@@ -150,7 +151,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns. If None, RNAs are not assigned to individual
         cells.
-    others : Dict[np.ndarray]
+    others_coord : Dict[np.ndarray]
         Dictionary of coordinates arrays. For each array of the dictionary,
         the different elements are assigned to individual cells. Arrays should
         be organized the same way than spots: zyx or yx coordinates in the
@@ -161,6 +162,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
     image : np.ndarray, np.uint
         Image in 2-d of the FoV. If None, image of the individual cells are not
         extracted.
+    others_image : Dict[np.ndarray]
+        Dictionary of images to crop. If None, no others image of the
+        individual cells are extracted.
     remove_cropped_cell : bool
         Remove cells cropped by the FoV frame.
     check_nuc_in_cell : bool
@@ -179,39 +183,52 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
     """
     # check parameters
     check_parameter(ndim=int,
-                    others=(dict, type(None)),
+                    others_coord=(dict, type(None)),
+                    others_image=(dict, type(None)),
                     remove_cropped_cell=bool,
                     check_nuc_in_cell=bool)
-    check_array(cell_label,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64])
+    check_array(cell_label, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
     if nuc_label is not None:
-        check_array(nuc_label,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16, np.int64])
+        check_array(nuc_label, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
     if rna_coord is not None:
-        check_array(rna_coord,
-                    ndim=2,
-                    dtype=np.int64)
+        check_array(rna_coord, ndim=2, dtype=np.int64)
     if image is not None:
-        check_array(image,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16])
-    if others is not None:
-        for key in others:
-            array = others[key]
-            check_array(array,
-                        ndim=2,
-                        dtype=np.int64)
+        check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    actual_keys = ["bbox", "cell_coord", "cell_mask", "nuc_coord", "nuc_mask",
+                   "rna_coord", "image"]
+    if others_coord is not None:
+        for key in others_coord:
+            if key in actual_keys:
+                raise KeyError("Key {0} in 'others_coord' is already taken. "
+                               "Please choose another one.".format(key))
+            else:
+                actual_keys.append(key)
+            array = others_coord[key]
+            check_array(array, ndim=2, dtype=np.int64)
             if array.shape[1] < ndim:
-                warnings.warn("array in 'others' have less coordinates ({0}) "
-                              "than the minimum number of spatial dimension "
-                              "we consider ({1})".format(array.shape[1], ndim),
+                warnings.warn("Array in 'others_coord' have less coordinates "
+                              "({0}) than the minimum number of spatial "
+                              "dimension we consider ({1})."
+                              .format(array.shape[1], ndim),
+                              UserWarning)
+    if others_image is not None:
+        for key in others_image:
+            if key in actual_keys:
+                raise KeyError("Key {0} in 'others_image' is already taken. "
+                               "Please choose another one.".format(key))
+            else:
+                actual_keys.append(key)
+            image_ = others_image[key]
+            check_array(image_, ndim=2, dtype=[np.uint8, np.uint16])
+            if image_.shape != image.shape:
+                warnings.warn("Image in 'others_image' does not have the same "
+                              "shape ({0}) than original image ({1})."
+                              .format(image_.shape, image.shape),
                               UserWarning)
     if rna_coord.shape[1] < ndim:
         warnings.warn("'rna_coord' have less coordinates ({0}) than the "
                       "minimum number of spatial dimension we "
-                      "consider ({1})".format(rna_coord.shape[1], ndim),
+                      "consider ({1}).".format(rna_coord.shape[1], ndim),
                       UserWarning)
 
     # initialize FoV results
@@ -285,9 +302,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
             cell_results["rna_coord"] = spots_in_cell
 
         # get coordinates of the other detected elements
-        if others is not None:
-            for key in others:
-                array = others[key]
+        if others_coord is not None:
+            for key in others_coord:
+                array = others_coord[key]
                 elements_in_cell = _extract_elements(cell_mask, array, ndim)
                 elements_in_cell[:, ndim - 2] -= min_y
                 elements_in_cell[:, ndim - 1] -= min_x
@@ -297,6 +314,13 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
         if image is not None:
             image_cropped = image[min_y: max_y, min_x: max_x]
             cell_results["image"] = image_cropped
+
+        # get crops of the other images
+        if others_image is not None:
+            for key in others_image:
+                image_ = others_image[key]
+                image_cropped_ = image_[min_y: max_y, min_x: max_x]
+                cell_results[key] = image_cropped_
 
         fov_results.append(cell_results)
 
