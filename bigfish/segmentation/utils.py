@@ -120,11 +120,11 @@ def clean_segmentation(image, small_object_size=None, fill_holes=False,
     ----------
     image : np.ndarray, np.int64 or bool
         Labelled or masked image with shape (y, x).
-    small_object_size : int
+    small_object_size : int or None
         Areas with a smaller surface (in pixels) are removed.
     fill_holes : bool
         Fill holes within a labelled or masked area.
-    smoothness : int
+    smoothness : int or None
         Radius of a median kernel filter. The higher the smoother instance
         boundaries are.
     delimit_instance : bool
@@ -331,14 +331,14 @@ def match_nuc_cell(nuc_label, cell_label):
     ----------
     nuc_label : np.ndarray, np.int or np.uint
         Labelled image of nuclei with shape (y, x).
-    cell_label : np.ndarray, np.int
+    cell_label : np.ndarray, np.int or np.uint
         Labelled image of cells with shape (y, x).
 
     Returns
     -------
     new_nuc_label : np.ndarray, np.int or np.uint
         Labelled image of nuclei with shape (y, x).
-    new_cell_label : np.ndarray, np.int64
+    new_cell_label : np.ndarray, np.int or np.uint
         Labelled image of cells with shape (y, x).
 
     """
