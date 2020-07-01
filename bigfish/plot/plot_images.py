@@ -775,7 +775,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         Mask of the cell.
     nuc_mask : np.ndarray, np.uint
         Mask of the nucleus.
-    title : str
+    title : str or None
         Title of the image.
     remove_frame : bool
         Remove axes and frame.
@@ -783,7 +783,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         Rescale pixel values of the image (made by default in matplotlib).
     framesize : tuple
         Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
-    path_output : str
+    path_output : str or None
         Path to save the image (without extension).
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
@@ -860,8 +860,8 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             ax[1].scatter(rna_coord[:, ndim - 1], rna_coord[:, ndim - 2],
                           s=25, c="firebrick", marker=".")
         if foci_coord is not None:
-            for (_, y, x, nb_rna, _) in foci_coord:
-                ax[1].text(x + 5, y - 5, str(nb_rna),
+            for foci in foci_coord:
+                ax[1].text(foci[ndim-1] + 5, foci[ndim-2] - 5, str(foci[ndim]),
                            color="darkorange", size=20)
             # case where we know which rna belong to a foci
             if rna_coord.shape[1] == ndim + 1:
@@ -913,8 +913,8 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             plt.scatter(rna_coord[:, ndim - 1], rna_coord[:, ndim - 2],
                         s=25, c="firebrick", marker=".")
         if foci_coord is not None:
-            for (_, y, x, nb_rna, _) in foci_coord:
-                plt.text(x + 5, y - 5, str(nb_rna),
+            for foci in foci_coord:
+                plt.text(foci[ndim-1] + 5, foci[ndim-2] - 5, str(foci[ndim]),
                          color="darkorange", size=20)
             # case where we know which rna belong to a foci
             if rna_coord.shape[1] == ndim + 1:
