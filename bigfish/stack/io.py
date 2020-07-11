@@ -18,6 +18,7 @@ from .utils import check_array
 from .utils import check_parameter
 
 # TODO add general read function with mime types
+# TODO saving data in csv does not preserve dtypes
 
 
 # ### Read ###
@@ -443,10 +444,11 @@ def save_cell_extracted(cell_results, path):
     ----------
     cell_results : Dict
         Dictionary including information about the cell (image, masks,
-        coordinates arrays). Minimal information are :
-        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
-        - cell_coord : boundary coordinates of the cell.
-        - cell_mask : mask of the cell.
+        coordinates arrays). Minimal information are:
+        - cell_id -> Unique id of the cell.
+        - bbox -> bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord -> boundary coordinates of the cell.
+        - cell_mask -> mask of the cell.
     path : str
         Path of the saved array.
 

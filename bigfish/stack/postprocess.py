@@ -194,8 +194,8 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
         check_array(rna_coord, ndim=2, dtype=np.int64)
     if image is not None:
         check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
-    actual_keys = ["bbox", "cell_coord", "cell_mask", "nuc_coord", "nuc_mask",
-                   "rna_coord", "image"]
+    actual_keys = ["cell_id", "bbox", "cell_coord", "cell_mask", "nuc_coord",
+                   "nuc_mask", "rna_coord", "image"]
     if others_coord is not None:
         for key in others_coord:
             if key in actual_keys:
@@ -212,6 +212,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
                               .format(array.shape[1], ndim),
                               UserWarning)
     # TODO allow boolean for 'others_image'
+    # TODO bug if 'image' is None but not 'others_image'
     if others_image is not None:
         for key in others_image:
             if key in actual_keys:
@@ -449,7 +450,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
         - cell_mask: mask of the cell.
     ndim : int
         Number of spatial dimensions to consider (2 or 3).
-    path_output : str
+    path_output : str or None
         Path to save the dataframe in a csv file.
 
     Returns
@@ -474,6 +475,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
                     path_output=(str, type(None)))
 
     # case if no cell were detected
+    # TODO make it consistent with he case where there are cells
     if len(fov_results) == 0:
         df = pd.DataFrame({"cell_id": [],
                            "cell_area": []})
