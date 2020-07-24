@@ -44,6 +44,7 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_z : int or float or None
         Height of a voxel, along the z axis, in nanometer. If None, image is
         considered in 2-d.
+    # TODO Error returned with a float
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None

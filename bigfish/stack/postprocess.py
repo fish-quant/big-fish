@@ -460,7 +460,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
         level. A minimum number of indicators are returned:
         - cell_id -> Unique id of the cell.
         - cell_area -> Area of the cell in pixels.
-        Other indicators summarized if available:
+        Other indicators are summarized if available:
         - nuc_area -> Area of the nucleus in pixels.
         - nb_rna -> Number of detected rna in the cell.
         - nb_rna_in_nuc -> Number of detected rna inside the nucleus.
@@ -475,7 +475,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
                     path_output=(str, type(None)))
 
     # case if no cell were detected
-    # TODO make it consistent with he case where there are cells
+    # TODO make it consistent with the case where there are cells
     if len(fov_results) == 0:
         df = pd.DataFrame({"cell_id": [],
                            "cell_area": []})
