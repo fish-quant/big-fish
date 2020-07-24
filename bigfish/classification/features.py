@@ -996,7 +996,7 @@ def features_centrosome(rna_coord_out_nuc, distance_centrosome,
 
     # case where no mRNAs are detected outside nucleus
     if len(rna_coord_out_nuc) == 0:
-        features = 1.
+        features = (1., 1.)
         return features
 
     rna_distance_cent = distance_centrosome[rna_coord_out_nuc[:, ndim - 2],
