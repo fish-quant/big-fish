@@ -74,6 +74,8 @@ def detect_spots(images, threshold=None, remove_duplicate=True,
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
                           psf_yx=(int, float))
+
+    # if one image is provided we enlist it
     if not isinstance(images, list):
         stack.check_array(images,
                           ndim=[2, 3],
