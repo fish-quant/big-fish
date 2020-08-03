@@ -463,9 +463,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
         Dataframe with summarized results from the field of view, at the cell
         level. A minimum number of indicators are returned:
         - cell_id -> Unique id of the cell.
-        - cell_area -> Area of the cell in pixels.
         Other indicators are summarized if available:
-        - nuc_area -> Area of the nucleus in pixels.
         - nb_rna -> Number of detected rna in the cell.
         - nb_rna_in_nuc -> Number of detected rna inside the nucleus.
         - nb_rna_out_nuc -> Number of detected rna outside the nucleus.
@@ -481,8 +479,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
     # case if no cell were detected
     # TODO make it consistent with the case where there are cells
     if len(fov_results) == 0:
-        df = pd.DataFrame({"cell_id": [],
-                           "cell_area": []})
+        df = pd.DataFrame({"cell_id": []})
         if path_output is not None:
             save_data_to_csv(df, path_output)
         return df
@@ -502,24 +499,12 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     # summarize results at the cell level
     _cell_id = []
-    _cell_area = []
-    _nuc_area = []
     _nb_rna = []
     _nb_rna_in_nuc = []
     _nb_rna_out_nuc = []
     for cell_results in fov_results:
         # get cell id
         _cell_id.append(cell_results["cell_id"])
-
-        # get cell mask
-        cell_mask = cell_results["cell_mask"]
-        _cell_area.append(cell_mask.sum())
-
-        # get nucleus mask
-        nuc_mask = None
-        if "nuc_mask" in cell_results:
-            nuc_mask = cell_results["nuc_mask"]
-            _nuc_area.append(nuc_mask.sum())
 
         # get rna coordinates and relative results
         if "rna_coord" in cell_results:
@@ -528,6 +513,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
             # get rna in nucleus
             if "nuc_mask" in cell_results:
+                nuc_mask = cell_results["nuc_mask"]
                 rna_in_nuc, rna_out_nuc = identify_objects_in_region(
                     nuc_mask, rna_coord, ndim)
                 _nb_rna_in_nuc.append(len(rna_in_nuc))
@@ -540,8 +526,6 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     # complete missing mandatory results
     n = len(_cell_id)
-    if len(_nuc_area) == 0:
-        _nuc_area = [np.nan] * n
     if len(_nb_rna) == 0:
         _nb_rna = [np.nan] * n
     if len(_nb_rna_in_nuc) == 0:
@@ -551,15 +535,11 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     # store minimum results in a dataframe
     result_summary = {"cell_id": _cell_id,
-                      "cell_area": _cell_area,
-                      "nuc_area": _nuc_area,
                       "nb_rna": _nb_rna,
                       "nb_rna_in_nuc": _nb_rna_in_nuc,
                       "nb_rna_out_nuc": _nb_rna_out_nuc}
 
     # store available results on nucleus and rna
-    if len(_nuc_area) > 0:
-        result_summary["nuc_area"] = _nuc_area
     if len(_nb_rna) > 0:
         result_summary["nb_rna"] = _nb_rna
     if len(_nb_rna_in_nuc) > 0:
