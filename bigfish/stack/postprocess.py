@@ -75,7 +75,7 @@ def identify_objects_in_region(mask, coord, ndim):
     return coord_in, coord_out
 
 
-def remove_transcription_site_rna(rna, transcription_site):
+def remove_transcription_site(rna, foci, nuc_mask, ndim):
     """Distinguish RNA molecules detected in a transcription site from the
     rest.
 
@@ -88,10 +88,14 @@ def remove_transcription_site_rna(rna, transcription_site):
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the foci assigned to the RNA. If no foci was
         assigned, value is -1.
-    transcription_site : np.ndarray, np.int64
+    foci : np.ndarray, np.int64
         Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the transcription site centroid (zyx or yx coordinates),
-        the number of RNAs detected in the transcription site and its index.
+        dimension for the foci centroid (zyx or yx coordinates),
+        the number of RNAs detected in the foci and its index.
+    nuc_mask : np.ndarray, bool
+        Binary mask of the nuclei region with shape (y, x).
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
 
     Returns
     -------
@@ -100,31 +104,31 @@ def remove_transcription_site_rna(rna, transcription_site):
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the foci assigned to the RNA. If no foci was
         assigned, value is -1. RNAs from transcription sites are removed.
+    foci : np.ndarray, np.int64
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension for the foci centroid (zyx or yx coordinates),
+        the number of RNAs detected in the foci and its index.
+    ts : np.ndarray, np.int64
+        Array with shape (nb_ts, 5) or (nb_ts, 4). One coordinate per
+        dimension for the transcription site centroid (zyx or yx coordinates),
+        the number of RNAs detected in the transcription site and its index.
 
     """
     # check parameters
     check_array(rna,
                 ndim=2,
                 dtype=np.int64)
-    check_array(transcription_site,
-                ndim=2,
-                dtype=np.int64)
 
-    # check number of dimensions
-    ndim = transcription_site.shape[1] - 2
-    if ndim not in [2, 3]:
-        raise ValueError("transcription_site array should be in 4 or 5 "
-                         "dimensions (one coordinate per dimension for the "
-                         "cluster centroid, the number of spots detected in "
-                         "the cluster and its index), not {0}."
-                         .format(transcription_site.shape[1]))
+    # discriminate foci from transcription sites
+    ts, foci = identify_objects_in_region(
+        nuc_mask, foci, ndim)
 
     # filter out rna from transcription sites
-    rna_in_ts = transcription_site[:, ndim + 1]
+    rna_in_ts = ts[:, ndim + 1]
     mask_rna_in_ts = np.isin(rna[:, ndim], rna_in_ts)
     rna_out_ts = rna[~mask_rna_in_ts]
 
-    return rna_out_ts
+    return rna_out_ts, foci, ts
 
 
 # ### Cell extraction ###
