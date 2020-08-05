@@ -16,6 +16,8 @@ from skimage.morphology.selem import disk
 import bigfish.stack as stack
 from .input_preparation import prepare_extracted_data
 
+# TODO normalize features using RMSD ?
+
 
 # ### Main functions ###
 
@@ -537,19 +539,27 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
 
     # initialization
     if ndim == 3:
+        rna_coord_2d = rna_coord[1:]
         centroid_rna_2d = centroid_rna[1:]
     else:
+        rna_coord_2d = rna_coord.copy()
         centroid_rna_2d = centroid_rna.copy()
 
     # get coordinates of each pixel of the cell
     cell_coord = np.nonzero(cell_mask)
     cell_coord = np.column_stack(cell_coord)
 
+    # get coordinates of each rna pixel in the cell from a 2-d binary mask
+    rna_mask = np.zeros_like(cell_mask)
+    rna_mask[rna_coord_2d[:, 0], rna_coord_2d[:, 1]] = True
+    rna_coord_ = np.nonzero(rna_mask)
+    rna_coord_ = np.column_stack(rna_coord_)
+
     # get intensity value of every pixels and its random counterpart
+    rna_value = smfish[rna_mask]
+    total_intensity_rna = rna_value.sum()
     cell_value = smfish[cell_mask]
-    total_intensity = cell_value.sum()
-    cell_value_random = np.ones_like(cell_value)
-    total_intensity_random = cell_value_random.sum()
+    total_intensity_cell = cell_value.sum()
 
     # compute polarization index from cell centroid
     centroid_distance = np.linalg.norm(centroid_rna_2d - centroid_cell)
@@ -559,17 +569,19 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
     features = (index_polarization,)
 
     # compute dispersion index
+    r = np.linalg.norm(rna_coord_ - centroid_rna_2d, axis=1) ** 2
+    a = np.sum((r * rna_value) / total_intensity_rna)
     r = np.linalg.norm(cell_coord - centroid_rna_2d, axis=1) ** 2
-    a = np.sum((r * cell_value) / total_intensity)
-    b = np.sum((r * cell_value_random) / total_intensity_random)
+    b = np.sum((r * cell_value) / total_intensity_cell)
     index_dispersion = a / b
 
     features += (index_dispersion,)
 
     # compute peripheral dispersion index
+    r = np.linalg.norm(rna_coord_ - centroid_nuc, axis=1) ** 2
+    a = np.sum((r * rna_value) / total_intensity_rna)
     r = np.linalg.norm(cell_coord - centroid_nuc, axis=1) ** 2
-    a = np.sum((r * cell_value) / total_intensity)
-    b = np.sum((r * cell_value_random) / total_intensity_random)
+    b = np.sum((r * cell_value) / total_intensity_cell)
     index_peripheral_dispersion = a / b
 
     features += (index_peripheral_dispersion,)
