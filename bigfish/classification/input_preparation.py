@@ -141,7 +141,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
         # get rna centroid
         if len(rna_coord) == 0:
-            centroid_rna = centroid_cell.copy()
+            centroid_rna = np.array([0] * ndim, dtype=np.int64)
         else:
             centroid_rna = _get_centroid_rna(rna_coord, ndim)
 
@@ -159,7 +159,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
             # get rna centroid (outside nucleus)
             if len(rna_coord_out_nuc) == 0:
-                centroid_rna_out_nuc = centroid_cell.copy()
+                centroid_rna_out_nuc = np.array([0] * ndim, dtype=np.int64)
             else:
                 centroid_rna_out_nuc = _get_centroid_rna(rna_coord_out_nuc,
                                                          ndim)

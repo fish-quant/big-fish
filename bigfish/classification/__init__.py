@@ -14,9 +14,7 @@ from .features import get_features_name
 from .features import features_distance
 from .features import features_in_out_nucleus
 from .features import features_protrusion
-from .features import features_polarization
 from .features import features_dispersion
-from .features import features_peripheral_dispersion
 from .features import features_topography
 from .features import features_foci
 from .features import features_area
@@ -32,9 +30,7 @@ _features = [
     "features_distance"
     "features_in_out_nucleus"
     "features_protrusion"
-    "features_polarization"
     "features_dispersion"
-    "features_peripheral_dispersion"
     "features_topography"
     "features_foci"
     "features_area"
