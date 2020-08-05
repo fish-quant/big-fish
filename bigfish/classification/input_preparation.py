@@ -185,7 +185,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
         # build distance map from centroid
         if len(centrosome_coord) == 0:
-            distance_centrosome = None
+            distance_centrosome = np.array([0, 0], dtype=np.int64)
         else:
             distance_centrosome = _get_centrosome_distance_map(
                 centrosome_coord, cell_mask)

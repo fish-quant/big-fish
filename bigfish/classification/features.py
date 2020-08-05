@@ -152,16 +152,19 @@ def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
 
     # centrosome related features
     if (compute_centrosome and centrosome_coord is not None
-            and voxel_size_yx is not None):
+            and voxel_size_yx is not None and smfish is not None):
         features += features_centrosome(
-            rna_coord, distance_centrosome, cell_mask, ndim, voxel_size_yx,
-            False)
+            smfish, rna_coord, distance_centrosome, cell_mask, ndim,
+            voxel_size_yx, False)
     elif compute_centrosome and centrosome_coord is None:
         raise ValueError("Centrosome related features can't be computed "
                          "because 'centrosome_coord' is not provided.")
     elif compute_centrosome and voxel_size_yx is None:
         raise ValueError("Centrosome related features can't be computed "
                          "because 'voxel_size_yx' is not provided.")
+    elif compute_centrosome and smfish is None:
+        raise ValueError("Centrosome related features can't be computed "
+                         "because 'smfish' is not provided.")
 
     # format features
     features = np.array(features, dtype=np.float32)
@@ -275,7 +278,8 @@ def get_features_name(names_features_distance=True,
         features_name += ["index_mean_distance_centrosome",
                           "index_median_distance_centrosome",
                           "index_rna_centrosome",
-                          "proportion_rna_centrosome"]
+                          "proportion_rna_centrosome",
+                          "index_attraction"]
 
     return features_name
 
@@ -555,7 +559,7 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
     rna_coord_ = np.nonzero(rna_mask)
     rna_coord_ = np.column_stack(rna_coord_)
 
-    # get intensity value of every pixels and its random counterpart
+    # get intensity value of every rna and cell pixels
     rna_value = smfish[rna_mask]
     total_intensity_rna = rna_value.sum()
     cell_value = smfish[cell_mask]
@@ -917,12 +921,14 @@ def features_area(cell_mask, nuc_mask, cell_mask_out_nuc, check_input=True):
     return features
 
 
-def features_centrosome(rna_coord, distance_centrosome, cell_mask, ndim,
-                        voxel_size_yx, check_input=True):
+def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
+                        ndim, voxel_size_yx, check_input=True):
     """Compute centrosome related features.
 
     Parameters
     ----------
+    smfish : np.ndarray, np.uint
+        Image of RNAs, with shape (y, x).
     rna_coord : np.ndarray, np.int64
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
@@ -948,6 +954,9 @@ def features_centrosome(rna_coord, distance_centrosome, cell_mask, ndim,
         the expected number of RNAs under random distribution.
     proportion_rna_centrosome : float
         Proportion of RNAs within a 2000nm radius from a centrosome.
+    index_attraction : float
+        Attraction index. A low index means RNAs localize close to a
+        centrosome.
 
     """
     # check parameters
@@ -956,20 +965,15 @@ def features_centrosome(rna_coord, distance_centrosome, cell_mask, ndim,
         stack.check_parameter(ndim=int)
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
+        stack.check_array(smfish, ndim=2, dtype=[np.uint8, np.uint16])
         stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-        if distance_centrosome is not None:
-            stack.check_array(distance_centrosome, ndim=2,
-                              dtype=[np.float16, np.float32, np.float64])
+        stack.check_array(distance_centrosome, ndim=2,
+                          dtype=[np.float16, np.float32, np.float64])
         stack.check_array(cell_mask, ndim=2, dtype=bool)
-
-    # case where no centrosome are detected
-    if distance_centrosome is None:
-        features = (1., 1., 1., 0.)
-        return features
 
     # case where no mRNAs are detected
     if len(rna_coord) == 0:
-        features = (1., 1., 1., 0.)
+        features = (1., 1., 1., 0., 1.)
         return features
 
     # initialization
@@ -998,5 +1002,25 @@ def features_centrosome(rna_coord, distance_centrosome, cell_mask, ndim,
     proportion_rna_centrosome = nb_rna_centrosome / len(rna_coord)
 
     features += (index_rna_centrosome, proportion_rna_centrosome)
+
+    # get coordinates of each pixel of the cell
+    cell_coord = np.nonzero(cell_mask)
+    cell_coord = np.column_stack(cell_coord)
+
+    # get intensity value of every rna and cell pixels
+    rna_value = smfish[rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]]
+    total_intensity_rna = rna_value.sum()
+    cell_value = smfish[cell_coord[:, 0], cell_coord[:, 1]]
+    total_intensity_cell = cell_value.sum()
+
+    # compute attraction index
+    r = distance_centrosome[rna_coord[:, ndim - 2],
+                            rna_coord[:, ndim - 1]] ** 2
+    a = np.sum((r * rna_value) / total_intensity_rna)
+    r = distance_centrosome[cell_coord[:, 0], cell_coord[:, 1]] ** 2
+    b = np.sum((r * cell_value) / total_intensity_cell)
+    index_attraction = a / b
+
+    features += (index_attraction,)
 
     return features
