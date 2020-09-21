@@ -325,7 +325,7 @@ def gaussian_filter(image, sigma, allow_negative=False):
 
     # we clip negative values to 0
     if not allow_negative:
-        image_filtered = np.clip(image_filtered, a_min=0, a_max=None)
+        image_filtered = np.clip(image_filtered, a_min=0, a_max=1)
 
     # cast filtered image
     if image.dtype == np.uint8:
