@@ -560,13 +560,20 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
         centroid_z, centroid_y, centroid_x = centroid_coord
         p0 = [centroid_z, centroid_y, centroid_x, psf_z, psf_yx, amplitude,
               background]
+        l_bound = [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, 0]
+        u_bound = [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf]
+
     else:
         # parameters to fit: mu_y, mu_x, sigma_yx, amplitude and background
         centroid_y, centroid_x = centroid_coord
         p0 = [centroid_y, centroid_x, psf_yx, amplitude, background]
+        l_bound = [-np.inf, -np.inf, -np.inf, -np.inf, 0]
+        u_bound = [np.inf, np.inf, np.inf, np.inf, np.inf]
 
     # fit a gaussian function on this reference spot
-    popt, pcov = _fit_gaussian(f, grid, reference_spot, p0)
+    popt, pcov = _fit_gaussian(f, grid, reference_spot, p0,
+                               lower_bound=l_bound,
+                               upper_bound=u_bound)
 
     # get optimized parameters to modelize the reference spot as a gaussian
     if ndim == 3:
@@ -1598,6 +1605,9 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
                           sigma_yx=(int, float),
                           amplitude=float,
                           background=float)
+    if background < 0:
+        raise ValueError("Background value can't be negative: {0}"
+                         .format(background))
 
     # check number of dimensions
     ndim = image.ndim
@@ -1618,7 +1628,7 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
     if image.ndim == 3:
 
         for i_cluster, region in enumerate(cluster_regions):
-            image_region, best_simulation, pos_gaussian = _gaussian_mixture_3d(
+            image_region, _, pos_gaussian = _gaussian_mixture_3d(
                 image,
                 region,
                 voxel_size_z,
@@ -1652,7 +1662,7 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
     else:
 
         for i_cluster, region in enumerate(cluster_regions):
-            image_region, best_simulation, pos_gaussian = _gaussian_mixture_2d(
+            image_region, _, pos_gaussian = _gaussian_mixture_2d(
                 image,
                 region,
                 voxel_size_yx,
@@ -1729,12 +1739,13 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
     box = tuple(region.bbox)
     image_region = image[box[0]:box[3], box[1]:box[4], box[2]:box[5]]
     image_region_raw = np.reshape(image_region, image_region.size)
+    image_region_raw = image_region_raw.astype(np.float64)
 
     # build a grid to represent this image
     grid = _initialize_grid_3d(image_region, voxel_size_z, voxel_size_yx)
 
     # add a gaussian for each local maximum while the RSS decreases
-    simulation = np.zeros(image_region_raw.shape, dtype=np.float64)
+    simulation = np.zeros_like(image_region_raw)
     residual = image_region_raw - simulation
     ssr = np.sum(residual ** 2)
     diff_ssr = -1
@@ -1775,8 +1786,9 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
                       "artifact in the image.".format(limit_gaussian),
                       UserWarning)
 
+    # TODO clip the image correctly before casting it
     best_simulation = np.reshape(best_simulation, image_region.shape)
-    best_simulation = best_simulation.astype(image_region_raw.dtype)
+    best_simulation = best_simulation.astype(image_region.dtype)
 
     return image_region, best_simulation, positions_gaussian
 
@@ -1821,12 +1833,13 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
     box = tuple(region.bbox)
     image_region = image[box[0]:box[2], box[1]:box[3]]
     image_region_raw = np.reshape(image_region, image_region.size)
+    image_region_raw = image_region_raw.astype(np.float64)
 
     # build a grid to represent this image
     grid = _initialize_grid_2d(image_region, voxel_size_yx)
 
     # add a gaussian for each local maximum while the RSS decreases
-    simulation = np.zeros(image_region_raw.shape, dtype=np.float64)
+    simulation = np.zeros_like(image_region_raw)
     residual = image_region_raw - simulation
     ssr = np.sum(residual ** 2)
     diff_ssr = -1
@@ -1864,7 +1877,8 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
                       "artifact in the image.".format(limit_gaussian),
                       UserWarning)
 
+    # TODO clip the image correctly before casting it
     best_simulation = np.reshape(best_simulation, image_region.shape)
-    best_simulation = best_simulation.astype(image_region_raw.dtype)
+    best_simulation = best_simulation.astype(image_region.dtype)
 
     return image_region, best_simulation, positions_gaussian
