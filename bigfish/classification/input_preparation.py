@@ -45,25 +45,25 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     cell_mask : np.ndarray, bool
         Surface of the cell with shape (y, x).
     distance_cell : np.ndarray, np.float32
-        Distance map from the cell with shape (y, x).
+        Distance map from the cell with shape (y, x), in pixels.
     distance_cell_normalized : np.ndarray, np.float32
         Normalized distance map from the cell with shape (y, x).
     centroid_cell : np.ndarray, np.int64
         Coordinates of the cell centroid with shape (1, 2).
     distance_centroid_cell : np.ndarray, np.float32
-        Distance map from the cell centroid with shape (y, x).
+        Distance map from the cell centroid with shape (y, x), in pixels.
     nuc_mask : np.ndarray, bool
         Surface of the nucleus with shape (y, x).
     cell_mask_out_nuc : np.ndarray, bool
         Surface of the cell (outside the nucleus) with shape (y, x).
     distance_nuc : np.ndarray, np.float32
-        Distance map from the nucleus with shape (y, x).
+        Distance map from the nucleus with shape (y, x), in pixels.
     distance_nuc_normalized : np.ndarray, np.float32
         Normalized distance map from the nucleus with shape (y, x).
     centroid_nuc : np.ndarray, np.int64
         Coordinates of the nucleus centroid with shape (1, 2).
     distance_centroid_nuc : np.ndarray, np.float32
-        Distance map from the nucleus centroid with shape (y, x).
+        Distance map from the nucleus centroid with shape (y, x), in pixels.
     rna_coord_out_nuc : np.ndarray, np.int64
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
@@ -72,15 +72,15 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     centroid_rna : np.ndarray, np.int64
         Coordinates of the rna centroid with shape (1, 2).
     distance_centroid_rna : np.ndarray, np.float32
-        Distance map from the rna centroid with shape (y, x).
+        Distance map from the rna centroid with shape (y, x), in pixels.
     centroid_rna_out_nuc : np.ndarray, np.int64
         Coordinates of the rna centroid (outside the nucleus) with shape
         (1, 2).
     distance_centroid_rna_out_nuc : np.ndarray, np.float32
         Distance map from the rna centroid (outside the nucleus) with shape
-        (y, x).
+        (y, x), in pixels.
     distance_centrosome : np.ndarray, np.float32
-        Distance map from the centrosome with shape (y, x).
+        Distance map from the centrosome with shape (y, x), in pixels.
 
     """
     # check parameters

@@ -933,7 +933,7 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
     distance_centrosome : np.ndarray, np.float32
-        Distance map from the centrosome with shape (y, x).
+        Distance map from the centrosome with shape (y, x), in pixels.
     cell_mask : np.ndarray, bool
         Surface of the cell with shape (y, x).
     ndim : int
@@ -992,16 +992,25 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
 
     # compute proportion of mRNAs next to the centrosomes (<2000nm)
     radius = int(2000 / voxel_size_yx)
-    mask_centrosome = distance_centrosome < radius
-    mask_centrosome[~cell_mask] = False
-    centrosome_area = max(mask_centrosome.sum(), 1)
-    expected_nb_rna = nb_rna * centrosome_area / cell_area
-    mask_rna = mask_centrosome[rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]]
-    nb_rna_centrosome = len(rna_coord[mask_rna])
-    index_rna_centrosome = nb_rna_centrosome / expected_nb_rna
-    proportion_rna_centrosome = nb_rna_centrosome / len(rna_coord)
+    if radius < 1:
+        warnings.warn(UserWarning, "'voxel_size_yx' is greater than 2000 "
+                                   "nanometers ({0}). Centrosome neighborhood "
+                                   "is defined with a radius of 2000 "
+                                   "nanometers so it can't be computed here."
+                      .format(voxel_size_yx))
+        features += (1, 0)
+    else:
+        mask_centrosome = distance_centrosome < radius
+        mask_centrosome[~cell_mask] = False
+        centrosome_area = max(mask_centrosome.sum(), 1)
+        expected_nb_rna = nb_rna * centrosome_area / cell_area
+        mask_rna = mask_centrosome[rna_coord[:, ndim - 2],
+                                   rna_coord[:, ndim - 1]]
+        nb_rna_centrosome = len(rna_coord[mask_rna])
+        index_rna_centrosome = nb_rna_centrosome / expected_nb_rna
+        proportion_rna_centrosome = nb_rna_centrosome / len(rna_coord)
 
-    features += (index_rna_centrosome, proportion_rna_centrosome)
+        features += (index_rna_centrosome, proportion_rna_centrosome)
 
     # get coordinates of each pixel of the cell
     cell_coord = np.nonzero(cell_mask)
