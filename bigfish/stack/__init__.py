@@ -18,6 +18,7 @@ from .utils import get_eps_float32
 from .utils import load_and_save_url
 from .utils import check_hash
 from .utils import compute_hash
+from .utils import check_input_data
 from .utils import moving_average
 from .utils import centered_moving_average
 
@@ -93,6 +94,7 @@ _utils = [
     "load_and_save_url",
     "check_hash",
     "compute_hash",
+    "check_input_data",
     "moving_average",
     "centered_moving_average"]
 
