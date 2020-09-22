@@ -32,8 +32,8 @@ Updated dependencies might break.
 To avoid dependency conflicts the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment should be a considered option.
 
 ```bash
-conda create -n bigfish python=3.6
-source activate bigfish
+conda create -n bigfish_env python=3.6
+source activate bigfish_env
 ```
 
 #### Download the package from PyPi
