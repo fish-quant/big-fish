@@ -1,10 +1,6 @@
 # Mac OS files
 .DS_Store
 
-# Notebooks
-examples/old
-examples/.ipynb_checkpoints
-
 # PyCharm stuff
 .idea/
 
