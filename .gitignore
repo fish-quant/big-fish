@@ -4,6 +4,9 @@
 # PyCharm stuff
 .idea/
 
+# folders
+playground/
+
 # ### General python stuff ###
 
 # Byte-compiled / optimized / DLL files
