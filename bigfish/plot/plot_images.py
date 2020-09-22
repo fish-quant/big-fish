@@ -22,15 +22,15 @@ from matplotlib.patches import RegularPolygon
 
 # ### General plot ###
 
-def plot_yx(tensor, r=0, c=0, z=0, rescale=False, contrast=False,
+def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
             title=None, framesize=(8, 8), remove_frame=True, path_output=None,
             ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
     Parameters
     ----------
-    tensor : np.ndarray
-        A 2-d, 3-d, 4-d or 5-d tensor with shape (y, x), (z, y, x),
+    image : np.ndarray
+        A 2-d, 3-d, 4-d or 5-d image with shape (y, x), (z, y, x),
         (c, z, y, x) or (r, c, z, y, x) respectively.
     r : int
         Index of the round to keep.
@@ -61,7 +61,7 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, contrast=False,
 
     """
     # check parameters
-    stack.check_array(tensor,
+    stack.check_array(image,
                       ndim=[2, 3, 4, 5],
                       dtype=[np.uint8, np.uint16, np.int64,
                              np.float32, np.float64,
@@ -75,15 +75,15 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, contrast=False,
                           path_output=(str, type(None)),
                           ext=(str, list))
 
-    # get the 2-d tensor
-    if tensor.ndim == 2:
-        xy_tensor = tensor
-    elif tensor.ndim == 3:
-        xy_tensor = tensor[z, :, :]
-    elif tensor.ndim == 4:
-        xy_tensor = tensor[c, z, :, :]
+    # get the 2-d image
+    if image.ndim == 2:
+        xy_image = image
+    elif image.ndim == 3:
+        xy_image = image[z, :, :]
+    elif image.ndim == 4:
+        xy_image = image[c, z, :, :]
     else:
-        xy_tensor = tensor[r, c, z, :, :]
+        xy_image = image[r, c, z, :, :]
 
     # plot
     if remove_frame:
@@ -93,14 +93,14 @@ def plot_yx(tensor, r=0, c=0, z=0, rescale=False, contrast=False,
     else:
         plt.figure(figsize=framesize)
     if not rescale and not contrast:
-        vmin, vmax = get_minmax_values(tensor)
-        plt.imshow(xy_tensor, vmin=vmin, vmax=vmax)
+        vmin, vmax = get_minmax_values(image)
+        plt.imshow(xy_image, vmin=vmin, vmax=vmax)
     elif rescale and not contrast:
-        plt.imshow(xy_tensor)
+        plt.imshow(xy_image)
     else:
-        if xy_tensor.dtype not in [np.int64, bool]:
-            xy_tensor = stack.rescale(xy_tensor, channel_to_stretch=0)
-        plt.imshow(xy_tensor)
+        if xy_image.dtype not in [np.int64, bool]:
+            xy_image = stack.rescale(xy_image, channel_to_stretch=0)
+        plt.imshow(xy_image)
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
     if not remove_frame:
