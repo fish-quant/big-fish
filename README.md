@@ -56,7 +56,7 @@ Big-FISH provides a toolbox for the full analysis pipeline of smFISH images:
 - Use `bigfish.plot` subpackage for plotting routines.
 - Use `bigfish.classification` subpackage for pattern recognition tasks.
 
-Several examples are developed in the [examples](https://github.com/fish-quant/big-fish/tree/master/examples) directory.
+Several examples are developed in this [notebooks](https://github.com/fish-quant/big-fish-examples/tree/master/notebooks) directory.
 
 ## Support
 
