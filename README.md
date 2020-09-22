@@ -17,29 +17,36 @@
 
 Big-FISH requires Python 3.6 or newer. Additionally, it has the following dependencies:
 
-- numpy (>= 1.16.0)
-- scipy (>= 1.2.0)
-- scikit-learn (>= 0.20.2)
-- scikit-image (>= 0.14.2)
-- matplotlib (>= 3.0.2)
-- pandas (>= 0.24.0)
-- mrc (>= 0.1.5)
+- numpy (== 1.16.0)
+- scipy (== 1.4.1)
+- scikit-learn (== 0.20.2)
+- scikit-image (== 0.14.2)
+- matplotlib (== 3.0.2)
+- pandas (== 0.24.0)
+- mrc (== 0.1.5)
+
+Updated dependencies might break.
 
 ### User installation
 
 To avoid dependency conflicts the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment should be a considered option.
 
-#### From PyPi
+```bash
+conda create -n bigfish python=3.6
+source activate bigfish
+```
+
+#### Download the package from PyPi
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Big-FISH. In a terminal run the command:
 
 ```bash
-pip install bigfish
+pip install big-fish
 ```
 
-#### From Github
+#### Download the package from Github
 
-Clone the project's [Github repository](https://github.com/fish-quant/big-fish) and install it locally with the following commands:
+Clone the project's [Github repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
 
 ```bash
 git clone git@github.com:fish-quant/big-fish.git
@@ -64,12 +71,8 @@ If you have any question relative to the repository, please open an [issue](http
 
 ## Roadmap (suggestion)
 
-Version 0.4.0:
-- Refactor `bigfish.classification` subpackage.
-- Add pattern recognition examples.
-
 Version 0.5.0:
-- Switch to tensorflow 2.0.0.
+- Switch to tensorflow 2.2.0.
 - Integrate a deep learning model for segmentation.
 
 Version 1.0.0:
@@ -84,6 +87,7 @@ You can access the latest sources with the commands:
 
 ```bash
 git clone git@github.com:fish-quant/big-fish.git
+cd big-fish
 git checkout develop
 ```
 
