@@ -8,9 +8,9 @@ Setup script.
 
 from setuptools import setup, find_packages
 
+
 # package description
 DESCRIPTION = "Toolbox for the analysis of smFISH images."
-
 
 # package version
 VERSION = None
@@ -24,7 +24,7 @@ with open('bigfish/__init__.py', encoding='utf-8') as f:
 with open("requirements.txt", encoding='utf-8') as f:
     REQUIREMENTS = [l.strip() for l in f.readlines() if l]
 DEEPLEARNING_REQUIREMENTS = [
-    'tensorflow >= 1.12.0, < 2.0']
+    'tensorflow >= 2.2.0']
 
 # long description of the package
 with open("README.md", "r") as f:
