@@ -49,7 +49,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     distance_cell_normalized : np.ndarray, np.float32
         Normalized distance map from the cell with shape (y, x).
     centroid_cell : np.ndarray, np.int64
-        Coordinates of the cell centroid with shape (1, 2).
+        Coordinates of the cell centroid with shape (2,).
     distance_centroid_cell : np.ndarray, np.float32
         Distance map from the cell centroid with shape (y, x), in pixels.
     nuc_mask : np.ndarray, bool
@@ -61,7 +61,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     distance_nuc_normalized : np.ndarray, np.float32
         Normalized distance map from the nucleus with shape (y, x).
     centroid_nuc : np.ndarray, np.int64
-        Coordinates of the nucleus centroid with shape (1, 2).
+        Coordinates of the nucleus centroid with shape (2,).
     distance_centroid_nuc : np.ndarray, np.float32
         Distance map from the nucleus centroid with shape (y, x), in pixels.
     rna_coord_out_nuc : np.ndarray, np.int64
@@ -70,12 +70,12 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
         plus the index of the cluster assigned to the spot. If no cluster was
         assigned, value is -1. Spots detected inside the nucleus are removed.
     centroid_rna : np.ndarray, np.int64
-        Coordinates of the rna centroid with shape (1, 2).
+        Coordinates of the rna centroid with shape (2,) or (3,).
     distance_centroid_rna : np.ndarray, np.float32
         Distance map from the rna centroid with shape (y, x), in pixels.
     centroid_rna_out_nuc : np.ndarray, np.int64
-        Coordinates of the rna centroid (outside the nucleus) with shape
-        (1, 2).
+        Coordinates of the rna centroid (outside the nucleus) with shape (2,)
+        or (3,).
     distance_centroid_rna_out_nuc : np.ndarray, np.float32
         Distance map from the rna centroid (outside the nucleus) with shape
         (y, x), in pixels.
@@ -219,7 +219,7 @@ def _get_centroid_surface(mask):
     Returns
     -------
     centroid : np.ndarray, np.int64
-        Coordinates of the centroid with shape (1, 2).
+        Coordinates of the centroid with shape (2,).
 
     """
     # get centroid
@@ -245,7 +245,7 @@ def _get_centroid_rna(rna_coord, ndim):
     Returns
     -------
     centroid_rna : np.ndarray, np.int64
-        Coordinates of the rna centroid with shape (1, 2) or (1, 3).
+        Coordinates of the rna centroid with shape (2,) or (3,).
 
     """
     # get rna centroids
@@ -260,7 +260,7 @@ def _get_centroid_distance_map(centroid, cell_mask):
     Parameters
     ----------
     centroid : np.ndarray, np.int64
-        Coordinates of the centroid with shape (1, 2) or (1, 3).
+        Coordinates of the centroid with shape (2,) or (3,).
     cell_mask : np.ndarray, bool
         Binary surface of the cell with shape (y, x).
 
