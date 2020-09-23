@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
-**Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **manipulate microscopic images**, **detect spots** and **segment relevant area** of the cells. The package allows the user to extract specific signal from images and build a coordinate representation of the cells. The ultimate goal is to ease **large scale statistical analysis** and quantification.
+**Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **analyze microscopy images**, such **spot detection** and **segmentation of cells and nuclei**. The package allows the user represent the extract properties of a cell as coordinates (see figure below). The ultimate goal is to simplify **large scale statistical analysis** and quantification.
 
 | Cell image (smFISH channel) and its coordinates representation |
 | ------------- |
@@ -27,14 +27,16 @@ Big-FISH requires Python 3.6 or newer. Additionally, it has the following depend
 
 Updated dependencies might break.
 
-### User installation
+### Virtual environment
 
-To avoid dependency conflicts the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment should be a considered option.
+To avoid dependency conflicts, we recommend the the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment.  In a terminal run the command:
 
 ```bash
 conda create -n bigfish_env python=3.6
 source activate bigfish_env
 ```
+
+We recommend two options to then install Big-FISH in your virtual environment.
 
 #### Download the package from PyPi
 
@@ -44,7 +46,7 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Big-FIS
 pip install big-fish
 ```
 
-#### Download the package from Github
+#### Clone package from Github
 
 Clone the project's [Github repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
 
@@ -57,13 +59,14 @@ pip install .
 ## Usage
 
 Big-FISH provides a toolbox for the full analysis pipeline of smFISH images:
+
 - Use `bigfish.stack` subpackage for I/O operations, preprocessing and postprocessing.
 - Use `bigfish.segmentation` subpackage for nucleus and cell segmentation.
 - Use `bigfish.detection` subpackage for mRNAs detection.
 - Use `bigfish.plot` subpackage for plotting routines.
 - Use `bigfish.classification` subpackage for pattern recognition tasks.
 
-Several examples are developed in this [notebook](https://github.com/fish-quant/big-fish-examples/tree/master/notebooks) directory.
+Several examples are available as [Jupyter notebooks](https://github.com/fish-quant/big-fish-examples/tree/master/notebooks).
 
 ## Support
 
