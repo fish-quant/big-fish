@@ -10,77 +10,76 @@ returned by a bigfish method.
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy import ndimage as ndi
 
 from .utils import check_array, check_parameter, get_margin_value
+from .io import save_data_to_csv
 
 from skimage.measure import regionprops, find_contours
 from skimage.draw import polygon_perimeter
 
 
-# TODO extract cell-RNAs matrix
-# TODO sum up extraction results in a (csv) file
+# ### Object identification to sub-cellular regions ###
 
-# ### Transcription sites ###
-
-def identify_transcription_site(nuc_mask, foci):
-    """A transcription site is defined as as a foci detected within the
-    nucleus.
+def identify_objects_in_region(mask, coord, ndim):
+    """Identify cellular objects in specific region.
 
     Parameters
     ----------
-    nuc_mask : np.ndarray, bool
-        Binary mask of the nuclei with shape (y, x).
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx coordinates), the number of
-        RNAs detected in the foci and its index.
+    mask : np.ndarray, bool
+        Binary mask of the targeted region with shape (y, x).
+    coord : np.ndarray, np.int64
+        Array with two dimensions. One object per row, zyx or yx coordinates
+        in the first 3 or 2 columns.
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
 
     Returns
     -------
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx coordinates), the number of
-        RNAs detected in the foci and its index. Transcription site are
-        removed.
-    transcription_site : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the transcription site centroid (zyx or yx coordinates),
-        the number of RNAs detected in the transcription site and its index.
+    coord_in : np.ndarray, np.int64
+        Coordinates of the objects detected inside the region.
+    coord_out : np.ndarray, np.int64
+        Coordinates of the objects detected outside the region.
 
     """
     # check parameters
-    check_array(nuc_mask,
+    check_parameter(ndim=int)
+    check_array(mask,
                 ndim=2,
                 dtype=[np.uint8, np.uint16, np.int64,
                        bool])
-    check_array(foci,
+    check_array(coord,
                 ndim=2,
                 dtype=np.int64)
 
     # check number of dimensions
-    ndim = foci.shape[1] - 2
     if ndim not in [2, 3]:
-        raise ValueError("Foci array should be in 4 or 5 dimensions (one "
-                         "coordinate per dimension for the foci centroid, the "
-                         "number of RNAs detected in the foci and its "
-                         "index), not {0}.".format(foci.shape[1]))
+        raise ValueError("The number of spatial dimension requested should be "
+                         "2 or 3, not {0}.".format(ndim))
+    if coord.shape[1] < ndim:
+        raise ValueError("Coord array should have at least {0} features to "
+                         "match the number of spatial dimensions requested. "
+                         "Currently {1} is not enough."
+                         .format(ndim, coord.shape[1]))
 
     # binarize nuclei mask if needed
-    if nuc_mask.dtype != bool:
-        nuc_mask = nuc_mask.astype(bool)
+    if mask.dtype != bool:
+        mask = mask.astype(bool)
 
-    # remove foci inside nuclei
-    mask_transcription_site = nuc_mask[foci[:, ndim - 2], foci[:, ndim - 1]]
-    transcription_site = foci[mask_transcription_site]
-    foci = foci[~mask_transcription_site]
+    # remove objects inside the region
+    mask_in = mask[coord[:, ndim - 2], coord[:, ndim - 1]]
+    coord_in = coord[mask_in]
+    coord_out = coord[~mask_in]
 
-    return foci, transcription_site
+    return coord_in, coord_out
 
 
-def remove_transcription_site(rna, transcription_site):
-    """A transcription site is defined as as a foci detected within the
-    nucleus.
+def remove_transcription_site(rna, foci, nuc_mask, ndim):
+    """Distinguish RNA molecules detected in a transcription site from the
+    rest.
+
+    A transcription site is defined as as a foci detected within the nucleus.
 
     Parameters
     ----------
@@ -89,10 +88,14 @@ def remove_transcription_site(rna, transcription_site):
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the foci assigned to the RNA. If no foci was
         assigned, value is -1.
-    transcription_site : np.ndarray, np.int64
+    foci : np.ndarray, np.int64
         Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the transcription site centroid (zyx or yx coordinates),
-        the number of RNAs detected in the transcription site and its index.
+        dimension for the foci centroid (zyx or yx coordinates),
+        the number of RNAs detected in the foci and its index.
+    nuc_mask : np.ndarray, bool
+        Binary mask of the nuclei region with shape (y, x).
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
 
     Returns
     -------
@@ -101,37 +104,38 @@ def remove_transcription_site(rna, transcription_site):
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the foci assigned to the RNA. If no foci was
         assigned, value is -1. RNAs from transcription sites are removed.
+    foci : np.ndarray, np.int64
+        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
+        dimension for the foci centroid (zyx or yx coordinates),
+        the number of RNAs detected in the foci and its index.
+    ts : np.ndarray, np.int64
+        Array with shape (nb_ts, 5) or (nb_ts, 4). One coordinate per
+        dimension for the transcription site centroid (zyx or yx coordinates),
+        the number of RNAs detected in the transcription site and its index.
 
     """
     # check parameters
     check_array(rna,
                 ndim=2,
                 dtype=np.int64)
-    check_array(transcription_site,
-                ndim=2,
-                dtype=np.int64)
 
-    # check number of dimensions
-    ndim = transcription_site.shape[1] - 2
-    if ndim not in [2, 3]:
-        raise ValueError("transcription_site array should be in 4 or 5 "
-                         "dimensions (one coordinate per dimension for the "
-                         "cluster centroid, the number of spots detected in "
-                         "the cluster and its index), not {0}."
-                         .format(transcription_site.shape[1]))
+    # discriminate foci from transcription sites
+    ts, foci = identify_objects_in_region(
+        nuc_mask, foci, ndim)
 
     # filter out rna from transcription sites
-    rna_in_ts = transcription_site[:, ndim + 1]
+    rna_in_ts = ts[:, ndim + 1]
     mask_rna_in_ts = np.isin(rna[:, ndim], rna_in_ts)
     rna_out_ts = rna[~mask_rna_in_ts]
 
-    return rna_out_ts
+    return rna_out_ts, foci, ts
 
 
 # ### Cell extraction ###
 
-def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
-                 image=None, remove_cropped_cell=True, check_nuc_in_cell=True):
+def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
+                 others_coord=None, image=None, others_image=None,
+                 remove_cropped_cell=True, check_nuc_in_cell=True):
     """Extract cell-level results of a FoV.
 
     The function gathers different segmentation and detection results obtained
@@ -150,7 +154,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns. If None, RNAs are not assigned to individual
         cells.
-    others : Dict[np.ndarray]
+    others_coord : Dict[np.ndarray]
         Dictionary of coordinates arrays. For each array of the dictionary,
         the different elements are assigned to individual cells. Arrays should
         be organized the same way than spots: zyx or yx coordinates in the
@@ -161,8 +165,11 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
     image : np.ndarray, np.uint
         Image in 2-d of the FoV. If None, image of the individual cells are not
         extracted.
+    others_image : Dict[np.ndarray]
+        Dictionary of images to crop. If None, no others image of the
+        individual cells are extracted.
     remove_cropped_cell : bool
-        Remove cells cropped by the FOv frame.
+        Remove cells cropped by the FoV frame.
     check_nuc_in_cell : bool
         Check that each nucleus is entirely localized within a cell.
 
@@ -171,47 +178,63 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
     fov_results : List[Dict]
         List of dictionaries, one per cell segmented in the FoV. Each
         dictionary includes information about the cell (image, masks,
-        coordinates arrays). Minimal information are :
-        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
-        - cell_coord : boundary coordinates of the cell.
-        - cell_mask : mask of the cell.
+        coordinates arrays). Minimal information are:
+        - cell_id -> Unique id of the cell.
+        - bbox -> bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord -> boundary coordinates of the cell.
+        - cell_mask -> mask of the cell.
 
     """
     # check parameters
     check_parameter(ndim=int,
-                    others=(dict, type(None)),
+                    others_coord=(dict, type(None)),
+                    others_image=(dict, type(None)),
                     remove_cropped_cell=bool,
                     check_nuc_in_cell=bool)
-    check_array(cell_label,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64])
+    check_array(cell_label, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
     if nuc_label is not None:
-        check_array(nuc_label,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16, np.int64])
+        check_array(nuc_label, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
     if rna_coord is not None:
-        check_array(rna_coord,
-                    ndim=2,
-                    dtype=np.int64)
+        check_array(rna_coord, ndim=2, dtype=np.int64)
     if image is not None:
-        check_array(image,
-                    ndim=2,
-                    dtype=[np.uint8, np.uint16])
-    if others is not None:
-        for key in others:
-            array = others[key]
-            check_array(array,
-                        ndim=2,
-                        dtype=np.int64)
+        check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    actual_keys = ["cell_id", "bbox", "cell_coord", "cell_mask", "nuc_coord",
+                   "nuc_mask", "rna_coord", "image"]
+    if others_coord is not None:
+        for key in others_coord:
+            if key in actual_keys:
+                raise KeyError("Key {0} in 'others_coord' is already taken. "
+                               "Please choose another one.".format(key))
+            else:
+                actual_keys.append(key)
+            array = others_coord[key]
+            check_array(array, ndim=2, dtype=np.int64)
             if array.shape[1] < ndim:
-                warnings.warn("array in 'others' have less coordinates ({0}) "
-                              "than the minimum number of spatial dimension "
-                              "we consider ({1})".format(array.shape[1], ndim),
+                warnings.warn("Array in 'others_coord' have less coordinates "
+                              "({0}) than the minimum number of spatial "
+                              "dimension we consider ({1})."
+                              .format(array.shape[1], ndim),
+                              UserWarning)
+    # TODO allow boolean for 'others_image'
+    # TODO bug if 'image' is None but not 'others_image'
+    if others_image is not None:
+        for key in others_image:
+            if key in actual_keys:
+                raise KeyError("Key {0} in 'others_image' is already taken. "
+                               "Please choose another one.".format(key))
+            else:
+                actual_keys.append(key)
+            image_ = others_image[key]
+            check_array(image_, ndim=2, dtype=[np.uint8, np.uint16])
+            if image_.shape != image.shape:
+                warnings.warn("Image in 'others_image' does not have the same "
+                              "shape ({0}) than original image ({1})."
+                              .format(image_.shape, image.shape),
                               UserWarning)
     if rna_coord.shape[1] < ndim:
         warnings.warn("'rna_coord' have less coordinates ({0}) than the "
                       "minimum number of spatial dimension we "
-                      "consider ({1})".format(rna_coord.shape[1], ndim),
+                      "consider ({1}).".format(rna_coord.shape[1], ndim),
                       UserWarning)
 
     # initialize FoV results
@@ -234,6 +257,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
 
         # get the bounding box of the cell
         label = cell.label
+        cell_results["cell_id"] = label
         (min_y, min_x, max_y, max_x) = cell.bbox
         cell_results["bbox"] = cell.bbox
 
@@ -279,24 +303,33 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None, others=None,
 
         # get coordinates of the spots detected in the cell
         if rna_coord is not None:
-            spots_in_cell = _extract_elements(cell_mask, rna_coord, ndim)
-            spots_in_cell[:, ndim - 2] -= min_y
-            spots_in_cell[:, ndim - 1] -= min_x
-            cell_results["rna_coord"] = spots_in_cell
+            rna_in_cell, _ = identify_objects_in_region(
+                cell_mask, rna_coord, ndim)
+            rna_in_cell[:, ndim - 2] -= min_y
+            rna_in_cell[:, ndim - 1] -= min_x
+            cell_results["rna_coord"] = rna_in_cell
 
         # get coordinates of the other detected elements
-        if others is not None:
-            for key in others:
-                array = others[key]
-                elements_in_cell = _extract_elements(cell_mask, array, ndim)
-                elements_in_cell[:, ndim - 2] -= min_y
-                elements_in_cell[:, ndim - 1] -= min_x
-                cell_results[key] = elements_in_cell
+        if others_coord is not None:
+            for key in others_coord:
+                array = others_coord[key]
+                element_in_cell, _ = identify_objects_in_region(
+                    cell_mask, array, ndim)
+                element_in_cell[:, ndim - 2] -= min_y
+                element_in_cell[:, ndim - 1] -= min_x
+                cell_results[key] = element_in_cell
 
         # crop cell image
         if image is not None:
             image_cropped = image[min_y: max_y, min_x: max_x]
             cell_results["image"] = image_cropped
+
+        # get crops of the other images
+        if others_image is not None:
+            for key in others_image:
+                image_ = others_image[key]
+                image_cropped_ = image_[min_y: max_y, min_x: max_x]
+                cell_results[key] = image_cropped_
 
         fov_results.append(cell_results)
 
@@ -354,34 +387,6 @@ def _check_nucleus_in_cell(cell_mask, nuc_mask):
         return True
 
 
-def _extract_elements(cell_mask, array, ndim):
-    """Assign elements detected in a the FoV to specific individual cells.
-
-    Parameters
-    ----------
-    cell_mask : np.ndarray, bool
-        Binary mask of the cell with shape (y, x).
-    array : np.ndarray, np.int64
-        Coordinates of the detected elements. The spatial coordinates (zyx or
-        yx coordinates) should be in the first 3 or 2 columns.
-    ndim : int
-        Number of spatial dimension to consider (2 or 3).
-
-    Returns
-    -------
-    spots_out_foci_cell : np.ndarray, np.int64
-        Coordinate of the spots detected outside foci in the cell, with shape
-        (nb_spots, 4). One coordinate per dimension (zyx coordinates) plus the
-        index of the foci.
-
-    """
-    # get coordinates of the elements within the specific cell
-    mask_elements_in_cell = cell_mask[array[:, ndim - 2], array[:, ndim - 1]]
-    elements_in_cell = array[mask_elements_in_cell]
-
-    return elements_in_cell
-
-
 def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     """Get spots coordinates within a given frame.
 
@@ -431,6 +436,129 @@ def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
         extracted_spots[:, 2] -= x_lim[0]
 
     return extracted_spots
+
+
+def summarize_extraction_results(fov_results, ndim, path_output=None):
+    """Summarize results extracted from a field of view and store them in a
+    dataframe.
+
+    Parameters
+    ----------
+    fov_results : List[Dict]
+        List of dictionaries, one per cell segmented in the FoV. Each
+        dictionary includes information about the cell (image, masks,
+        coordinates arrays). Minimal information are:
+        - cell_id: Unique id of the cell.
+        - bbox: bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord: boundary coordinates of the cell.
+        - cell_mask: mask of the cell.
+    ndim : int
+        Number of spatial dimensions to consider (2 or 3).
+    path_output : str or None
+        Path to save the dataframe in a csv file.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        Dataframe with summarized results from the field of view, at the cell
+        level. A minimum number of indicators are returned:
+        - cell_id -> Unique id of the cell.
+        Other indicators are summarized if available:
+        - nb_rna -> Number of detected rna in the cell.
+        - nb_rna_in_nuc -> Number of detected rna inside the nucleus.
+        - nb_rna_out_nuc -> Number of detected rna outside the nucleus.
+        Extra coordinates elements detected are counted in the cell and
+        summarized as well.
+
+    """
+    # check parameters
+    check_parameter(fov_results=list,
+                    ndim=int,
+                    path_output=(str, type(None)))
+
+    # case if no cell were detected
+    # TODO make it consistent with the case where there are cells
+    if len(fov_results) == 0:
+        df = pd.DataFrame({"cell_id": []})
+        if path_output is not None:
+            save_data_to_csv(df, path_output)
+        return df
+
+    # check extra coordinates to summarize
+    cell_results = fov_results[0]
+    _extra_coord = {}
+    for key in cell_results:
+        if key in ["cell_id", "bbox", "cell_coord", "cell_mask",
+                   "nuc_coord", "nuc_mask", "rna_coord", "image"]:
+            continue
+        others_coord = cell_results[key]
+        if (not isinstance(others_coord, np.ndarray)
+                or others_coord.dtype != np.int64):
+            continue
+        _extra_coord[key] = []
+
+    # summarize results at the cell level
+    _cell_id = []
+    _nb_rna = []
+    _nb_rna_in_nuc = []
+    _nb_rna_out_nuc = []
+    for cell_results in fov_results:
+        # get cell id
+        _cell_id.append(cell_results["cell_id"])
+
+        # get rna coordinates and relative results
+        if "rna_coord" in cell_results:
+            rna_coord = cell_results["rna_coord"]
+            _nb_rna.append(len(rna_coord))
+
+            # get rna in nucleus
+            if "nuc_mask" in cell_results:
+                nuc_mask = cell_results["nuc_mask"]
+                rna_in_nuc, rna_out_nuc = identify_objects_in_region(
+                    nuc_mask, rna_coord, ndim)
+                _nb_rna_in_nuc.append(len(rna_in_nuc))
+                _nb_rna_out_nuc.append(len(rna_out_nuc))
+
+        # get others coordinates
+        for key in _extra_coord:
+            others_coord = cell_results[key]
+            _extra_coord[key].append(len(others_coord))
+
+    # complete missing mandatory results
+    n = len(_cell_id)
+    if len(_nb_rna) == 0:
+        _nb_rna = [np.nan] * n
+    if len(_nb_rna_in_nuc) == 0:
+        _nb_rna_in_nuc = [np.nan] * n
+    if len(_nb_rna_out_nuc) == 0:
+        _nb_rna_out_nuc = [np.nan] * n
+
+    # store minimum results in a dataframe
+    result_summary = {"cell_id": _cell_id,
+                      "nb_rna": _nb_rna,
+                      "nb_rna_in_nuc": _nb_rna_in_nuc,
+                      "nb_rna_out_nuc": _nb_rna_out_nuc}
+
+    # store available results on nucleus and rna
+    if len(_nb_rna) > 0:
+        result_summary["nb_rna"] = _nb_rna
+    if len(_nb_rna_in_nuc) > 0:
+        result_summary["nb_rna_in_nuc"] = _nb_rna_in_nuc
+    if len(_nb_rna_out_nuc) > 0:
+        result_summary["nb_rna_out_nuc"] = _nb_rna_out_nuc
+
+    # store results from others elements detected in the cell
+    for key in _extra_coord:
+        result_summary["nb_{0}".format(key)] = _extra_coord[key]
+
+    # instantiate dataframe
+    df = pd.DataFrame(result_summary)
+
+    # save dataframe
+    if path_output is not None:
+        save_data_to_csv(df, path_output)
+
+    return df
 
 
 # ### Segmentation postprocessing ###

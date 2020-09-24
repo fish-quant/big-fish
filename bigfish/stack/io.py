@@ -11,12 +11,14 @@ import mrc
 import warnings
 
 import numpy as np
+import pandas as pd
 
 from skimage import io
 from .utils import check_array
 from .utils import check_parameter
 
 # TODO add general read function with mime types
+# TODO saving data in csv does not preserve dtypes
 
 
 # ### Read ###
@@ -113,15 +115,19 @@ def read_array(path):
     return array
 
 
-def read_array_from_csv(path, dtype=np.float64):
+def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8"):
     """Read a numpy array saved in a csv file.
 
     Parameters
     ----------
     path : str
         Path of the csv file to read.
-    dtype : numpy data type
+    dtype : type or None
         Expected dtype to cast the array.
+    delimiter : str
+        Delimiter used in the csv file to separate columns.
+    encoding : str
+        Encoding to use.
 
     Returns
     -------
@@ -129,17 +135,49 @@ def read_array_from_csv(path, dtype=np.float64):
         Array read.
 
     """
-    # check path
+    # check parameters
     check_parameter(path=str,
-                    dtype=type)
+                    dtype=(type, type(None)),
+                    delimiter=str,
+                    encoding=str)
 
     # read csv file
-    array = np.loadtxt(path, delimiter=";", encoding="utf-8")
+    array = np.loadtxt(path, delimiter=delimiter, encoding=encoding)
 
     # cast array dtype
-    array = array.astype(dtype)
+    if dtype is not None:
+        array = array.astype(dtype)
 
     return array
+
+
+def read_dataframe_from_csv(path, delimiter=";", encoding="utf-8"):
+    """Read a numpy array or a pandas object saved in a csv file.
+
+    Parameters
+    ----------
+    path : str
+        Path of the csv file to read.
+    delimiter : str
+        Delimiter used in the csv file to separate columns.
+    encoding : str
+        Encoding to use.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        Pandas object read.
+
+    """
+    # check parameters
+    check_parameter(path=str,
+                    delimiter=str,
+                    encoding=str)
+
+    # read csv file
+    df = pd.read_csv(path, sep=delimiter, encoding=encoding)
+
+    return df
 
 
 def read_uncompressed(path, verbose=False):
@@ -340,44 +378,60 @@ def save_array(array, path):
     return
 
 
-def save_array_to_csv(array, path):
-    """Save an array into a csv file.
+def save_data_to_csv(data, path, delimiter=";"):
+    """Save a numpy array or a pandas object into a csv file.
 
-    The input array should have 2 dimensions, with (unsigned) integer or float.
+    The input should be a pandas object (Series or DataFrame) or a numpy array
+    with 2 dimensions and (unsigned) integer or float.
 
     Parameters
     ----------
-    array : np.ndarray
-        Array to save.
+    data : np.ndarray, pd.Series or pd.DataFrame
+        Data to save.
     path : str
-        Path of the saved array.
+        Path of the saved csv file.
+    delimiter : str
+        Delimiter used in the csv file to separate columns.
 
     Returns
     -------
 
     """
-    # check array and path
-    check_parameter(path=str)
-    check_array(array,
-                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                       np.int8, np.int16, np.int32, np.int64,
-                       np.float16, np.float32, np.float64],
-                ndim=2)
+    # check parameters
+    check_parameter(data=(pd.DataFrame, pd.Series, np.ndarray),
+                    path=str,
+                    delimiter=str)
 
     # add extension if necessary
     if ".csv" not in path:
         path += ".csv"
 
-    # save csv file
-    if array.dtype == np.float16:
-        fmt = "%.4f"
-    elif array.dtype == np.float32:
-        fmt = "%.7f"
-    elif array.dtype == np.float64:
-        fmt = "%.16f"
+    # save numpy ndarray in a csv file
+    if not isinstance(data, (pd.DataFrame, pd.Series)):
+        check_array(data,
+                    dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                           np.int8, np.int16, np.int32, np.int64,
+                           np.float16, np.float32, np.float64],
+                    ndim=2)
+
+        if data.dtype == np.float16:
+            fmt = "%.4f"
+        elif data.dtype == np.float32:
+            fmt = "%.7f"
+        elif data.dtype == np.float64:
+            fmt = "%.16f"
+        else:
+            fmt = "%.1i"
+        np.savetxt(path, data, fmt=fmt, delimiter=delimiter, encoding="utf-8")
+
+    # save pandas object in a csv file
+    elif isinstance(data, pd.Series):
+        data = data.to_frame()
+        data.to_csv(path, sep=delimiter, header=True, index=False,
+                    encoding="utf-8")
     else:
-        fmt = "%.1i"
-    np.savetxt(path, array, fmt=fmt, delimiter=';', encoding="utf-8")
+        data.to_csv(path, sep=delimiter, header=True, index=False,
+                    encoding="utf-8")
 
     return
 
@@ -390,10 +444,11 @@ def save_cell_extracted(cell_results, path):
     ----------
     cell_results : Dict
         Dictionary including information about the cell (image, masks,
-        coordinates arrays). Minimal information are :
-        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
-        - cell_coord : boundary coordinates of the cell.
-        - cell_mask : mask of the cell.
+        coordinates arrays). Minimal information are:
+        - cell_id -> Unique id of the cell.
+        - bbox -> bounding box coordinates (min_y, min_x, max_y, max_x).
+        - cell_coord -> boundary coordinates of the cell.
+        - cell_mask -> mask of the cell.
     path : str
         Path of the saved array.
 

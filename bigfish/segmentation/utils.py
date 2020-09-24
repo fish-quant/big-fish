@@ -15,6 +15,8 @@ from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_objects
 
 
+# TODO make functions compatible with different type of integers
+
 # ### Labelled images ###
 
 def label_instances(image_binary):
@@ -118,11 +120,11 @@ def clean_segmentation(image, small_object_size=None, fill_holes=False,
     ----------
     image : np.ndarray, np.int64 or bool
         Labelled or masked image with shape (y, x).
-    small_object_size : int
+    small_object_size : int or None
         Areas with a smaller surface (in pixels) are removed.
     fill_holes : bool
         Fill holes within a labelled or masked area.
-    smoothness : int
+    smoothness : int or None
         Radius of a median kernel filter. The higher the smoother instance
         boundaries are.
     delimit_instance : bool
@@ -251,7 +253,7 @@ def _smooth_instance(image, radius):
 
 
 def _delimit_instance(image):
-    """Substract an eroded image to a dilated one in order to prevent
+    """Subtract an eroded image to a dilated one in order to prevent
     boundaries contact.
 
     Parameters
@@ -273,7 +275,7 @@ def _delimit_instance(image):
     # erode-dilate mask
     image_dilated = stack.dilation_filter(image, "disk", 1)
     image_eroded = stack.erosion_filter(image, "disk", 1)
-    if original_dtype  == bool:
+    if original_dtype == bool:
         borders = image_dilated & ~image_eroded
         image_cleaned = image.copy()
         image_cleaned[borders] = False
@@ -327,37 +329,50 @@ def match_nuc_cell(nuc_label, cell_label):
 
     Parameters
     ----------
-    nuc_label : np.ndarray, np.int64
+    nuc_label : np.ndarray, np.int or np.uint
         Labelled image of nuclei with shape (y, x).
-    cell_label : np.ndarray, np.int64
+    cell_label : np.ndarray, np.int or np.uint
         Labelled image of cells with shape (y, x).
 
     Returns
     -------
-    new_nuc_label : np.ndarray, np.int64
+    new_nuc_label : np.ndarray, np.int or np.uint
         Labelled image of nuclei with shape (y, x).
-    new_cell_label : np.ndarray, np.int64
+    new_cell_label : np.ndarray, np.int or np.uint
         Labelled image of cells with shape (y, x).
 
     """
     # check parameters
-    stack.check_array(nuc_label, ndim=2, dtype=np.int64)
-    stack.check_array(cell_label, ndim=2, dtype=np.int64)
+    stack.check_array(nuc_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(cell_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
 
     # initialize new labelled images
     new_nuc_label = np.zeros_like(nuc_label)
     new_cell_label = np.zeros_like(cell_label)
 
     # match nuclei and cells
-    for i_nuc in range(1, nuc_label.max() + 1):
+    label_max = nuc_label.max()
+    for i_nuc in range(1, label_max + 1):
+        # check if a nucleus is labelled with this value
         nuc_mask = nuc_label == i_nuc
+        if nuc_mask.sum() == 0:
+            continue
+        # check if a cell is labelled with this value
         i_cell = _get_most_frequent_value(cell_label[nuc_mask])
         if i_cell == 0:
             continue
+        # assign cell and nucleus
         cell_mask = cell_label == i_cell
         cell_mask |= nuc_mask
         new_nuc_label[nuc_mask] = i_nuc
         new_cell_label[cell_mask] = i_nuc
+        # remove pixel already assigned
+        nuc_label[nuc_mask] = 0
+        cell_label[cell_mask] = 0
 
     return new_nuc_label, new_cell_label
 

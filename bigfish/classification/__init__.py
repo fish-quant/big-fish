@@ -1,21 +1,39 @@
 # -*- coding: utf-8 -*-
+# Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
+# License: BSD 3 clause
 
 """
-The bigfish.classification module includes models to classify the localization
-patterns of the RNA.
+The bigfish.classification subpackage includes functions to prepare input data,
+craft features and train classification models.
 """
 
-from .input_preparation import (prepare_coordinate_data,
-                                build_boundaries_layers, build_surface_layers,
-                                build_distance_layers, Generator)
-from .features import get_features, get_features_name
+from .input_preparation import prepare_extracted_data
 
-# ### Load models ###
+from .features import compute_features
+from .features import get_features_name
+from .features import features_distance
+from .features import features_in_out_nucleus
+from .features import features_protrusion
+from .features import features_dispersion
+from .features import features_topography
+from .features import features_foci
+from .features import features_area
+from .features import features_centrosome
 
-_features = ["get_features", "get_features_name"]
 
-_input_preparation = ["prepare_coordinate_data", "build_boundaries_layers",
-                      "build_surface_layers", "build_distance_layers",
-                      "Generator"]
+_input_preparation = [
+    "prepare_extracted_data"]
 
-__all__ = _features + _input_preparation
+_features = [
+    "compute_features",
+    "get_features_name",
+    "features_distance"
+    "features_in_out_nucleus"
+    "features_protrusion"
+    "features_dispersion"
+    "features_topography"
+    "features_foci"
+    "features_area"
+    "features_centrosome"]
+
+__all__ = _input_preparation + _features

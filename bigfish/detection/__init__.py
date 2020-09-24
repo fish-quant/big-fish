@@ -13,6 +13,7 @@ from .utils import get_radius
 from .spot_detection import detect_spots
 from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
+from .spot_detection import automated_threshold_setting
 
 from .cluster_decomposition import decompose_cluster
 from .cluster_decomposition import build_reference_spot
@@ -31,7 +32,8 @@ _utils = [
 _spots = [
     "detect_spots",
     "local_maximum_detection",
-    "spots_thresholding"]
+    "spots_thresholding",
+    "automated_threshold_setting"]
 
 _clusters = [
     "decompose_cluster",

@@ -20,13 +20,10 @@ from skimage.measure import regionprops
 from skimage.measure import label
 
 
-# TODO add parameter to detect more or less clusters
-# TODO add parameter to fit more or less spots in a cluster
-
 # ### Main function ###
 
 def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                      psf_z=None, psf_yx=200):
+                      psf_z=None, psf_yx=200, alpha=0.5, beta=1):
     """Detect potential regions with clustered spots and fit as many reference
     spots as possible in these regions.
 
@@ -44,16 +41,27 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
         for 3-d or 2-d images respectively.
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
+    # TODO Error returned with a float
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. The higher,
+        the brighter are the spots fitted in the clusters. Consequently, a high
+        intensity score reduces the number of spots per cluster. Default is
+        0.5.
+    beta : int or float
+        Multiplicative factor for the intensity threshold of a cluster region.
+        Default is 1. Threshold is computed with the formula :
+            threshold = beta * max(median_spot)
 
     Returns
     -------
@@ -77,7 +85,15 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     stack.check_parameter(voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
-                          psf_yx=(int, float))
+                          psf_yx=(int, float),
+                          alpha=(int, float),
+                          beta=(int, float))
+    if alpha < 0 or alpha > 1:
+        raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
+                         .format(alpha))
+    if beta < 0:
+        raise ValueError("'beta' should be a positive value, not {0}"
+                         .format(beta))
 
     # check number of dimensions
     ndim = image.ndim
@@ -94,6 +110,12 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     if ndim == 2:
         voxel_size_z, psf_z = None, None
 
+    # case where no spot were detected
+    if spots.size == 0:
+        cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
+        reference_spot = np.zeros((5,) * ndim, dtype=image.dtype)
+        return spots, cluster, reference_spot
+
     # compute expected standard deviation of the spots
     sigma = get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
     large_sigma = tuple([sigma_ * 5 for sigma_ in sigma])
@@ -107,21 +129,13 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     reference_spot = build_reference_spot(
         image_denoised,
         spots,
-        voxel_size_z, voxel_size_yx, psf_z, psf_yx)
-    threshold_cluster = int(reference_spot.max())
-
-    # case where no spot were detected
-    if spots.size == 0:
-        spots_out_cluster = np.array([], dtype=np.int64).reshape((0, ndim))
-        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, ndim + 1))
-        cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots_out_cluster, spots_in_cluster, cluster, reference_spot
+        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        alpha)
 
     # case with an empty frame as reference spot
     if reference_spot.sum() == 0:
-        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, ndim + 1))
         cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots, spots_in_cluster, cluster, reference_spot
+        return spots, cluster, reference_spot
 
     # fit a gaussian function on the reference spot to be able to simulate it
     parameters_fitted = modelize_spot(
@@ -134,13 +148,15 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # use connected components to detect potential clusters
     cluster_regions, spots_out_cluster, cluster_size = get_clustered_region(
-        image_denoised, spots, threshold_cluster)
+        image_denoised,
+        spots,
+        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        beta)
 
     # case where no cluster where detected
     if cluster_regions.size == 0:
-        spots_in_cluster = np.array([], dtype=np.int64).reshape((0, ndim + 1))
         cluster = np.array([], dtype=np.int64).reshape((0, ndim + 4))
-        return spots, spots_in_cluster, cluster, reference_spot
+        return spots, cluster, reference_spot
 
     # precompute gaussian function values
     max_grid = max(200, cluster_size + 1)
@@ -176,7 +192,7 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 # ### Reference spot ###
 
 def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                         psf_z=None, psf_yx=200, method="median"):
+                         psf_z=None, psf_yx=200, alpha=0.5):
     """Build a median or mean spot in 3 or 2 dimensions as reference.
 
     Reference spot is computed from a sample of uncropped detected spots. If
@@ -189,18 +205,22 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) for 3-d images or
         (nb_spots, 2) for 2-d images.
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
-    method : str
-        Method use to compute the reference spot (a 'mean' or 'median' spot).
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. If 0, reference
+        spot approximates the spot with the lowest intensity. If 1, reference
+        spot approximates the brightest spot. Default is 0.5.
+
 
     Returns
     -------
@@ -217,10 +237,10 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
                           psf_yx=(int, float),
-                          method=str)
-    if method not in ['mean', 'median']:
-        raise ValueError("'{0}' is not a valid value for parameter 'method'. "
-                         "Use 'mean' or 'median' instead.".format(method))
+                          alpha=(int, float))
+    if alpha < 0 or alpha > 1:
+        raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
+                         .format(alpha))
 
     # check number of dimensions
     ndim = image.ndim
@@ -242,16 +262,14 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # build reference spot
     if image.ndim == 3:
-        reference_spot = _build_reference_spot_3d(image, spots, radius,
-                                                  method="median")
+        reference_spot = _build_reference_spot_3d(image, spots, radius, alpha)
     else:
-        reference_spot = _build_reference_spot_2d(image, spots, radius,
-                                                  method="median")
+        reference_spot = _build_reference_spot_2d(image, spots, radius, alpha)
 
     return reference_spot
 
 
-def _build_reference_spot_3d(image, spots, radius, method="median"):
+def _build_reference_spot_3d(image, spots, radius, alpha):
     """Build a median or mean spot in 3 dimensions as reference.
 
     Reference spot is computed from a sample of uncropped detected spots. If
@@ -265,8 +283,10 @@ def _build_reference_spot_3d(image, spots, radius, method="median"):
         Coordinate of the spots with shape (nb_spots, 3) for 3-d images.
     radius : Tuple[float]
         Radius in pixels of the detected spots, one element per dimension.
-    method : str
-        Method use to compute the reference spot (a 'mean' or 'median' spot).
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. If 0, reference
+        spot approximates the spot with the lowest intensity. If 1, reference
+        spot approximates the brightest spot.
 
     Returns
     -------
@@ -313,10 +333,8 @@ def _build_reference_spot_3d(image, spots, radius, method="median"):
 
     # project the different spot images
     l_reference_spot = np.stack(l_reference_spot, axis=0)
-    if method == "mean":
-        reference_spot = np.mean(l_reference_spot, axis=0)
-    else:
-        reference_spot = np.median(l_reference_spot, axis=0)
+    alpha_ = alpha * 100
+    reference_spot = np.percentile(l_reference_spot, alpha_, axis=0)
     reference_spot = reference_spot.astype(image.dtype)
 
     return reference_spot
@@ -362,7 +380,7 @@ def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     return image_spot
 
 
-def _build_reference_spot_2d(image, spots, radius, method="median"):
+def _build_reference_spot_2d(image, spots, radius, alpha):
     """Build a median or mean spot in 2 dimensions as reference.
 
     Reference spot is computed from a sample of uncropped detected spots. If
@@ -376,8 +394,10 @@ def _build_reference_spot_2d(image, spots, radius, method="median"):
         Coordinate of the spots with shape (nb_spots, 2) for 2-d images.
     radius : Tuple[float]
         Radius in pixels of the detected spots, one element per dimension.
-    method : str
-        Method use to compute the reference spot (a 'mean' or 'median' spot).
+    alpha : int or float
+        Intensity score of the reference spot, between 0 and 1. If 0, reference
+        spot approximates the spot with the lowest intensity. If 1, reference
+        spot approximates the brightest spot.
 
     Returns
     -------
@@ -420,10 +440,8 @@ def _build_reference_spot_2d(image, spots, radius, method="median"):
 
     # project the different spot images
     l_reference_spot = np.stack(l_reference_spot, axis=0)
-    if method == "mean":
-        reference_spot = np.mean(l_reference_spot, axis=0)
-    else:
-        reference_spot = np.median(l_reference_spot, axis=0)
+    alpha_ = alpha * 100
+    reference_spot = np.percentile(l_reference_spot, alpha_, axis=0)
     reference_spot = reference_spot.astype(image.dtype)
 
     return reference_spot
@@ -472,15 +490,16 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
     ----------
     reference_spot : np.ndarray
         A 3-d or 2-d image with detected spot and shape (z, y, x) or (y, x).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, reference
+        spot is considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, reference spot is considered in 2-d.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
         in nanometer.
 
     Returns
@@ -541,13 +560,20 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
         centroid_z, centroid_y, centroid_x = centroid_coord
         p0 = [centroid_z, centroid_y, centroid_x, psf_z, psf_yx, amplitude,
               background]
+        l_bound = [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, 0]
+        u_bound = [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf]
+
     else:
         # parameters to fit: mu_y, mu_x, sigma_yx, amplitude and background
         centroid_y, centroid_x = centroid_coord
         p0 = [centroid_y, centroid_x, psf_yx, amplitude, background]
+        l_bound = [-np.inf, -np.inf, -np.inf, -np.inf, 0]
+        u_bound = [np.inf, np.inf, np.inf, np.inf, np.inf]
 
     # fit a gaussian function on this reference spot
-    popt, pcov = _fit_gaussian(f, grid, reference_spot, p0)
+    popt, pcov = _fit_gaussian(f, grid, reference_spot, p0,
+                               lower_bound=l_bound,
+                               upper_bound=u_bound)
 
     # get optimized parameters to modelize the reference spot as a gaussian
     if ndim == 3:
@@ -577,8 +603,9 @@ def _initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
     ----------
     image_spot : np.ndarray
         An image with detected spot and shape (z, y, x) or (y, x).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image spot
+        is considered in 2-d.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     return_centroid : bool
@@ -757,13 +784,14 @@ def _objective_function(nb_dimension, voxel_size_z, voxel_size_yx, psf_z,
     ----------
     nb_dimension : int
         Number of dimensions to consider (2 or 3).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d gaussian function.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float
+    psf_z : int or float or None
         Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
+        in nanometer. If None, we consider a 2-d gaussian function.
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
@@ -1221,12 +1249,13 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 
     Parameters
     ----------
-    voxel_size_z : float, int
-        Height of a voxel, in nanometer.
-    voxel_size_yx : float, int
+    voxel_size_z : float or int or None
+        Height of a voxel, in nanometer. If None, we consider a 2-d erf.
+    voxel_size_yx : float or int
         size of a voxel, in nanometer.
-    sigma_z : float or int
-        Standard deviation of the gaussian along the z axis, in nanometer.
+    sigma_z : float or int or None
+        Standard deviation of the gaussian along the z axis, in nanometer. If
+        None, we consider a 2-d erf.
     sigma_yx : float or int
         Standard deviation of the gaussian along the yx axis, in nanometer.
     max_grid : int
@@ -1282,12 +1311,12 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 
 # ### Clustered regions ###
 
-def get_clustered_region(image, spots, threshold):
+def get_clustered_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
+                         psf_z=None, psf_yx=200, beta=1):
     """Detect and filter potential clustered regions.
 
-    A candidate region follows two criteria:
-        - at least 2 connected pixels above a specific threshold.
-        - among the 50% brightest regions.
+    A candidate region follows has at least 2 connected pixels above a
+    specific threshold.
 
     Parameters
     ----------
@@ -1295,8 +1324,21 @@ def get_clustered_region(image, spots, threshold):
         Image with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    threshold : int or float
-        A threshold to detect peaks.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d image.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, we consider a 2-d image.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+    beta : int or float
+        Multiplicative factor for the intensity threshold of a cluster region.
+        Default is 1. Threshold is computed with the formula :
+            threshold = beta * max(median_spot)
 
     Returns
     -------
@@ -1315,13 +1357,37 @@ def get_clustered_region(image, spots, threshold):
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(threshold=(int, float))
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float),
+                          beta=(int, float))
+    if beta < 0:
+        raise ValueError("'beta' should be a positive value, not {0}"
+                         .format(beta))
 
     # check number of dimensions
-    if image.ndim != spots.shape[1]:
+    ndim = image.ndim
+    if ndim == 3 and voxel_size_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'voxel_size_z' parameter is missing.".format(ndim))
+    if ndim == 3 and psf_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'psf_z' parameter is missing.".format(ndim))
+    if ndim != spots.shape[1]:
         raise ValueError("Provided image has {0} dimensions but spots are "
                          "detected in {1} dimensions."
-                         .format(image.ndim, spots.shape[1]))
+                         .format(ndim, spots.shape[1]))
+    if ndim == 2:
+        voxel_size_z, psf_z = None, None
+
+    # estimate median spot value and a threshold to detect clustered regions
+    median_spot = build_reference_spot(
+        image,
+        spots,
+        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        alpha=0.5)
+    threshold = int(median_spot.max() * beta)
 
     # get connected regions
     connected_regions = _get_connected_region(image, threshold)
@@ -1361,9 +1427,8 @@ def _get_connected_region(image, threshold):
 def _filter_connected_region(image, connected_component, spots):
     """Filter clustered regions (defined as connected component regions).
 
-    A candidate region follows two criteria:
-        - at least 2 connected pixels above a specific threshold.
-        - among the 50% brightest regions.
+    A candidate region has at least 2 connected pixels
+    above a specific threshold.
 
     Parameters
     ----------
@@ -1390,39 +1455,26 @@ def _filter_connected_region(image, connected_component, spots):
 
     # get different features of the regions
     area = []
-    intensity = []
     bbox = []
     for i, region in enumerate(regions):
         area.append(region.area)
-        intensity.append(region.mean_intensity)
         bbox.append(region.bbox)
     regions = np.array(regions)
     area = np.array(area)
-    intensity = np.array(intensity)
     bbox = np.array(bbox)
 
     # keep regions with a minimum size
     big_area = area >= 2
-    regions = regions[big_area]
-    intensity = intensity[big_area]
-    bbox = bbox[big_area]
+    regions_filtered = regions[big_area]
+    bbox_filtered = bbox[big_area]
 
     # case where no region big enough were detected
     if regions.size == 0:
         regions_filtered = np.array([])
         return regions_filtered, spots, 0
 
-    # keep the brightest regions
-    high_intensity = intensity >= np.median(intensity)
-    regions_filtered = regions[high_intensity]
-    bbox = bbox[high_intensity]
-
-    # case where no region bright enough were detected
-    if regions_filtered.size == 0:
-        return regions_filtered, spots, 0
-
     spots_out_region, max_region_size = _filter_spot_out_candidate_regions(
-        bbox, spots, nb_dim=image.ndim)
+        bbox_filtered, spots, nb_dim=image.ndim)
 
     return regions_filtered, spots_out_region, max_region_size
 
@@ -1510,12 +1562,14 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
         Image with shape (z, y, x) or (y, x).
     cluster_regions : np.ndarray
         Array with filtered skimage.measure._regionprops._RegionProperties.
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, we
+        consider a 2-d image.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
-    sigma_z : int or float
-        Standard deviation of the gaussian along the z axis, in nanometer.
+    sigma_z : int or float or None
+        Standard deviation of the gaussian along the z axis, in nanometer. If
+        None, we consider a 2-d image.
     sigma_yx : int or float
         Standard deviation of the gaussian along the yx axis, in nanometer.
     amplitude : float
@@ -1551,6 +1605,9 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
                           sigma_yx=(int, float),
                           amplitude=float,
                           background=float)
+    if background < 0:
+        raise ValueError("Background value can't be negative: {0}"
+                         .format(background))
 
     # check number of dimensions
     ndim = image.ndim
@@ -1571,7 +1628,7 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
     if image.ndim == 3:
 
         for i_cluster, region in enumerate(cluster_regions):
-            image_region, best_simulation, pos_gaussian = _gaussian_mixture_3d(
+            image_region, _, pos_gaussian = _gaussian_mixture_3d(
                 image,
                 region,
                 voxel_size_z,
@@ -1605,7 +1662,7 @@ def fit_gaussian_mixture(image, cluster_regions, voxel_size_z=None,
     else:
 
         for i_cluster, region in enumerate(cluster_regions):
-            image_region, best_simulation, pos_gaussian = _gaussian_mixture_2d(
+            image_region, _, pos_gaussian = _gaussian_mixture_2d(
                 image,
                 region,
                 voxel_size_yx,
@@ -1682,12 +1739,13 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
     box = tuple(region.bbox)
     image_region = image[box[0]:box[3], box[1]:box[4], box[2]:box[5]]
     image_region_raw = np.reshape(image_region, image_region.size)
+    image_region_raw = image_region_raw.astype(np.float64)
 
     # build a grid to represent this image
     grid = _initialize_grid_3d(image_region, voxel_size_z, voxel_size_yx)
 
     # add a gaussian for each local maximum while the RSS decreases
-    simulation = np.zeros(image_region_raw.shape, dtype=np.float64)
+    simulation = np.zeros_like(image_region_raw)
     residual = image_region_raw - simulation
     ssr = np.sum(residual ** 2)
     diff_ssr = -1
@@ -1728,8 +1786,9 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
                       "artifact in the image.".format(limit_gaussian),
                       UserWarning)
 
+    # TODO clip the image correctly before casting it
     best_simulation = np.reshape(best_simulation, image_region.shape)
-    best_simulation = best_simulation.astype(image_region_raw.dtype)
+    best_simulation = best_simulation.astype(image_region.dtype)
 
     return image_region, best_simulation, positions_gaussian
 
@@ -1774,12 +1833,13 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
     box = tuple(region.bbox)
     image_region = image[box[0]:box[2], box[1]:box[3]]
     image_region_raw = np.reshape(image_region, image_region.size)
+    image_region_raw = image_region_raw.astype(np.float64)
 
     # build a grid to represent this image
     grid = _initialize_grid_2d(image_region, voxel_size_yx)
 
     # add a gaussian for each local maximum while the RSS decreases
-    simulation = np.zeros(image_region_raw.shape, dtype=np.float64)
+    simulation = np.zeros_like(image_region_raw)
     residual = image_region_raw - simulation
     ssr = np.sum(residual ** 2)
     diff_ssr = -1
@@ -1817,7 +1877,8 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
                       "artifact in the image.".format(limit_gaussian),
                       UserWarning)
 
+    # TODO clip the image correctly before casting it
     best_simulation = np.reshape(best_simulation, image_region.shape)
-    best_simulation = best_simulation.astype(image_region_raw.dtype)
+    best_simulation = best_simulation.astype(image_region.dtype)
 
     return image_region, best_simulation, positions_gaussian

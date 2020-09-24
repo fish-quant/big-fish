@@ -18,6 +18,9 @@ from .utils import get_eps_float32
 from .utils import load_and_save_url
 from .utils import check_hash
 from .utils import compute_hash
+from .utils import check_input_data
+from .utils import moving_average
+from .utils import centered_moving_average
 
 from .io import read_image
 from .io import read_dv
@@ -25,10 +28,11 @@ from .io import read_array
 from .io import read_uncompressed
 from .io import read_cell_extracted
 from .io import read_array_from_csv
+from .io import read_dataframe_from_csv
 from .io import save_image
 from .io import save_array
 from .io import save_cell_extracted
-from .io import save_array_to_csv
+from .io import save_data_to_csv
 
 from .preprocess import build_stacks
 from .preprocess import build_stack
@@ -62,10 +66,11 @@ from .projection import get_in_focus_indices
 from .illumination import compute_illumination_surface
 from .illumination import correct_illumination_surface
 
-from .postprocess import identify_transcription_site
+from .postprocess import identify_objects_in_region
 from .postprocess import remove_transcription_site
 from .postprocess import extract_cell
 from .postprocess import extract_spots_from_frame
+from .postprocess import summarize_extraction_results
 from .postprocess import center_mask_coord
 from .postprocess import from_boundaries_to_surface
 from .postprocess import from_surface_to_boundaries
@@ -88,7 +93,10 @@ _utils = [
     "get_eps_float32",
     "load_and_save_url",
     "check_hash",
-    "compute_hash"]
+    "compute_hash",
+    "check_input_data",
+    "moving_average",
+    "centered_moving_average"]
 
 _io = [
     "read_image",
@@ -97,10 +105,11 @@ _io = [
     "read_uncompressed",
     "read_cell_extracted",
     "read_array_from_csv",
+    "read_dataframe_from_csv",
     "save_image",
     "save_array",
     "save_cell_extracted",
-    "save_array_to_csv"]
+    "save_data_to_csv"]
 
 _preprocess = [
     "build_stacks",
@@ -139,10 +148,11 @@ _illumination = [
     "correct_illumination_surface"]
 
 _postprocess = [
-    "identify_transcription_site",
+    "identify_objects_in_region",
     "remove_transcription_site",
     "extract_cell",
     "extract_spots_from_frame",
+    "summarize_extraction_results",
     "center_mask_coord",
     "from_boundaries_to_surface",
     "from_surface_to_boundaries",

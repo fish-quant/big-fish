@@ -588,7 +588,7 @@ def check_parameter(**kwargs):
 
     Parameters
     ----------
-    kwargs : dict
+    kwargs : Type or Tuple[Type]
         Map of each parameter with its expected dtype.
 
     Returns
@@ -745,3 +745,142 @@ def compute_hash(path):
     sha256 = sha256hash.hexdigest()
 
     return sha256
+
+
+def check_input_data(input_directory):
+    """Check input images exists and download them if necessary.
+
+    Returns
+    -------
+    input_directory : str
+        Path of the input data directory.
+
+    """
+    # parameters
+    filename_input_dapi = "experiment_1_dapi_fov_1.tif"
+    url_input_dapi = "https://github.com/fish-quant/big-fish-examples/releases/download/data/experiment_1_dapi_fov_1.tif"
+    hash_input_dapi = "3ce6dcfbece75da41326943432ada4cc9bacd06750e59dc2818bb253b6e7fdcd"
+    filename_input_smfish = "experiment_1_smfish_fov_1.tif"
+    url_input_smfish = "https://github.com/fish-quant/big-fish-examples/releases/download/data/experiment_1_smfish_fov_1.tif"
+    hash_input_smfish = "bc6aec1f3da4c25f3c6b579c274584ce1e88112c7f980e5437b5ad5223bc8ff6"
+
+    # check if input dapi image exists
+    path = os.path.join(input_directory, filename_input_dapi)
+    if os.path.isfile(path):
+
+        # check that image is not corrupted
+        try:
+            check_hash(path, hash_input_dapi)
+            print("{0} is already in the directory"
+                  .format(filename_input_dapi))
+
+        # otherwise download it
+        except IOError:
+            print("{0} seems corrupted".format(filename_input_dapi))
+            print("downloading {0}...".format(filename_input_dapi))
+            load_and_save_url(url_input_dapi,
+                              input_directory,
+                              filename_input_dapi)
+            check_hash(path, hash_input_dapi)
+
+    # if file does not exist we directly download it
+    else:
+        print("downloading {0}...".format(filename_input_dapi))
+        load_and_save_url(url_input_dapi,
+                          input_directory,
+                          filename_input_dapi)
+        check_hash(path, hash_input_dapi)
+
+    # check if input smfish image exists
+    path = os.path.join(input_directory, filename_input_smfish)
+    if os.path.isfile(path):
+
+        # check that image is not corrupted
+        try:
+            check_hash(path, hash_input_smfish)
+            print("{0} is already in the directory"
+                  .format(filename_input_smfish))
+
+        # otherwise download it
+        except IOError:
+            print("{0} seems corrupted".format(filename_input_smfish))
+            print("downloading {0}...".format(filename_input_smfish))
+            load_and_save_url(url_input_smfish,
+                              input_directory,
+                              filename_input_smfish)
+            check_hash(path, hash_input_smfish)
+
+    # if file does not exist we directly download it
+    else:
+        print("downloading {0}...".format(filename_input_smfish))
+        load_and_save_url(url_input_smfish,
+                          input_directory,
+                          filename_input_smfish)
+        check_hash(path, hash_input_smfish)
+
+    return
+
+
+# ### Computation ###
+
+def moving_average(array, n):
+    """Compute a trailing average.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array used to compute moving average.
+    n : int
+        Window width of the moving average.
+
+    Returns
+    -------
+
+    """
+    # check parameter
+    check_parameter(n=int)
+    check_array(array, ndim=1)
+
+    # compute moving average
+    cumsum = [0]
+    res = []
+    for i, x in enumerate(array, 1):
+        cumsum.append(cumsum[i-1] + x)
+        if i >= n:
+            ma = (cumsum[i] - cumsum[i - n]) / n
+            res.append(ma)
+    res = np.array(res)
+
+    return res
+
+
+def centered_moving_average(array, n):
+    """Compute a centered moving average.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array used to compute moving average.
+    n : int
+        Window width of the moving average.
+
+    Returns
+    -------
+
+    """
+    # check parameter
+    check_parameter(n=int)
+    check_array(array, ndim=1)
+
+    # pad array to keep the same length and centered the outcome
+    if n % 2 == 0:
+        r = int(n / 2)
+        n += 1
+    else:
+        r = int((n - 1) / 2)
+    array_padded = np.pad(array, pad_width=r, mode="reflect")
+
+    # compute centered moving average
+    res = moving_average(array_padded, n)
+
+    return res

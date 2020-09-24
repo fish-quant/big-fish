@@ -325,7 +325,7 @@ def gaussian_filter(image, sigma, allow_negative=False):
 
     # we clip negative values to 0
     if not allow_negative:
-        image_filtered = np.clip(image_filtered, a_min=0, a_max=None)
+        image_filtered = np.clip(image_filtered, a_min=0, a_max=1)
 
     # cast filtered image
     if image.dtype == np.uint8:
@@ -395,7 +395,7 @@ def remove_background_gaussian(image, sigma):
     image_filtered = gaussian_filter(image, sigma,
                                      allow_negative=False)
 
-    # substract the gaussian filter
+    # subtract the gaussian filter
     out = np.zeros_like(image)
     image_no_background = np.subtract(image, image_filtered,
                                       out=out,
