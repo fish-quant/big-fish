@@ -10,7 +10,6 @@ import scipy.ndimage as ndi
 import numpy as np
 
 import bigfish.stack as stack
-from .utils import get_sigma
 
 from skimage.measure import regionprops
 from skimage.measure import label
@@ -192,7 +191,7 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
 
     """
     # initialization
-    sigma = get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+    sigma = stack.get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
     n = len(images)
 
     # apply LoG filter and find local maximum

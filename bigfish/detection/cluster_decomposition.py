@@ -12,7 +12,6 @@ import warnings
 import numpy as np
 
 import bigfish.stack as stack
-from .utils import get_sigma, get_radius
 
 from scipy.special import erf
 from scipy.optimize import curve_fit
@@ -117,7 +116,7 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
         return spots, cluster, reference_spot
 
     # compute expected standard deviation of the spots
-    sigma = get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+    sigma = stack.get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
     large_sigma = tuple([sigma_ * 5 for sigma_ in sigma])
 
     # denoise the image
@@ -258,7 +257,7 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
         voxel_size_z, psf_z = None, None
 
     # compute radius
-    radius = get_radius(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+    radius = stack.get_radius(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
 
     # build reference spot
     if image.ndim == 3:

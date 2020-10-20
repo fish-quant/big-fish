@@ -7,9 +7,6 @@ The bigfish.detection subpackage includes function to detect RNA spot in 2-d
 and 3-d.
 """
 
-from .utils import get_sigma
-from .utils import get_radius
-
 from .spot_detection import detect_spots
 from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
@@ -24,10 +21,6 @@ from .cluster_decomposition import fit_gaussian_mixture
 
 from .foci_detection import detect_foci
 
-
-_utils = [
-    "get_sigma",
-    "get_radius"]
 
 _spots = [
     "detect_spots",
@@ -46,4 +39,4 @@ _clusters = [
 _foci = [
     "detect_foci"]
 
-__all__ = _utils + _spots + _clusters + _foci
+__all__ = _spots + _clusters + _foci
