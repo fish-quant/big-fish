@@ -83,6 +83,9 @@ from .postprocess import from_coord_to_surface
 
 from .augmentation import augment_2d
 
+from .quality import compute_snr
+from .quality import compute_snr_spots
+
 
 _utils = [
     "check_array",
@@ -168,6 +171,10 @@ _postprocess = [
 _augmentation = [
     "augment_2d"]
 
+_quality = [
+    "compute_snr",
+    "compute_snr_spots"]
+
 
 __all__ = (_utils + _io + _preprocess + _postprocess + _filter + _projection +
-           _illumination + _augmentation)
+           _illumination + _augmentation + _quality)
