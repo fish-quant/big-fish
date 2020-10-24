@@ -45,6 +45,8 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
                       psf_z=None, psf_yx=200, neighbourhood_factor=3):
     """Compute Signal-to-Noise ratio for every detected spot.
 
+        SNR = (mean_spot_signal - mean_background) / std_background
+
     Parameters
     ----------
     image : np.ndarray
