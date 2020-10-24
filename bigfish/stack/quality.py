@@ -170,7 +170,7 @@ def _compute_snr_per_spot_3d(image, spot, radius_spot, neighbourhood_spot):
     signal = image_spot.mean()
 
     # remove spot values
-    image_bis = image.copy()
+    image_bis = image.copy().astype(np.float64)
     mask = np.ones_like(image_spot) * -1
     image_bis[z_spot_min:z_spot_max + 1,
               y_spot_min:y_spot_max + 1,
@@ -239,7 +239,7 @@ def _compute_snr_per_spot_2d(image, spot, radius_spot, neighbourhood_spot):
     signal = image_spot.mean()
 
     # remove spot values
-    image_bis = image.copy()
+    image_bis = image.copy().astype(np.float64)
     mask = np.ones_like(image_spot) * -1
     image_bis[y_spot_min:y_spot_max + 1, x_spot_min:x_spot_max + 1] = mask
 
