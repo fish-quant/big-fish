@@ -151,10 +151,6 @@ def plot_snr_spots(snr_spots, labels=None, colors=None, x_lim=None, y_lim=None,
                           path_output=(str, type(None)),
                           ext=(str, list),
                           show=bool)
-    for snr_spots_ in snr_spots:
-        stack.check_array(snr_spots_,
-                          ndim=1,
-                          dtype=[np.float32, np.float64])
 
     # enlist values if necessary
     if isinstance(snr_spots, np.ndarray):
@@ -163,6 +159,12 @@ def plot_snr_spots(snr_spots, labels=None, colors=None, x_lim=None, y_lim=None,
         labels = [labels]
     if colors is not None and isinstance(colors, str):
         colors = [colors]
+
+    # check arrays
+    for snr_spots_ in snr_spots:
+        stack.check_array(snr_spots_,
+                          ndim=1,
+                          dtype=[np.float32, np.float64])
 
     # check number of parameters
     if labels is not None and len(snr_spots) != len(labels):
