@@ -8,44 +8,22 @@ Functions used to detect and clean noisy images.
 
 import numpy as np
 
+from scipy.ndimage import convolve
+
 from .utils import check_array, check_parameter, check_range_value, get_radius
 
 
 # ### Signal-to-Noise ratio ###
 
-def compute_snr(image):
-    """Compute Signal-to-Noise ratio for an image.
-
-        SNR = mean / std
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (z, y, x) or (y, x). Values should be positive.
-
-    Returns
-    -------
-    snr : float
-        Signal-to-Noise ratio of the image.
-
-    """
-    # check parameters
-    check_array(image,
-                ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    check_range_value(image, min_=0)
-
-    # compute signal-to-noise ratio
-    snr = image.mean() / image.std()
-
-    return snr
-
-
 def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                      psf_z=None, psf_yx=200, neighbourhood_factor=3):
+                      psf_z=None, psf_yx=200, background_factor=3):
     """Compute Signal-to-Noise ratio for every detected spot.
 
         SNR = (mean_spot_signal - mean_background) / std_background
+
+    Signal corresponds to the spot region. Background is a larger region
+    surrounding the spot region. Computation time will be sensitive to the
+    image surface or volume, not the number of spots.
 
     Parameters
     ----------
@@ -65,7 +43,7 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
-    neighbourhood_factor : float or int
+    background_factor : float or int
         Factor to define the surrounding background of the spot from its
         radius.
     Returns
@@ -79,7 +57,7 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
                     voxel_size_yx=(int, float),
                     psf_z=(int, float, type(None)),
                     psf_yx=(int, float),
-                    neighbourhood_factor=(float, int))
+                    background_factor=(float, int))
     check_array(image,
                 ndim=[2, 3],
                 dtype=[np.uint8, np.uint16, np.float32, np.float64])
@@ -102,163 +80,69 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
         voxel_size_z, psf_z = None, None
 
     # compute spot radius
-    radius_spot = get_radius(voxel_size_z=voxel_size_z,
-                             voxel_size_yx=voxel_size_yx,
-                             psf_z=psf_z, psf_yx=psf_yx)
+    radius_signal_ = get_radius(voxel_size_z=voxel_size_z,
+                                voxel_size_yx=voxel_size_yx,
+                                psf_z=psf_z, psf_yx=psf_yx)
 
-    # compute the neighbourhood size
-    neighbourhood_spot = tuple(i * neighbourhood_factor for i in radius_spot)
+    # compute the neighbourhood radius
+    radius_background_ = tuple(i * background_factor for i in radius_signal_)
 
-    # loop over every spot
-    snr_spots = []
-    for spot in spots:
+    # ceil radii
+    radius_signal = np.ceil(radius_signal_).astype(np.int)
+    radius_background = np.ceil(radius_background_).astype(np.int)
 
-        # compute SNR per spot
-        if ndim == 3:
-            snr_spot = _compute_snr_per_spot_3d(
-                image, spot, radius_spot, neighbourhood_spot)
-        else:
-            snr_spot = _compute_snr_per_spot_2d(
-                image, spot, radius_spot, neighbourhood_spot)
-        snr_spots.append(snr_spot)
+    # kernels width
+    width_signal = 1 + radius_signal * 2
+    width_background = 1 + radius_background * 2
 
-    # format results
-    snr_spots = np.array(snr_spots)
+    # cast image in float if necessary
+    if image.dtype in [np.uint8, np.uint16]:
+        image_float = image.astype(np.float64)
+    else:
+        image_float = image
+
+    # mean signal
+    nb_signal = np.prod(width_signal)
+    kernel_signal = np.ones(width_signal, dtype=np.float64)
+    kernel_mean_signal = kernel_signal / nb_signal
+    mean_signal = convolve(image_float, kernel_mean_signal)
+
+    # mean background
+    nb_background = np.prod(width_background) - nb_signal
+    kernel_background = np.ones(width_background, dtype=np.float64)
+    patch_signal = np.zeros(width_signal, dtype=np.float64)
+    start = radius_background - radius_signal
+    end = radius_background + radius_signal + 1
+    if ndim == 3:
+        kernel_background[start[0]:end[0],
+                          start[1]:end[1],
+                          start[2]:end[2]] = patch_signal
+    else:
+        kernel_background[start[0]:end[0], start[1]:end[1]] = patch_signal
+    kernel_mean_background = kernel_background / nb_background
+    mean_background = convolve(image_float, kernel_mean_background)
+
+    # difference signal - background
+    diff = np.subtract(mean_signal, mean_background,
+                       out=np.zeros_like(mean_signal),
+                       where=mean_signal > mean_background)
+
+    # standard deviation background
+    sum_1 = convolve(image_float ** 2, kernel_background)
+    local_sum_background = convolve(image_float, kernel_background)
+    sum_2 = np.multiply(mean_background, local_sum_background) * 2
+    sum_3 = (mean_background ** 2) * nb_background
+    std_background = np.sqrt((sum_1 - sum_2 + sum_3) / (nb_background - 1))
+
+    # local signal-to-noise ratio
+    snr = np.divide(diff, std_background,
+                    out=np.zeros_like(diff),
+                    where=std_background > 0)
+
+    # spots signal-to-noise ratio
+    if ndim == 3:
+        snr_spots = snr[spots[:, 0], spots[:, 1], spots[:, 2]]
+    else:
+        snr_spots = snr[spots[:, 0], spots[:, 1]]
 
     return snr_spots
-
-
-def _compute_snr_per_spot_3d(image, spot, radius_spot, neighbourhood_spot):
-    """Extract a 3-d background and spot volume then compute the spot
-    Signal-to-Noise ratio.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (z, y, x).
-    spot : np.ndarray, np.int64
-        Coordinate of a spot, with shape (1, 3). One coordinate per dimension
-        (zyx coordinates).
-    radius_spot : Tuple
-        Radius of the spot, one scalar per dimension (z, y, x).
-    neighbourhood_spot : Tuple
-        Radius of the spot background, one scalar per dimension (z, y, x).
-
-    Returns
-    -------
-    snr_spot : float
-        Signal-to-Noise ratio of the spot.
-
-    """
-    # get spot coordinate
-    spot_z, spot_y, spot_x = spot
-
-    # get spot and background radii
-    radius_z, radius_yx, radius_yx = radius_spot
-    background_z, background_yx, background_yx = neighbourhood_spot
-
-    # extract volume around spot
-    z_spot_min = max(0, int(spot_z - radius_z))
-    z_spot_max = min(image.shape[0], int(spot_z + radius_z))
-    y_spot_min = max(0, int(spot_y - radius_yx))
-    y_spot_max = min(image.shape[1], int(spot_y + radius_yx))
-    x_spot_min = max(0, int(spot_x - radius_yx))
-    x_spot_max = min(image.shape[2], int(spot_x + radius_yx))
-    image_spot = image[z_spot_min:z_spot_max + 1,
-                       y_spot_min:y_spot_max + 1,
-                       x_spot_min:x_spot_max + 1]
-
-    # compute signal
-    signal = image_spot.mean()
-
-    # remove spot values
-    image_bis = image.copy().astype(np.float64)
-    mask = np.ones_like(image_spot) * -1
-    image_bis[z_spot_min:z_spot_max + 1,
-              y_spot_min:y_spot_max + 1,
-              x_spot_min:x_spot_max + 1] = mask
-
-    # extract a larger volume around spot to get the background
-    z_spot_min = max(0, int(spot_z - background_z))
-    z_spot_max = min(image.shape[0], int(spot_z + background_z))
-    y_spot_min = max(0, int(spot_y - background_yx))
-    y_spot_max = min(image.shape[1], int(spot_y + background_yx))
-    x_spot_min = max(0, int(spot_x - background_yx))
-    x_spot_max = min(image.shape[2], int(spot_x + background_yx))
-    image_background = image_bis[z_spot_min:z_spot_max + 1,
-                                 y_spot_min:y_spot_max + 1,
-                                 x_spot_min:x_spot_max + 1]
-
-    # compute background and noise
-    image_background = image_background[image_background >= 0]
-    background = image_background.mean()
-    noise = max(image_background.std(), 10e-6)
-
-    # compute SNR
-    snr_spot = max(0, (signal - background)) / noise
-
-    return snr_spot
-
-
-def _compute_snr_per_spot_2d(image, spot, radius_spot, neighbourhood_spot):
-    """Extract a 2-d background and spot surface then compute the spot
-    Signal-to-Noise ratio.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (y, x).
-    spot : np.ndarray, np.int64
-        Coordinate of a spot, with shape (1, 2). One coordinate per dimension
-        (yx coordinates).
-    radius_spot : Tuple
-        Radius of the spot, one scalar per dimension (y, x).
-    neighbourhood_spot : Tuple
-        Radius of the spot background, one scalar per dimension (y, x).
-
-    Returns
-    -------
-    snr_spot : float
-        Signal-to-Noise ratio of the spot.
-
-    """
-    # get spot coordinate
-    spot_y, spot_x = spot
-
-    # get spot and background radii
-    radius_yx, radius_yx = radius_spot
-    background_yx, background_yx = neighbourhood_spot
-
-    # extract surface around spot
-    y_spot_min = max(0, int(spot_y - radius_yx))
-    y_spot_max = min(image.shape[0], int(spot_y + radius_yx))
-    x_spot_min = max(0, int(spot_x - radius_yx))
-    x_spot_max = min(image.shape[1], int(spot_x + radius_yx))
-    image_spot = image[y_spot_min:y_spot_max + 1,
-                       x_spot_min:x_spot_max + 1]
-
-    # compute signal
-    signal = image_spot.mean()
-
-    # remove spot values
-    image_bis = image.copy().astype(np.float64)
-    mask = np.ones_like(image_spot) * -1
-    image_bis[y_spot_min:y_spot_max + 1, x_spot_min:x_spot_max + 1] = mask
-
-    # extract a larger surface around spot to get the background
-    y_spot_min = max(0, int(spot_y - background_yx))
-    y_spot_max = min(image.shape[0], int(spot_y + background_yx))
-    x_spot_min = max(0, int(spot_x - background_yx))
-    x_spot_max = min(image.shape[1], int(spot_x + background_yx))
-    image_background = image_bis[y_spot_min:y_spot_max + 1,
-                                 x_spot_min:x_spot_max + 1]
-
-    # compute background and noise
-    image_background = image_background[image_background >= 0]
-    background = image_background.mean()
-    noise = max(image_background.std(), 10e-6)
-
-    # compute SNR
-    snr_spot = max(0, (signal - background)) / noise
-
-    return snr_spot

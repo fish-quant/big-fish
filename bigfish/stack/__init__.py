@@ -83,7 +83,6 @@ from .postprocess import from_coord_to_surface
 
 from .augmentation import augment_2d
 
-from .quality import compute_snr
 from .quality import compute_snr_spots
 
 
@@ -172,7 +171,6 @@ _augmentation = [
     "augment_2d"]
 
 _quality = [
-    "compute_snr",
     "compute_snr_spots"]
 
 
