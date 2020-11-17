@@ -13,82 +13,82 @@ from .quality import compute_focus
 
 # ### Projections 2-d ###
 
-def maximum_projection(tensor):
-    """Project the z-dimension of a tensor, keeping the maximum intensity of
+def maximum_projection(image):
+    """Project the z-dimension of an image, keeping the maximum intensity of
     each yx pixel.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
-        A 3-d tensor with shape (z, y, x).
+    image : np.ndarray, np.uint
+        A 3-d image with shape (z, y, x).
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint
-        A 2-d tensor with shape (y, x).
+    projected_image : np.ndarray, np.uint
+        A 2-d image with shape (y, x).
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
+    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
 
-    # project tensor along the z axis
-    projected_tensor = tensor.max(axis=0)
+    # project image along the z axis
+    projected_image = image.max(axis=0)
 
-    return projected_tensor
+    return projected_image
 
 
-def mean_projection(tensor, return_float=False):
-    """Project the z-dimension of a tensor, computing the mean intensity of
+def mean_projection(image, return_float=False):
+    """Project the z-dimension of a image, computing the mean intensity of
     each yx pixel.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
+    image : np.ndarray, np.uint
         A 3-d tensor with shape (z, y, x).
     return_float : bool
         Return a (potentially more accurate) float array.
 
     Returns
     -------
-    projected_tensor : np.ndarray
-        A 2-d tensor with shape (y, x).
+    projected_image : np.ndarray
+        A 2-d image with shape (y, x).
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
+    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
 
-    # project tensor along the z axis
+    # project image along the z axis
     if return_float:
-        projected_tensor = tensor.mean(axis=0)
+        projected_image = image.mean(axis=0)
     else:
-        projected_tensor = tensor.mean(axis=0).astype(tensor.dtype)
+        projected_image = image.mean(axis=0).astype(image.dtype)
 
-    return projected_tensor
+    return projected_image
 
 
-def median_projection(tensor):
-    """Project the z-dimension of a tensor, computing the median intensity of
+def median_projection(image):
+    """Project the z-dimension of a image, computing the median intensity of
     each yx pixel.
 
     Parameters
     ----------
-    tensor : np.ndarray, np.uint
-        A 3-d tensor with shape (z, y, x).
+    image : np.ndarray, np.uint
+        A 3-d image with shape (z, y, x).
 
     Returns
     -------
-    projected_tensor : np.ndarray, np.uint
-        A 2-d tensor with shape (y, x).
+    projected_image : np.ndarray, np.uint
+        A 2-d image with shape (y, x).
 
     """
     # check parameters
-    check_array(tensor, ndim=3, dtype=[np.uint8, np.uint16])
+    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
 
-    # project tensor along the z axis
-    projected_tensor = np.median(tensor, axis=0)
-    projected_tensor = projected_tensor.astype(tensor.dtype)
+    # project image along the z axis
+    projected_image = np.median(image, axis=0)
+    projected_image = projected_image.astype(image.dtype)
 
-    return projected_tensor
+    return projected_image
 
 
 def focus_projection_classic(image):
