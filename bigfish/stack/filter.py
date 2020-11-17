@@ -75,12 +75,12 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray, np.uint or np.float
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
         'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
         (height, width).
 
@@ -93,7 +93,7 @@ def mean_filter(image, kernel_shape, kernel_size):
     # check parameters
     check_array(image,
                 ndim=2,
-                dtype=[np.uint8, np.uint16])
+                dtype=[np.float32, np.float64, np.uint8, np.uint16])
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
