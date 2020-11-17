@@ -93,9 +93,9 @@ def test_mean_filter():
     expected_x = np.array(
         [[2, 1, 0, 0, 0],
          [1, 1, 0, 0, 0],
-         [1, 0, 1, 0, 0],
          [0, 0, 1, 0, 0],
-         [0, 0, 1, 1, 1]],
+         [0, 0, 1, 0, 0],
+         [0, 0, 0, 0, 0]],
         dtype=np.uint8)
     assert_array_equal(filtered_x, expected_x)
     assert filtered_x.dtype == np.uint8

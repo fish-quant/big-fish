@@ -26,6 +26,7 @@ from skimage.filters import rank
 from skimage.filters import gaussian
 
 from scipy.ndimage import gaussian_laplace
+from scipy.ndimage import convolve
 
 
 # ### Filters ###
@@ -70,7 +71,7 @@ def _define_kernel(shape, size, dtype):
 
 
 def mean_filter(image, kernel_shape, kernel_size):
-    """Apply a mean filter to a 2-d image.
+    """Apply a mean filter to a 2-d through convolution filter.
 
     Parameters
     ----------
@@ -96,13 +97,15 @@ def mean_filter(image, kernel_shape, kernel_size):
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
-    # get kernel
+    # build kernel
     kernel = _define_kernel(shape=kernel_shape,
                             size=kernel_size,
-                            dtype=image.dtype)
+                            dtype=np.float64)
+    n = kernel.sum()
+    kernel /= n
 
-    # apply filter
-    image_filtered = rank.mean(image, kernel)
+    # apply convolution filter
+    image_filtered = convolve(image, kernel)
 
     return image_filtered
 
