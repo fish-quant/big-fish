@@ -59,9 +59,8 @@ from .filter import erosion_filter
 from .projection import maximum_projection
 from .projection import mean_projection
 from .projection import median_projection
-from .projection import focus_projection
+from .projection import focus_projection_classic
 from .projection import focus_projection_fast
-from .projection import focus_measurement
 from .projection import in_focus_selection
 from .projection import get_in_focus_indices
 
@@ -84,6 +83,7 @@ from .postprocess import from_coord_to_surface
 from .augmentation import augment_2d
 
 from .quality import compute_snr_spots
+from .quality import compute_focus
 
 
 _utils = [
@@ -144,9 +144,8 @@ _projection = [
     "mean_projection",
     "median_projection",
     "in_focus_selection",
-    "focus_measurement",
     "get_in_focus_indices",
-    "focus_projection",
+    "focus_projection_classic",
     "focus_projection_fast"]
 
 _illumination = [
@@ -171,7 +170,8 @@ _augmentation = [
     "augment_2d"]
 
 _quality = [
-    "compute_snr_spots"]
+    "compute_snr_spots",
+    "compute_focus"]
 
 
 __all__ = (_utils + _io + _preprocess + _postprocess + _filter + _projection +
