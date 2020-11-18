@@ -1263,8 +1263,9 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
     Returns
     -------
     table_erf : Tuple[np.ndarray]
-        Tuple with one tables of precomputed values for the erf, with shape
-        (nb_value, 2). One table per dimension.
+        Tuple with tables of precomputed values for the erf, with shape
+        (nb_value, 2). One table per dimension. First column is the coordinate
+        along the table dimension. Second column is the precomputed erf value.
 
     """
     # check parameters
