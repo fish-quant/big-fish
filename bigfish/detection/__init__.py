@@ -13,6 +13,7 @@ from .spot_detection import spots_thresholding
 from .spot_detection import automated_threshold_setting
 
 from .cluster_decomposition import decompose_cluster
+from .cluster_decomposition import fit_subpixel
 from .cluster_decomposition import build_reference_spot
 from .cluster_decomposition import modelize_spot
 from .cluster_decomposition import precompute_erf
@@ -30,6 +31,7 @@ _spots = [
 
 _clusters = [
     "decompose_cluster",
+    "fit_subpixel",
     "build_reference_spot",
     "modelize_spot",
     "precompute_erf",

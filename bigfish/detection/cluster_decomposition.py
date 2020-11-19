@@ -313,8 +313,8 @@ def _build_reference_spot_3d(image, spots, radius, alpha):
         spot_z, spot_y, spot_x = candidate_spots[i_spot, :]
 
         # get the volume of the spot
-        image_spot = _get_spot_volume(image, spot_z, spot_y, spot_x,
-                                      radius_z, radius_yx)
+        image_spot, _, = _get_spot_volume(image, spot_z, spot_y, spot_x,
+                                          radius_z, radius_yx)
 
         # keep images that are not cropped by the borders
         if image_spot.shape == (z_shape, yx_shape, yx_shape):
@@ -361,6 +361,8 @@ def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     -------
     image_spot : np.ndarray
         Reference spot in 3-d.
+    _ : Tuple[int]
+        Lower zyx coordinates of the crop.
 
     """
     # get boundaries of the volume surrounding the spot
@@ -376,7 +378,7 @@ def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
                        y_spot_min:y_spot_max + 1,
                        x_spot_min:x_spot_max + 1]
 
-    return image_spot
+    return image_spot, (z_spot_min, y_spot_min, x_spot_min)
 
 
 def _build_reference_spot_2d(image, spots, radius, alpha):
@@ -422,7 +424,7 @@ def _build_reference_spot_2d(image, spots, radius, alpha):
         spot_y, spot_x = candidate_spots[i_spot, :]
 
         # get the volume of the spot
-        image_spot = _get_spot_surface(image, spot_y, spot_x, radius_yx)
+        image_spot, _ = _get_spot_surface(image, spot_y, spot_x, radius_yx)
 
         # keep images that are not cropped by the borders
         if image_spot.shape == (yx_shape, yx_shape):
@@ -464,6 +466,8 @@ def _get_spot_surface(image, spot_y, spot_x, radius_yx):
     -------
     image_spot : np.ndarray
         Reference spot in 2-d.
+    _ : Tuple[int]
+        Lower yx coordinates of the crop.
 
     """
     # get boundaries of the surface surrounding the spot
@@ -476,13 +480,13 @@ def _get_spot_surface(image, spot_y, spot_x, radius_yx):
     image_spot = image[y_spot_min:y_spot_max + 1,
                        x_spot_min:x_spot_max + 1]
 
-    return image_spot
+    return image_spot, (y_spot_min, x_spot_min)
 
 
 # ### Spot modelization ###
 
 def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
-                  psf_z=None, psf_yx=200):
+                  psf_z=None, psf_yx=200, return_coord=False):
     """Fit a gaussian function on the reference spot.
 
     Parameters
@@ -500,10 +504,18 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
+    return_coord : bool
+        Return spot coordinates.
 
     Returns
     -------
     parameters_fitted : Tuple[float]
+        - mu_z : float (optional)
+            Coordinate of the spot center along the z axis, in pixel.
+        - mu_y : float (optional)
+            Coordinate of the spot center along the y axis, in pixel.
+        - mu_x : float (optional)
+            Coordinate of the spot center along the x axis, in pixel.
         - sigma_z : float
             Standard deviation of the spot along the z axis, in pixel.
             Available only for a 3-d modelization.
@@ -522,7 +534,8 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
     stack.check_parameter(voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
-                          psf_yx=(int, float))
+                          psf_yx=(int, float),
+                          return_coord=bool)
 
     # check number of dimensions
     ndim = reference_spot.ndim
@@ -576,19 +589,30 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
 
     # get optimized parameters to modelize the reference spot as a gaussian
     if ndim == 3:
+        mu_z = popt[0]
+        mu_y = popt[1]
+        mu_x = popt[2]
         sigma_z = popt[3]
         sigma_yx = popt[4]
         amplitude = popt[5]
         background = popt[6]
 
-        return sigma_z, sigma_yx, amplitude, background
+        if return_coord:
+            return mu_z, mu_y, mu_x,sigma_z, sigma_yx, amplitude, background
+        else:
+            return sigma_z, sigma_yx, amplitude, background
 
     else:
+        mu_y = popt[0]
+        mu_x = popt[1]
         sigma_yx = popt[2]
         amplitude = popt[3]
         background = popt[4]
 
-        return sigma_yx, amplitude, background
+        if return_coord:
+            return mu_y, mu_x, sigma_yx, amplitude, background
+        else:
+            return sigma_yx, amplitude, background
 
 
 # ### Spot modelization: initialization ###
@@ -1882,3 +1906,211 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
     best_simulation = best_simulation.astype(image_region.dtype)
 
     return image_region, best_simulation, positions_gaussian
+
+
+# ### Subpixel fitting ###
+
+def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
+                 psf_z=None, psf_yx=200):
+    """Fit gaussian signal on every spot to find a subpixel coordinates.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x) or (y, x).
+    spots : np.ndarray, np.int64
+        Coordinate of the spots detected, with shape (nb_spots, 3) or
+        (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
+    # TODO Error returned with a float
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, image is considered in 2-d.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+
+    Returns
+    -------
+    spots_subpixel : np.ndarray, np.float64
+        Coordinate of the spots detected, with shape (nb_spots, 3) or
+        (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
+
+    """
+    # check parameters
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_array(spots, ndim=2, dtype=np.int64)
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float))
+
+    # check number of dimensions
+    ndim = image.ndim
+    if ndim == 3 and voxel_size_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'voxel_size_z' parameter is missing.".format(ndim))
+    if ndim == 3 and psf_z is None:
+        raise ValueError("Provided image has {0} dimensions but "
+                         "'psf_z' parameter is missing.".format(ndim))
+    if ndim != spots.shape[1]:
+        raise ValueError("Provided image has {0} dimensions but spots are "
+                         "detected in {1} dimensions."
+                         .format(ndim, spots.shape[1]))
+    if ndim == 2:
+        voxel_size_z, psf_z = None, None
+
+    # compute radius
+    radius = stack.get_radius(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+
+    # loop over every spot
+    spots_subpixel = []
+    for coord in spots[:, :ndim]:
+
+        # fit subpixel coordinates
+        if ndim == 3:
+            subpixel_coord = _fit_subpixel_3d(image, coord, radius, voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+
+        else:
+            subpixel_coord = _fit_subpixel_2d(
+                image, coord, radius, voxel_size_yx, psf_yx)
+
+        spots_subpixel.append(subpixel_coord)
+
+    # format results
+    spots_subpixel = np.stack(spots_subpixel)
+
+    return spots_subpixel
+
+
+def _fit_subpixel_3d(image, coord, radius, voxel_size_z, voxel_size_yx, psf_z,
+                     psf_yx):
+    """Fit a gaussian in a 3-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (z, y, x).
+    coord : np.ndarray, np.int64
+        Coordinate of the spot detected, with shape (3,). One coordinate per
+        dimension (zyx coordinates).
+    radius : Tuple[float]
+        Radius in pixels of the detected spots, one element per dimension.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+
+    Returns
+    -------
+    new_coord : List[float]
+        Coordinates of the spot centroid with a subpixel accuracy (one element
+        per dimension).
+
+    """
+    # extract spot image
+    image_spot, bbox_low = _get_spot_volume(
+        image, coord[0], coord[1], coord[2], radius[0], radius[1])
+
+    # fit gaussian
+    try:
+        parameters = modelize_spot(image_spot,
+                                   voxel_size_z=voxel_size_z,
+                                   voxel_size_yx=voxel_size_yx,
+                                   psf_z=psf_z, psf_yx=psf_yx,
+                                   return_coord=True)
+
+        # format coordinates and ensure it is fitted within the spot image
+        z_max, y_max, x_max = image_spot.shape
+        coord_z = parameters[0] / voxel_size_z
+        if coord_z < 0 or coord_z > z_max:
+            coord_z = coord[0]
+        else:
+            coord_z += bbox_low[0]
+        coord_y = parameters[1] / voxel_size_yx
+        if coord_y < 0 or coord_y > y_max:
+            coord_y = coord[1]
+        else:
+            coord_y += bbox_low[1]
+        coord_x = parameters[2] / voxel_size_yx
+        if coord_x < 0 or coord_x > x_max:
+            coord_x = coord[2]
+        else:
+            coord_x += bbox_low[2]
+        new_coord = [coord_z, coord_y, coord_x]
+
+    # if a spot is ill-conditioned, we simply keep its original coordinates
+    except RuntimeError:
+        new_coord = list(coord)
+
+    return new_coord
+
+
+def _fit_subpixel_2d(image, coord, radius, voxel_size_yx, psf_yx):
+    """Fit a gaussian in a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image with shape (y, x).
+    coord : np.ndarray, np.int64
+        Coordinate of the spot detected, with shape (2,). One coordinate per
+        dimension (yx coordinates).
+    radius : Tuple[float]
+        Radius in pixels of the detected spots, one element per dimension.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+
+    Returns
+    -------
+    new_coord : List[float]
+        Coordinates of the spot centroid with a subpixel accuracy (one element
+        per dimension).
+
+    """
+    # extract spot image
+    image_spot, bbox_low = _get_spot_surface(
+        image, coord[0], coord[1], radius[0])
+
+    # fit gaussian
+    try:
+        parameters = modelize_spot(image_spot,
+                                   voxel_size_z=None,
+                                   voxel_size_yx=voxel_size_yx,
+                                   psf_z=None, psf_yx=psf_yx,
+                                   return_coord=True)
+
+        # format coordinates and ensure it is fitted within the spot image
+        y_max, x_max = image_spot.shape
+        coord_y = parameters[0] / voxel_size_yx
+        if coord_y < 0 or coord_y > y_max:
+            coord_y = coord[0]
+        else:
+            coord_y += bbox_low[0]
+        coord_x = parameters[1] / voxel_size_yx
+        if coord_x < 0 or coord_x > x_max:
+            coord_x = coord[1]
+        else:
+            coord_x += bbox_low[1]
+        new_coord = [coord_y, coord_x]
+
+    # if a spot is ill-conditioned, we simply keep its original coordinates
+    except RuntimeError:
+        new_coord = list(coord)
+
+    return new_coord
