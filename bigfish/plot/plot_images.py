@@ -536,9 +536,9 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
                           show=bool)
     if isinstance(spots, list):
         for spots_ in spots:
-            stack.check_array(spots_, ndim=2, dtype=np.int64)
+            stack.check_array(spots_, ndim=2, dtype=[np.int64, np.float64])
     else:
-        stack.check_array(spots, ndim=2, dtype=np.int64)
+        stack.check_array(spots, ndim=2, dtype=[np.int64, np.float64])
 
     # enlist and format parameters
     if not isinstance(spots, list):
