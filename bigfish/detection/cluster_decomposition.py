@@ -43,7 +43,6 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_z : int or float or None
         Height of a voxel, along the z axis, in nanometer. If None, image is
         considered in 2-d.
-    # TODO Error returned with a float
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
@@ -699,15 +698,15 @@ def _initialize_grid_3d(image_spot, voxel_size_z, voxel_size_yx,
     # build meshgrid
     zz, yy, xx = np.meshgrid(np.arange(nb_z), np.arange(nb_y), np.arange(nb_x),
                              indexing="ij")
-    zz *= voxel_size_z
-    yy *= voxel_size_yx
-    xx *= voxel_size_yx
+    zz = zz.astype(np.float32) * float(voxel_size_z)
+    yy = yy.astype(np.float32) * float(voxel_size_yx)
+    xx = xx.astype(np.float32) * float(voxel_size_yx)
 
     # format result
     grid = np.zeros((3, nb_pixels), dtype=np.float32)
-    grid[0] = np.reshape(zz, (1, nb_pixels)).astype(np.float32)
-    grid[1] = np.reshape(yy, (1, nb_pixels)).astype(np.float32)
-    grid[2] = np.reshape(xx, (1, nb_pixels)).astype(np.float32)
+    grid[0] = np.reshape(zz, (1, nb_pixels))
+    grid[1] = np.reshape(yy, (1, nb_pixels))
+    grid[2] = np.reshape(xx, (1, nb_pixels))
 
     # compute centroid of the grid
     if return_centroid:
@@ -752,13 +751,14 @@ def _initialize_grid_2d(image_spot, voxel_size_yx, return_centroid=False):
 
     # build meshgrid
     yy, xx = np.meshgrid(np.arange(nb_y), np.arange(nb_x), indexing="ij")
-    yy *= voxel_size_yx
-    xx *= voxel_size_yx
+
+    yy = yy.astype(np.float32) * float(voxel_size_yx)
+    xx = xx.astype(np.float32) * float(voxel_size_yx)
 
     # format result
     grid = np.zeros((2, nb_pixels), dtype=np.float32)
-    grid[0] = np.reshape(yy, (1, nb_pixels)).astype(np.float32)
-    grid[1] = np.reshape(xx, (1, nb_pixels)).astype(np.float32)
+    grid[0] = np.reshape(yy, (1, nb_pixels))
+    grid[1] = np.reshape(xx, (1, nb_pixels))
 
     # compute centroid of the grid
     if return_centroid:
@@ -1293,25 +1293,25 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 
     """
     # check parameters
-    stack.check_parameter(voxel_size_z=(int, type(None)),
-                          voxel_size_yx=int,
-                          sigma_z=(float, int, type(None)),
-                          sigma_yx=(float, int),
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          sigma_z=(int, float, type(None)),
+                          sigma_yx=(int, float),
                           max_grid=int)
 
     # build a grid with a spatial resolution of 5 nm and a size of
     # max_grid * resolution nm
-    yy = np.array([i for i in range(0, max_grid * voxel_size_yx, 5)])
-    xx = np.array([i for i in range(0, max_grid * voxel_size_yx, 5)])
+    yy = np.array([i for i in range(0, int(max_grid * voxel_size_yx), 5)])
+    xx = np.array([i for i in range(0, int(max_grid * voxel_size_yx), 5)])
     mu_y, mu_x = 0, 0
 
     # compute erf values for this grid
-    erf_y = _rescaled_erf(low=yy - voxel_size_yx/2,
-                          high=yy + voxel_size_yx/2,
+    erf_y = _rescaled_erf(low=yy - voxel_size_yx / 2,
+                          high=yy + voxel_size_yx / 2,
                           mu=mu_y,
                           sigma=sigma_yx)
-    erf_x = _rescaled_erf(low=xx - voxel_size_yx/2,
-                          high=xx + voxel_size_yx/2,
+    erf_x = _rescaled_erf(low=xx - voxel_size_yx / 2,
+                          high=xx + voxel_size_yx / 2,
                           mu=mu_x,
                           sigma=sigma_yx)
 
@@ -1323,7 +1323,7 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
         return table_erf_y, table_erf_x
 
     else:
-        zz = np.array([i for i in range(0, max_grid * voxel_size_z, 5)])
+        zz = np.array([i for i in range(0, int(max_grid * voxel_size_z), 5)])
         mu_z = 0
         erf_z = _rescaled_erf(low=zz - voxel_size_z / 2,
                               high=zz + voxel_size_z / 2,
@@ -1924,7 +1924,6 @@ def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_z : int or float or None
         Height of a voxel, along the z axis, in nanometer. If None, image is
         considered in 2-d.
-    # TODO Error returned with a float
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
