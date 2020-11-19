@@ -21,6 +21,8 @@ from .utils import compute_hash
 from .utils import check_input_data
 from .utils import moving_average
 from .utils import centered_moving_average
+from .utils import get_sigma
+from .utils import get_radius
 
 from .io import read_image
 from .io import read_dv
@@ -57,9 +59,8 @@ from .filter import erosion_filter
 from .projection import maximum_projection
 from .projection import mean_projection
 from .projection import median_projection
-from .projection import focus_projection
+from .projection import focus_projection_classic
 from .projection import focus_projection_fast
-from .projection import focus_measurement
 from .projection import in_focus_selection
 from .projection import get_in_focus_indices
 
@@ -81,6 +82,9 @@ from .postprocess import from_coord_to_surface
 
 from .augmentation import augment_2d
 
+from .quality import compute_snr_spots
+from .quality import compute_focus
+
 
 _utils = [
     "check_array",
@@ -96,7 +100,9 @@ _utils = [
     "compute_hash",
     "check_input_data",
     "moving_average",
-    "centered_moving_average"]
+    "centered_moving_average",
+    "get_sigma",
+    "get_radius"]
 
 _io = [
     "read_image",
@@ -138,9 +144,8 @@ _projection = [
     "mean_projection",
     "median_projection",
     "in_focus_selection",
-    "focus_measurement",
     "get_in_focus_indices",
-    "focus_projection",
+    "focus_projection_classic",
     "focus_projection_fast"]
 
 _illumination = [
@@ -164,6 +169,10 @@ _postprocess = [
 _augmentation = [
     "augment_2d"]
 
+_quality = [
+    "compute_snr_spots",
+    "compute_focus"]
+
 
 __all__ = (_utils + _io + _preprocess + _postprocess + _filter + _projection +
-           _illumination + _augmentation)
+           _illumination + _augmentation + _quality)

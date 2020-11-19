@@ -93,9 +93,9 @@ def test_mean_filter():
     expected_x = np.array(
         [[2, 1, 0, 0, 0],
          [1, 1, 0, 0, 0],
-         [1, 0, 1, 0, 0],
          [0, 0, 1, 0, 0],
-         [0, 0, 1, 1, 1]],
+         [0, 0, 1, 0, 0],
+         [0, 0, 0, 0, 0]],
         dtype=np.uint8)
     assert_array_equal(filtered_x, expected_x)
     assert filtered_x.dtype == np.uint8
@@ -107,6 +107,28 @@ def test_mean_filter():
     expected_x = expected_x.astype(np.uint16)
     assert_array_equal(filtered_x, expected_x)
     assert filtered_x.dtype == np.uint16
+
+    # np.float32
+    filtered_x = stack.mean_filter(x.astype(np.float32),
+                                   kernel_shape="square",
+                                   kernel_size=3)
+    expected_x = np.array(
+        [[2.333, 1.444, 0.556, 0., 0.],
+         [1.556, 1., 0.444, 0., 0.],
+         [0.889, 0.778, 1.111, 0.667, 0.556],
+         [0.333, 0.444, 1., 0.667, 0.556],
+         [0.222, 0.333, 0.889, 0.667, 0.556]],
+        dtype=np.float32)
+    assert_allclose(filtered_x, expected_x, rtol=1e-02)
+    assert filtered_x.dtype == np.float32
+
+    # np.float64
+    filtered_x = stack.mean_filter(x.astype(np.float64),
+                                   kernel_shape="square",
+                                   kernel_size=3)
+    expected_x = expected_x.astype(np.float64)
+    assert_allclose(filtered_x, expected_x, rtol=1e-02)
+    assert filtered_x.dtype == np.float64
 
 
 def test_median_filter():
