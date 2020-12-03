@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Class and functions to detect RNA spots in 2-d and 3-d.
+Functions to detect spots in 2-d and 3-d.
 """
 
 import scipy.ndimage as ndi

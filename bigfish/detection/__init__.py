@@ -12,15 +12,15 @@ from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
 from .spot_detection import automated_threshold_setting
 
-from .cluster_decomposition import decompose_cluster
-from .cluster_decomposition import fit_subpixel
-from .cluster_decomposition import build_reference_spot
-from .cluster_decomposition import modelize_spot
-from .cluster_decomposition import precompute_erf
-from .cluster_decomposition import get_clustered_region
-from .cluster_decomposition import fit_gaussian_mixture
+from .dense_decomposition import decompose_cluster
+from .dense_decomposition import fit_subpixel
+from .dense_decomposition import build_reference_spot
+from .dense_decomposition import modelize_spot
+from .dense_decomposition import precompute_erf
+from .dense_decomposition import get_clustered_region
+from .dense_decomposition import fit_gaussian_mixture
 
-from .foci_detection import detect_foci
+from .cluster_detection import detect_clusters
 
 
 _spots = [
@@ -29,7 +29,7 @@ _spots = [
     "spots_thresholding",
     "automated_threshold_setting"]
 
-_clusters = [
+_dense = [
     "decompose_cluster",
     "fit_subpixel",
     "build_reference_spot",
@@ -38,7 +38,7 @@ _clusters = [
     "get_clustered_region",
     "fit_gaussian_mixture"]
 
-_foci = [
-    "detect_foci"]
+_clusters = [
+    "detect_clusters"]
 
-__all__ = _spots + _clusters + _foci
+__all__ = _spots + _dense + _clusters

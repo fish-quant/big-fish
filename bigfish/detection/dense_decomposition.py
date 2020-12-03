@@ -3,8 +3,8 @@
 # License: BSD 3 clause
 
 """
-Functions to fit gaussian functions to the detected RNA spots, especially in
-clustered regions.
+Functions to detect dense regions (with potential clustered spots) and
+use gaussian functions to correct a misdetection in these regions.
 """
 
 import warnings
