@@ -22,7 +22,7 @@ from skimage.measure import label
 # ### Main function ###
 
 def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                      psf_z=None, psf_yx=200, alpha=0.5, beta=1):
+                      psf_z=None, psf_yx=200, alpha=0.5, beta=1, gamma=5):
     """Detect potential regions with clustered spots and fit as many reference
     spots as possible in these regions.
 
@@ -60,6 +60,14 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
         Multiplicative factor for the intensity threshold of a cluster region.
         Default is 1. Threshold is computed with the formula :
             threshold = beta * max(median_spot)
+    gamma : int or float
+        Multiplicative factor use to compute a gaussian scale :
+            large_sigma = gamma * psf / voxel_size
+        We perform a large gaussian filter with such scale to estimate image
+        background and remove it from original image. A large gamma increases
+        the scale of the gaussian filter and smooth the estimated background.
+        To decompose very large bright areas, a larger gamma should be set.
+        If 0, image is not denoised.
 
     Returns
     -------
@@ -85,13 +93,17 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
                           psf_z=(int, float, type(None)),
                           psf_yx=(int, float),
                           alpha=(int, float),
-                          beta=(int, float))
+                          beta=(int, float),
+                          gamma=(int, float))
     if alpha < 0 or alpha > 1:
         raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
                          .format(alpha))
     if beta < 0:
         raise ValueError("'beta' should be a positive value, not {0}"
                          .format(beta))
+    if gamma < 0:
+        raise ValueError("'gamma' should be a positive value, not {0}"
+                         .format(gamma))
 
     # check number of dimensions
     ndim = image.ndim
@@ -116,12 +128,15 @@ def decompose_cluster(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # compute expected standard deviation of the spots
     sigma = stack.get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
-    large_sigma = tuple([sigma_ * 5 for sigma_ in sigma])
+    large_sigma = tuple([sigma_ * gamma for sigma_ in sigma])
 
     # denoise the image
-    image_denoised = stack.remove_background_gaussian(
-        image,
-        sigma=large_sigma)
+    if gamma > 0:
+        image_denoised = stack.remove_background_gaussian(
+            image,
+            sigma=large_sigma)
+    else:
+        image_denoised = image.copy()
 
     # build a reference median spot
     reference_spot = build_reference_spot(
