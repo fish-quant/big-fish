@@ -182,7 +182,5 @@ def test_one_hot_3d(dtype):
 
 # TODO remove test bigfish.stack.test_one_hot_3d
 # TODO test bigfish.stack.focus_projection
-# TODO test bigfish.stack.focus_projection_fast
 # TODO test bigfish.stack.in_focus_selection
-# TODO test bigfish.stack.focus_measurement
 # TODO test bigfish.stack.get_in_focus_indices

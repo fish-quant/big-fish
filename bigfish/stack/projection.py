@@ -91,6 +91,7 @@ def median_projection(image):
     return projected_image
 
 
+# TODO to deprecate
 def focus_projection_classic(image):
     """Project the z-dimension of an image as describe in Samacoits Aubin's
     thesis (part 5.3, strategy 5).
@@ -148,8 +149,8 @@ def focus_projection_classic(image):
     return projected_image
 
 
-def focus_projection_fast(image, proportion=5, neighborhood_size=7,
-                          method="median"):
+def focus_projection(image, proportion=5, neighborhood_size=7,
+                     method="median"):
     """Project the z-dimension of an image.
 
     Inspired from Samacoits Aubin's thesis (part 5.3, strategy 5). Compare to
@@ -171,7 +172,8 @@ def focus_projection_fast(image, proportion=5, neighborhood_size=7,
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
     method : str
-        Projection method applied on the selected pixel values.
+        Projection method applied on the selected pixel values ('median' or
+        'max').
 
     Returns
     -------

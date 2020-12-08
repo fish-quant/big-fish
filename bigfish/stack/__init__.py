@@ -59,8 +59,7 @@ from .filter import erosion_filter
 from .projection import maximum_projection
 from .projection import mean_projection
 from .projection import median_projection
-from .projection import focus_projection_classic
-from .projection import focus_projection_fast
+from .projection import focus_projection
 from .projection import in_focus_selection
 from .projection import get_in_focus_indices
 
@@ -145,8 +144,7 @@ _projection = [
     "median_projection",
     "in_focus_selection",
     "get_in_focus_indices",
-    "focus_projection_classic",
-    "focus_projection_fast"]
+    "focus_projection"]
 
 _illumination = [
     "compute_illumination_surface",
