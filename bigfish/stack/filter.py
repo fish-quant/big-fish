@@ -26,6 +26,7 @@ from skimage.filters import rank
 from skimage.filters import gaussian
 
 from scipy.ndimage import gaussian_laplace
+from scipy.ndimage import convolve
 
 
 # ### Filters ###
@@ -70,16 +71,16 @@ def _define_kernel(shape, size, dtype):
 
 
 def mean_filter(image, kernel_shape, kernel_size):
-    """Apply a mean filter to a 2-d image.
+    """Apply a mean filter to a 2-d through convolution filter.
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray, np.uint or np.float
         Image with shape (y, x).
     kernel_shape : str
         Shape of the kernel used to compute the filter ('diamond', 'disk',
         'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
         (height, width).
 
@@ -92,17 +93,19 @@ def mean_filter(image, kernel_shape, kernel_size):
     # check parameters
     check_array(image,
                 ndim=2,
-                dtype=[np.uint8, np.uint16])
+                dtype=[np.float32, np.float64, np.uint8, np.uint16])
     check_parameter(kernel_shape=str,
                     kernel_size=(int, tuple, list))
 
-    # get kernel
+    # build kernel
     kernel = _define_kernel(shape=kernel_shape,
                             size=kernel_size,
-                            dtype=image.dtype)
+                            dtype=np.float64)
+    n = kernel.sum()
+    kernel /= n
 
-    # apply filter
-    image_filtered = rank.mean(image, kernel)
+    # apply convolution filter
+    image_filtered = convolve(image, kernel)
 
     return image_filtered
 

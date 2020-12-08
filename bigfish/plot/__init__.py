@@ -15,6 +15,7 @@ from .plot_images import plot_reference_spot
 from .plot_images import plot_cell
 
 from .plot_quality import plot_sharpness
+from .plot_quality import plot_snr_spots
 
 from .plot_classification import plot_confusion_matrix
 from .plot_classification import plot_2d_projection
@@ -34,6 +35,7 @@ _classification = [
     "plot_2d_projection"]
 
 _quality = [
-    "plot_sharpness"]
+    "plot_sharpness",
+    "plot_snr_spots"]
 
 __all__ = _images + _classification + _quality
