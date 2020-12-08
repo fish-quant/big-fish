@@ -6,6 +6,7 @@
 Functions to detect spots in 2-d and 3-d.
 """
 
+import warnings
 import scipy.ndimage as ndi
 import numpy as np
 
@@ -232,7 +233,8 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
         thresholds, count_spots = _get_spot_counts(thresholds, all_value_spots)
 
         # select threshold where the kink of the distribution is located
-        threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+        if count_spots.size > 0:
+            threshold, _, _ = _get_breaking_point(thresholds, count_spots)
 
     # detect spots
     all_spots = []
@@ -326,8 +328,9 @@ def spots_thresholding(image, mask_local_max, threshold,
         Image with shape (z, y, x) or (y, x).
     mask_local_max : np.ndarray, bool
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
-    threshold : float or int
-        A threshold to discriminate relevant spots from noisy blobs.
+    threshold : float, int or None
+        A threshold to discriminate relevant spots from noisy blobs. If None,
+        detection is aborted with a warning.
     remove_duplicate : bool
         Remove potential duplicate coordinates for the same spots. Slow the
         running.
@@ -348,8 +351,16 @@ def spots_thresholding(image, mask_local_max, threshold,
     stack.check_array(mask_local_max,
                       ndim=[2, 3],
                       dtype=[bool])
-    stack.check_parameter(threshold=(float, int),
+    stack.check_parameter(threshold=(float, int, type(None)),
                           remove_duplicate=bool)
+
+    if threshold is None:
+        mask = np.zeros_like(image, dtype=bool)
+        spots = np.array([], dtype=np.int64).reshape((0, image.ndim))
+        warnings.warn("No spots were detected (threshold is {0})."
+                      .format(threshold),
+                      UserWarning)
+        return spots, mask
 
     # remove peak with a low intensity
     mask = (mask_local_max & (image > threshold))
@@ -376,6 +387,12 @@ def spots_thresholding(image, mask_local_max, threshold,
         # get peak coordinates
         spots = np.nonzero(mask)
         spots = np.column_stack(spots)
+
+    # case where no spots were detected
+    if spots.size == 0:
+        warnings.warn("No spots were detected (threshold is {0})."
+                      .format(threshold),
+                      UserWarning)
 
     return spots, mask
 
@@ -423,7 +440,12 @@ def automated_threshold_setting(image, mask_local_max):
     thresholds, count_spots = _get_spot_counts(thresholds, value_spots)
 
     # select threshold where the kink of the distribution is located
-    optimal_threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+    if count_spots.size > 0:
+        optimal_threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+
+    # case where no spots were detected
+    else:
+        optimal_threshold = None
 
     return optimal_threshold
 
@@ -466,6 +488,8 @@ def _get_spot_counts(thresholds, value_spots):
 
     Returns
     -------
+    thresholds : np.ndarray, np.float64
+        Candidate threshold values.
     count_spots : np.ndarray, np.float64
         Spots count function.
 
