@@ -3,7 +3,8 @@
 # License: BSD 3 clause
 
 """
-Functions to cluster spots point cloud and detect aggregated structures.
+Functions to cluster spots in point cloud and detect relevant aggregated
+structures.
 """
 
 import numpy as np
