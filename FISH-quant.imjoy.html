@@ -1,0 +1,1201 @@
+<docs lang="markdown">
+    Python plugin performing analyze of smFISH images. 
+    
+    __DEV NOTE__: with tag "dev" no requirements will be installed. Make sure that you have
+    big-fish installed in the env where you run this plugin. Either the stable version from 
+    `https://github.com/muellerflorian/big-fish@test-setup` or a local editable installation.
+    </docs>
+    
+    <config lang="json">
+    {
+      "name": "FISH-QUANT(Test)",
+      "type": "native-python",
+      "version": "0.0.11",
+      "description": "Process smFISH images.",
+      "tags": ["stable","dev"],
+      "ui": "",
+      "cover": "",
+      "inputs": null,
+      "outputs": null,
+      "flags": ["single-instance", "allow-detach"],
+      "icon": "extension",
+      "api_version": "0.1.8",
+      "env": [{"type": "binder", "spec": "fish-quant/fq-imjoy/binder", "skip_requirements": true}],
+      "permissions": [],
+      "requirements": { "stable":["cmd:pip install -U git+https://github.com/fish-quant/big-fish.git@fix-matplotlib-mac#egg=big-fish"],
+                        "dev": [""]},
+        "dependencies":  [
+              "fish-quant/fq-imjoy:FQ-interface"
+              ],
+      "runnable": true
+    }
+    </config>
+    
+    <script lang="python">
+    
+    from imjoy import api
+    import asyncio
+    import sys
+    import os
+    from os.path import basename
+    from pathlib import Path
+    import json
+    import re
+    import base64
+    from datetime import datetime
+    import urllib.request
+    import zipfile
+    import numpy as np
+    from skimage import io
+    import pandas as pd
+    from skimage.exposure import rescale_intensity
+    import bigfish  # Is there a way to get the version without import?
+    from bigfish import stack, plot, detection
+    
+    # TEMPORARY BUG FIX 
+    # 1. fix_1: bad orientation in kaibu:
+    #     * 'np.flipud': correct orientation of image in Kaibu. 
+    #     * Flip y corrdinates
+    
+    # For MAC
+    if sys.platform == "darwin":
+        import matplotlib
+        matplotlib.use('PS')
+    
+    
+    def log_config(fun_name, config):
+        """
+        log the config file, and remove larger elements to not clog the log
+        """
+        api.log(f'{fun_name} received data::')
+        if 'detection_plot' in config:
+            api.log('Detection plot present, but removed for display')
+            del config['detection_plot']
+    
+        api.log(config)
+    
+    
+    def save_spots(spots, type, name_save):
+        """
+        Save results of spot detection.
+        """
+        if type == 'ZYX':
+            header = "Z,Y,X"
+    
+        if type == 'ZYXF':
+            header = "Z,Y,X,foci_idx"
+    
+        np.savetxt( name_save,
+                    np.asarray(spots),
+                    fmt='%i',
+                    header=header, 
+                    delimiter=',', 
+                    comments='')
+        api.log(f'[FISH-QUANT][save_spots] results ({type} saved as: {name_save}')
+    
+    
+    def save_foci(foci, name_save):
+        """
+        Save results of foci detection.
+        """
+    
+        header = "Z,Y,X,n_rna,index"
+    
+        np.savetxt( name_save,
+                    np.asarray(foci),
+                    fmt='%i',
+                    header=header, 
+                    delimiter=',', 
+                    comments='')
+        api.log(f'[FISH-QUANT][save_foci] results ({type} saved as: {name_save}')
+    
+    
+    def save_encoded_plot(plot, name_save):
+        """
+        Save encoded plot as png. Can then be used to be displayed in ImJoy.
+        """
+        header, img_encoded = plot.split(",", 1)
+        img_decoded = base64.b64decode(img_encoded)
+        with open(name_save, 'wb') as f:
+            f.write(img_decoded)
+        api.log(f'[FISH-QUANT][save_encoded_plot]: plot saved as {name_save}')
+    
+    
+    def show_png(name_img):
+        """
+        Show png image in ImJoy dialog.
+        """
+        with open(name_img, 'rb') as f:
+            data = f.read()
+            result = base64.b64encode(data).decode('ascii')
+            imgurl = 'data:image/png;base64,' + result
+            #api.createWindow(type='imjoy/image', w=12, h=15, data={"src": imgurl})
+            api.showDialog(type='imjoy/image', w=12, h=15, data={"src": imgurl})
+    
+    
+    def create_folder(path_new):
+        """
+        Create new folder. Checks if path `path_new` exisist. If not, create it.
+        """
+        if not path_new.is_dir():
+            path_new.mkdir(parents=True)
+    
+    
+    def create_output_path(data_path, output_path):
+        """
+        Function to create output path to stored data.
+    
+        If the string output_path contains characters '>>' it will not
+        be interpreted as a path name but as an indicator for a string
+        replacement operation for the data_path: old_str>>new_str
+        """
+        
+        # Make sure they are strings
+        data_path = str(data_path)
+        output_path = str(output_path)
+    
+        if (re.search(">>", output_path)):
+          str_orig = re.search(r'^(.*)>>(.*)$', output_path).group(1)
+          str_rep = re.search(r'^(.*)>>(.*)$', output_path).group(2)
+    
+          print(f'Replacement parameters found: original string: {str_orig}, replacement string: {str_rep}')
+    
+          output_path_return = data_path.replace(str_orig,str_rep)
+          print(f'Output path: {output_path_return}')
+    
+        else:
+          print("No match")
+          output_path_return = output_path
+    
+        # Convert back to Path
+        output_path_return = Path(output_path_return)
+        create_folder(output_path_return)
+    
+        return output_path_return
+    
+    
+    async def create_mip(img, name_save, file_manager, create_url=False, rescale=True):
+        """
+        Provide a base64 encoded URL of a MIP.
+    
+        """
+    
+        # Create MIP for 3D images
+        img_mip = stack.maximum_projection(img)
+    
+        # Create URL for image to be shown in interface
+        if create_url:
+    
+            # Rescale image (only required when creating url)
+            if rescale:
+                pa, pb = np.percentile(img_mip, (0.1,99.99))
+                img_mip_save = rescale_intensity(img_mip, in_range=(pa, pb),out_range=np.uint8).astype('uint8')
+            else:
+                img_mip_save = np.copy(img_mip)
+    
+            stack.save_image(img_mip_save, name_save)
+            api.log(f'[FISH-QUANT][create_mip] mip saved as: {name_save}')
+    
+            # Preferred solution, but doesn't work yet. 
+            # Bug in Jupyter: returned content-Type is "text/html" but should be "image/png"
+            # Causes CORB error in Chrome.
+    
+            # img_url = await file_manager.getFileUrl({'path': name_save})
+            # api.log(file_url)
+            # return img_mip, img_mip.shape, file_url
+        
+            # Workaround until content type is fixed
+            with open(name_save, 'rb') as f:
+                data = f.read()
+                result = base64.b64encode(data).decode('ascii')
+                img_url = 'data:image/png;base64,' + result
+        
+        else:
+            img_url = None
+        
+        return img_mip, img_mip.shape, img_url
+        
+    
+    class ImJoyPlugin():
+    
+     
+        async def setup(self):
+            api.log('[FISH-QUANT] plugin initialized.')
+            self.file_manager = await api.getFileManager(api.FILE_MANAGER_URL)
+            self.path_analysis = None
+            self.analysis_details = {
+                    'date': '',
+                    'data_specs': {},
+                    'image_properties': {},
+                    'spot_detection': {'counts': {},
+                                      'settings' :{}
+                                       }
+            }
+            
+    
+        async def run(self, ctx):
+            self.FQ_interface = await api.createWindow(type="FQ-interface",
+                                                       name='FISH-quant',
+                                                       fullscreen=True,
+                                                       data={'file_manager': api.FILE_MANAGER_URL,
+                                                             'engine_url': api.ENGINE_URL,
+                                                             'version_FQ': await api.getConfig('_version'),
+                                                             'version_bigfish': bigfish.__version__})
+    
+    
+        def get_engine_url(self):
+            return api.ENGINE_URL
+    
+    
+        async def get_zipped_data(self, url):
+            """
+            Download test data.
+            """
+            # TODO: check that provide url is good
+    
+            api.showStatus('Getting zipped data ... download & unzipping might take a bit of time .... ')
+    
+            path_acquisition = None
+    
+            # Get data
+            url = await api.prompt("URL to zipped data", url)
+            api.log(f'Loading data from : {url}')
+            
+            # Download to the user directory
+            user_home = Path.home()
+            name_save = Path.home() / "fq-imjoy-tutorial.zip"
+    
+            # Download zip archive
+            with urllib.request.urlopen(url) as response, open(str(name_save), "wb") as out_file:
+                data = response.read()  # a `bytes` object
+                out_file.write(data)
+    
+            # Unzip and find acquisition folder
+            path_extract = name_save.parent
+    
+            with zipfile.ZipFile(name_save, "r") as zip_ref:
+                zip_ref.extractall(path=path_extract)
+    
+                extracted_files = zip_ref.namelist()
+                api.alert(f'Zipped data extracted to         : {str(path_extract)}')
+                api.log(f'Following files were extracted:')
+                api.log(*extracted_files, sep="\n") 
+    
+                # Find all names with acquisition, shortest should be parental folder
+                sub_folders_acquisition = [i for i in extracted_files if "acquisition" in i] 
+                if len(sub_folders_acquisition) > 0:
+    
+                    sub_folder_acquisition = min(sub_folders_acquisition, key=len)
+    
+                    path_acquisition = str(path_extract / sub_folder_acquisition) 
+                    api.log(f'\nAcquisition folder: {path_acquisition}')
+                else:
+                    api.alert(f'NO acquisition folder found. Please follow required file organization.')
+    
+            api.showStatus('Zipped data obtained. More details in log.')
+    
+            return path_acquisition
+    
+    
+        async def download_zipped_results(self, config):
+            """
+            Download zipped results.
+            """
+    
+            # Download only if results have already been otained
+            if not self.path_analysis:
+                api.alert('No analysis results stored so far')
+                return
+     
+            # Create zip archive with results (in current directory to allow download)
+            name_results_zip = "fq-results.zip"
+            api.log(f'Will zip results stored in folder : {str(self.path_analysis)}')
+            api.log(f'Results will be zipped in file    : {os.path.abspath(name_results_zip)}')
+            
+            try:
+                path_to_zip = str(self.path_analysis)
+                with zipfile.ZipFile(name_results_zip, "w") as zip_ref:
+                    for folderName, subfolders, filenames in os.walk(path_to_zip):
+                            for filename in filenames:
+    
+                                # Filename and name in zip
+                                filePath = os.path.join(folderName, filename)
+                                zipPath = os.path.relpath(filePath, path_to_zip)
+    
+                                # Add file to zip
+                                zip_ref.write(filePath, zipPath)
+    
+                # Provide download link
+                file_manager = await api.getFileManager(api.FILE_MANAGER_URL)
+                url = await file_manager.getFileUrl({"path": name_results_zip})
+                api.log(f'Download results with this link: {url}')
+                #api.utils.openUrl(url)
+                return url
+    
+            except:
+                api.alert(f"Something else went wrong. Could not store results in file {os.path.abspath(name_results_zip)}")
+                return None
+    
+        async def select_analysis_region(self, config):
+            """
+            Select analysis region in Kaibu.
+            """
+    
+            # Parameters
+            log_config('[FISH-QUANT][select_analysis_region]', config)
+            channel_selected = config['channel_selected']
+            display_type = config['display_type']
+    
+            # Show image
+            if display_type == 'window':
+                viewer = await api.createWindow(src="https://kaibu.org")
+        
+            elif display_type == 'dialog':
+                viewer = await api.showDialog(src="https://kaibu.org")
+        
+            # Check if channel was selected
+            if len(channel_selected) == 0:
+                api.alert('Please select which channel should be processed!')
+                return
+    
+            # Get index of selected channel
+            channel_index = self.image_names[channel_selected]["index"]
+            api.log(f'channel_index: {channel_index}')
+            
+            # Create viewer
+            image_array = self.image_mips[channel_index, :, :]
+            await viewer.view_image(np.flipud(image_array), type="itk-vtk", name='image')   # fix_1
+    
+            # Add annotation layer
+            layer = await viewer.add_shapes([ ], shape_type="polygon", name="analysis region", draw_edge_color='#db2307',  draw_face_color='#eb9d91AA', draw_shape_type="Rectangle",draw_enable=True)
+    
+            # get the annotation in geojson format
+    
+            async def get_geojson_features():    
+                features = await layer.get_features()
+                api.log(features)
+    
+                if len(features['features']) != 1:
+                    api.alert('Only one annotation is allowed')
+                    return
+    
+                if features['features'][0]['geometry']['type'] != 'Polygon':
+                    api.alert('Annotation has to be a Polygon')
+                    return
+    
+                coords = np.asarray(features['features'][0]['geometry']['coordinates'][0])
+    
+                if len(coords) != 5:
+                    api.alert('This is not a rectangular selection')
+                    return
+    
+                analysis_region = np.around(np.concatenate((coords.min(axis=0),coords.max(axis=0))))
+                self.analysis_region = analysis_region.astype('uint16')
+    
+                viewer.close()
+    
+            await viewer.add_widget(
+                {
+                    "_rintf": True,
+                    "name": "Control",
+                    "type": "control",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "label": "Return selection to FISH-quant",
+                            "callback": get_geojson_features,
+                        }
+                    ],
+                })
+    
+    
+            """
+            await viewer.set_ui({"title": "Utilities",
+                        "elements": [
+                            {"_rintf": True,
+                            "type": "button",
+                            "label": "Return selection to FISH-quant",
+                            "callback": get_geojson_features
+                            },   
+                        ]
+            })    
+            """
+    
+        async def show_results(self, config):
+            """
+            Show results (images, spots, outlines, ...)
+            """
+    
+            # Parameters
+            log_config('[FISH-QUANT][show_results]', config)
+            display_type = config['display_type']
+            data_show = config['data_show']
+    
+            # Show image
+            # Could also be viewer = await api.createWindow(type="Kaibu")
+    
+            if display_type == 'window':
+                viewer = await api.createWindow(src="https://kaibu.org")
+      
+            elif display_type == 'dialog':
+                viewer = await api.showDialog(src="https://kaibu.org")
+       
+            # Loop over provided layers that should be displayed
+            for data_add in data_show:
+                api.log(f'Adding new layer with specs: {data_add}')
+    
+                data_type = data_add[0]
+    
+                # Raw or filtered image
+                if data_type == 'img_raw' or data_type == 'img_filt':
+                    
+                    channel_selected = data_add[1]
+                    display_dim = data_add[2]
+                    visible = data_add[3]
+                    
+                    if visible == 'true':
+                        visible = True
+                    else:
+                        visible = False
+    
+                    # Check if channel was selected
+                    if len(channel_selected) == 0:
+                        api.alert('Please select which channel should be processed!')
+                        return
+    
+                    # Get index of selected channel
+                    channel_index = self.image_names[channel_selected]["index"]
+                    api.log(f'channel_index: {channel_index}; image_type: {data_type}; display_dim: {display_dim};')
+                    
+                    # Get image to be shown
+                    if data_type == 'img_raw':
+                        name = 'raw image'
+                            
+                        # Full image
+                        if self.filter_full:
+                
+                            if display_dim == 'orig':
+                                image_array = self.image[channel_index, :, :, :]
+                        
+                            elif display_dim == 'mip':
+                                image_array = self.image_mips[channel_index, :, :]
+                        
+                        # Croppend image for analysis
+                        else:
+                            
+                            if display_dim == 'orig':
+                                image_array = self.image_raw
+                        
+                            elif display_dim == 'mip':
+                                image_array = self.image_raw_mip
+    
+                    elif data_type == 'img_filt':
+                        name = 'filtered image'
+                        if display_dim == 'orig':
+                            image_array = self.image_filt
+    
+                        elif display_dim == 'mip':
+                            image_array = self.image_filt_mip
+    
+                    await viewer.view_image(np.flipud(image_array), type="itk-vtk", name=name, visible=visible)   # fix_1
+    
+                elif data_type == 'spots' or data_type == 'spots_decompose':
+                    
+                    size=data_add[1]
+                    visible = data_add[2]
+    
+                    if visible == 'true':
+                        visible = True
+                    else:
+                        visible = False
+    
+                    if data_type == 'spots':
+                        points=self.spots.astype('uint16')
+                    else:
+                        points=self.spots_post_decomposition.astype('uint16')
+    
+                    # Remove z position if present 
+                    if points.shape[1] == 3:
+                        points = np.delete(points, 0, 1)
+    
+                    # fix_1: orientation of y axis inverted in Kaibu
+                    n_y = image_array.shape[0]
+                    points[:,0] = n_y -  points[:,0] -1
+    
+                    # Invert X and Y 
+                    points[:,[0, 1]] = points[:,[1, 0]]
+                    
+                    await viewer.add_points(points, size=size, name='Detections', visible=visible, edge_color = '#db2307', face_color = '#eb9d91')
+    
+    
+        async def save_analysis_details(self, name_save):
+            """
+            Save settings as json file.
+            """
+            # Parameters
+            api.log('[FISH-QUANT][save_analysis_details]')
+    
+            # Add more fields
+            now = datetime.now() # current date and time
+            self.analysis_details['date'] = now.strftime("%d/%m/%Y__%H:%M:%S")
+    
+            # Save as json
+            with open(name_save, 'w') as json_file:
+                json.dump(self.analysis_details, json_file,indent=4, separators=(',', ': '))
+    
+            api.log(f'[FISH-QUANT][save_analysis_details] saved as {name_save}')
+    
+    
+        def scan_folder(self, config):
+            """
+            Scan folder for images to be analyzed.
+            """
+    
+            api.showStatus('Scanning folder for images with specified configuration ... ')
+    
+            # Parameters
+            log_config('[FISH-QUANT][scan_folder]', config)
+            channels  = config['channels']
+            reg_exp   = config['reg_exp']
+            path_data_full = Path(config['data_path'])
+            
+            if not path_data_full.is_dir():
+                api.alert('Specified data path does not EXIST. No images found.')
+                return
+    
+            # Get channels as dict
+            ch_dict = {channel['identifier']: channel['name'] for channel in channels}
+            ch_identifier = list(ch_dict.keys())
+            api.log(f'[FISH-QUANT][scan_folder] channel dictionary: {ch_dict}')
+    
+            # Scan all files create data-frame for files that match the regular expression
+            df_regexp = pd.DataFrame()
+    
+            #for file in os.listdir(str(path_data_full)):
+            for file_full in path_data_full.rglob(f"*.{config['img_ext']}"):  
+                api.log(f'Checking file: {str(file_full)}')
+                file = file_full.name
+                match = re.search(reg_exp, file)
+    
+                if match:
+                    match_dict = match.groupdict()
+    
+                    # Add only if image extension matches
+                    if match_dict['img_ext'] == config['img_ext']:
+                        match_dict.update({'file_name': file})
+                        df_regexp = df_regexp.append(match_dict, ignore_index=True)
+                else:
+                    api.log('     ... no match')
+                    
+            if df_regexp.size == 0:
+                api.alert('No images with these specifications found.')
+                return
+    
+            # Get unique positions (ignore channels)
+            df_pos_unique = df_regexp.drop_duplicates(['file_ident', 'fov'])
+            df_pos_unique = df_pos_unique.drop(columns=['channel', 'file_name'])
+    
+            # Iterate over the Dataframe rows as named tuples
+            df_scan = pd.DataFrame()
+            for pos_unique in df_pos_unique.itertuples(index=False):
+                file_ident_loop = getattr(pos_unique, 'file_ident')
+                fov_loop = getattr(pos_unique, 'fov')
+               
+                # Find all channels of unique positions
+                df_loop = df_regexp.query('(file_ident == @file_ident_loop) and (fov == @fov_loop)')
+                channels_loop = df_loop['channel'].values.tolist()
+    
+                # Verify if all channels are present
+                if set(ch_identifier) <= set(channels_loop):
+    
+                    data_dict = pos_unique._asdict()
+    
+                    # Find file-names for each channel and add to dictionary
+                    for ch_query in ch_identifier:
+                        image_name = df_loop.query('channel == @ch_query')['file_name'].values[0]
+                        data_dict.update({ch_dict[ch_query]: image_name})
+    
+                    df_scan = df_scan.append(data_dict, ignore_index=True)
+    
+            self.path_data_full = path_data_full
+            scan_results = df_scan.to_dict('records')
+    
+            api.showStatus(f'Found {len(scan_results)} images matching the search criteria.')
+            api.log('[FISH-QUANT][scan_folder] scan results:')
+            api.log(scan_results)
+            
+            # Save analysis details
+            self.analysis_details['data_specs']['data_path'] = str(path_data_full)
+            self.analysis_details['data_specs']['channels'] = channels
+            self.analysis_details['data_specs']['reg_exp'] = reg_exp
+    
+            return scan_results
+    
+    
+        async def load_image(self,config):
+            """
+            Function to load image.
+            """
+            
+            log_config('[FISH-QUANT][load_image]', config)
+    
+            show_status = config['show_status']
+            if show_status: api.showStatus('Loading images. Please wait .... ')
+    
+            # Folder containing data
+            path_data_full = self.path_data_full
+    
+            # Output path
+            self.path_analysis = create_output_path(path_data_full, config['output_path'])
+            create_folder(self.path_analysis)
+    
+            # Get channel names
+            channels = config['channels']
+            channel_identifiers = [channel['identifier'] for channel in channels]
+            channel_names = [channel['name'] for channel in channels]
+            ch_dict = {channel['name']: channel['identifier'] for channel in channels}
+    
+            # MIPs: create folder to store images
+            if config['create_mips']:
+                mips = []
+                path_save = self.path_analysis / 'imjoy-tmp' / 'mips'
+                create_folder(path_save)
+                api.log(f'[FISH-QUANT][load_image] path for MIPs: {path_save}')
+    
+            # Loop over channels and build 5D tensor (starfish)
+            imgs_3d = []
+            mip_tensors = []
+            image_names = {}
+    
+            for index, channel_name in enumerate(channel_names):
+            
+                image_name = config['file'][channel_name]
+                image_name_full = str(path_data_full / image_name)
+                api.log(f'[FISH-QUANT][load_image] reading image: {image_name_full}')
+    
+                img_channel = io.imread(image_name_full)
+    
+                # Add z-dimension for 2D images
+                if img_channel.ndim == 2:
+                    img_3d = np.array(img_channel)[np.newaxis, :]
+                else:
+                    img_3d = img_channel
+    
+                # Swap z (necessary for some images .... not sure why)
+                if not config['z_first']:
+                    img_3d = np.swapaxes(img_3d,0,2)
+                    img_3d = np.swapaxes(img_3d,1,2)
+    
+                imgs_3d.append(img_3d)
+    
+                image_names.update({ channel_name :  {
+                                        'index': index,
+                                        'image_name': image_name,
+                                        'identifier': ch_dict[channel_name]
+                                    }
+                })
+    
+                if config['create_mips']:
+                    name_save = str(path_save / f'img_mip_dum__{channel_name}.png')
+                    img_mip, shape, url = await create_mip(img_3d, name_save, self.file_manager, create_url=True, rescale=True)
+    
+                    mip_tensors.append(img_mip)
+                    mips.append({'url':url,'shape':shape,'channel':channel_name,'image_name':image_name})
+    
+            image = np.stack(imgs_3d, axis=0)
+            
+            # Save some image properties
+            self.analysis_details['data_specs']['output_path'] = config['output_path']
+            self.analysis_details['image_properties']['image_names'] = image_names
+            self.analysis_details['image_properties']['size'] = image.shape
+    
+            # Store for later use
+            self.image = image
+            self.image_names = image_names
+            self.channel_identifiers = channel_identifiers
+            self.channel_names = channel_name
+    
+            # Initiate some parameters that will be populated along the way
+            self.filter_full = True
+            self.image_filt = []
+            self.mask_lm = []
+            self.analysis_region = []
+    
+            # Status updates
+            api.log(f'[FISH-QUANT][load_image] loaded image: shape: {image.shape}, dtype: {image.dtype}')
+            if show_status: api.showStatus('Image loaded!')
+    
+            # Return MIPs
+            if config['create_mips']:
+                self.image_mips = np.stack(mip_tensors, axis=0)
+                return mips
+        
+    
+        async def filter_image(self,config):
+            """
+            Filter selected image
+            """
+    
+            # Parameters
+            log_config('[FISH-QUANT][filter_image]', config)
+            sigma = config['sigma']
+            channel_selected = config['channel_selected']
+            show_status = config['show_status']
+            path_data_full = self.path_data_full
+            image_names = self.image_names
+    
+            if show_status: api.showStatus('Filtering image ....')
+    
+            # Get index of channel that will be analyzed
+            channel_index = image_names[channel_selected]["index"]
+            api.log(f'[FISH-QUANT][filter_image] filtering channel {channel_selected} with index {channel_index}')
+    
+            # Crop image if specified
+            x_min = None
+            
+            api.log(self.image.shape)
+    
+            if len(self.analysis_region) > 0:
+                analysis_region = self.analysis_region
+    
+                # Size of full image
+                n_y = self.image.shape[2]-1
+                n_x = self.image.shape[3]-1
+    
+                api.log(self.image.shape)
+                api.log(str(analysis_region))
+    
+                x_min = analysis_region[0]
+                y_min = analysis_region[1]
+                x_max = analysis_region[2]
+                y_max = analysis_region[3]
+       
+                if (x_min<0): x_min = 0
+                if (x_max>n_x): x_max = n_x
+                if (y_min<0): x_min = 0
+                if (y_max>n_y): y_max = n_y
+    
+                # fix_1: orientation of y axis inverted in Kaibu
+                y_max_new = n_y - y_min -1
+                y_min_new = n_y - y_max -1
+                y_min = y_min_new
+                y_max = y_max_new
+                
+                # crop image
+                api.log(f'crop in y: min: {y_min}, max: {y_max}')
+                img = self.image[channel_index, :,y_min:y_max, x_min:x_max]
+                api.log(img.shape)
+                self.image_raw = img
+                self.image_raw_mip = stack.maximum_projection(img)
+                self.filter_full = False
+            
+            else:
+                img = self.image[channel_index, :, :, :]
+                self.filter_full = True        
+    
+            # Check if channel was selected
+            if len(channel_selected) == 0:
+                api.alert('Please select which channel should be processed!')
+                return
+    
+            img_filt = stack.log_filter(img, sigma)
+    
+            # Get name-base of loaded image
+            image_name = image_names[channel_selected]["image_name"]
+            name_base, file_extension = os.path.splitext(image_name)
+    
+            self.image_filt = img_filt
+            self.mask_lm = []
+            self.channel_selected = channel_selected
+            self.channel_index = channel_index
+            self.name_base = name_base
+            api.log(f'[FISH-QUANT][filter_image] name base {self.name_base}')
+    
+            # Save settings of spot detection
+            self.analysis_details['spot_detection']['settings']['filter'] = {
+                'method' : 'LoG',
+                'sigma': sigma
+            }
+    
+            # Save some image properties
+            self.analysis_details['image_properties']['channel_selected'] = channel_selected
+            self.analysis_details['image_properties']['intensity'] = {
+                'raw_mean': np.mean(img),
+                'raw_median': np.median(img),
+                'raw_std': np.std(img),
+                'filt_mean': np.mean(img_filt),
+                'filt_median': np.median(img_filt),
+                'filt_std': np.std(img_filt),
+            }
+    
+            # Create MIP and provide base64 encoded strings
+            if config['create_mips']:
+                path_save = self.path_analysis / 'imjoy-tmp' / 'mips'
+                create_folder(path_save)
+                
+                name_save = str(path_save / f'img_filt_mip_dum_c{channel_index}.png')
+                img_filt_mip, shape, url = await create_mip(img_filt, name_save, self.file_manager, create_url=True, rescale=True)
+    
+                self.image_filt_mip = img_filt_mip
+                if show_status: api.showStatus('Filtering finished!')
+    
+                return {'url':url,
+                        'shape':shape,
+                        'min':img_filt.min().item(),
+                        'max':img_filt.max().item()}  
+    
+    
+        def save_image_filtered(self,config):
+            '''
+            Save filtered image.
+            '''
+            # TODO: supported is only png, tif, tiff
+            
+            # Parameters
+            log_config('[FISH-QUANT][save_image_filtered]', config)
+            channel_selected = config['channel_selected']
+            channel_name = self.image_names[channel_selected]["image_name"]
+            
+            path_save = self.path_analysis / 'images_filtered'
+            create_folder(path_save)
+            
+            # Save image under original name in dedicated folder
+            stack.save_image(self.image_filt, str(path_save / channel_name))
+            api.alert(f'Filtered image saved as {channel_name}, \nin folder: {str(path_save)}')
+    
+    
+        async def calc_local_max(self, config):
+            '''
+            Calculate local maximum image from filtered image.
+            '''
+    
+            # Parameters
+            log_config('[FISH-QUANT][calc_local_max]', config)
+            minimum_distance = config['minimum_distance']
+            sigma = (minimum_distance[1], minimum_distance[0], minimum_distance[0])
+    
+            # Local maximum detection
+            self.mask_lm = detection.local_maximum_detection(self.image_filt, sigma)
+    
+            # Settings
+            self.analysis_details['spot_detection']['settings']['detection'] = {
+                'method': 'localmax',
+                'mind_dist': minimum_distance
+            }
+    
+        async def detect_test_thresholds(self,config):
+            '''
+            Perform detection
+    
+            TODO:
+            * Re-use stored mask_lm if appropriate (same file, same settings, ...)
+              Requires a bunch of checks ... same image, same min distance, ...
+            '''
+    
+            # Parameters
+            log_config('[FISH-QUANT][detect_test_thresholds]', config)
+            threshold_range = config['threshold_range']
+            show_status = config['show_status']
+    
+            if show_status: api.showStatus('Performing predection ... calculate local maximum image')
+    
+            # Calculate local maximum
+            await self.calc_local_max({ 'minimum_distance': config['minimum_distance']})
+    
+            # Loop over thresholds
+            if show_status: api.showStatus('Performing predection ... testing thresholds')
+            self.FQ_interface.emit('create_detection_plot',[])
+            thresholds_spot = np.around(np.linspace(threshold_range[0], threshold_range[1],threshold_range[2] ))
+    
+            n_thresholds = threshold_range[2]
+            n_detections = np.zeros(n_thresholds,dtype='int')
+    
+            for i in range(n_thresholds):
+                api.showProgress((i+1)/n_thresholds)
+                threshold = thresholds_spot[i]
+                spots, _ = detection.spots_thresholding(self.image_filt, self.mask_lm, threshold)
+                n_detections[i] = spots.shape[0]
+                api.log(f'[FISH-QUANT][detect_test_thresholds] testing threshold {i}/{n_thresholds}: {threshold}  yields  {n_detections[i]}  spots.')
+    
+                self.FQ_interface.emit('extend_detection_plot', [thresholds_spot[i].tolist(), n_detections[i].tolist()])
+    
+            if show_status: api.showStatus('Performing predection ... finished!')
+    
+            return [thresholds_spot.tolist(), n_detections.tolist()]
+    
+    
+        async def detect_apply(self,config):
+            ''' 
+            Apply spot detection.
+            Returns spots as a nested list [[Z0,Y0,X0],[Z1,Y1,X1], .... ]. 
+            '''
+    
+            # Parameters
+            log_config('[FISH-QUANT][detect_apply]', config)
+            api.log(f'[FISH-QUANT][detect_apply] name base {self.name_base}')
+            threshold = config['detection_threshold']
+            show_status = config['show_status']
+            
+            # Save detection plot
+            if 'detection_plot' in config:
+                self.detection_plot = config['detection_plot']
+    
+            # Save image with position of detections
+            if 'name_save' in config:
+                name_save = config['name_save']
+            else:
+                name_save = None
+    
+            # Perform pre-detection
+            spots, _ = detection.spots_thresholding(self.image_filt, self.mask_lm, threshold)
+    
+            # Save analysis details
+            self.analysis_details['spot_detection']['settings']['detection']['threshold'] = threshold
+            self.analysis_details['spot_detection']['counts'] = {
+                'spots': len(spots)
+            }
+    
+            # Save image (filtered, contrasted) with detections
+            if name_save:
+                img_filt_mip = stack.maximum_projection(self.image_filt)
+                pa, pb = np.percentile(img_filt_mip, (0.1,99.99))
+                img_filt_mip = rescale_intensity(img_filt_mip, in_range=(pa, pb), out_range=np.uint8).astype('uint8')
+                
+                plot.plot_detection(img_filt_mip, spots, radius=2, framesize=(40, 21), remove_frame=True,path_output=name_save)
+                api.log(f'[FISH-QUANT][detect_apply] plot with detection results: {name_save}.')
+    
+            api.log(f'[FISH-QUANT][detect_apply] detection with threshold {threshold} detects {len(spots)} spots.')  
+            api.showStatus(f'Detection with threshold {threshold} detects {len(spots)} spots.')
+            self.spots = spots
+    
+    
+        async def decompose_clusters(self,config):
+            """
+            Decompose clusters.
+            For more details see bigfish: detection.decompose_cluster
+            """
+            # Parameters
+            log_config('[FISH-QUANT][decompose_clusters]', config)
+            show_status = config['show_status']
+      
+            # Get image
+            if not self.filter_full:
+                img = self.image_raw 
+            else:
+                img = self.image[self.channel_index, :, :, :]
+            
+            spots_post_decomposition, clusters, reference_spot = detection.decompose_cluster(
+                img, 
+                spots=self.spots, 
+                voxel_size_z = config['voxel_size_z'], 
+                voxel_size_yx = config['voxel_size_yx'],
+                psf_z = config['psf_size_z'], 
+                psf_yx = config['psf_size_xy'], 
+                alpha = config['cluster_alpha'], 
+                beta = config['cluster_beta'])
+    
+            api.log(f'[FISH-QUANT][decompose_cluster] from {len(self.spots)} to {len(spots_post_decomposition)} spots.')
+            api.showStatus(f'Cluster decomposition: from {len(self.spots)} to {len(spots_post_decomposition)} spots.')
+    
+            self.spots_post_decomposition = spots_post_decomposition
+    
+    
+        async def detect_foci(self,config):
+            """
+            Detect foci.
+            For more details see bigfish: detection.detect_foci
+            """
+            # Parameters
+            log_config('[FISH-QUANT][detect_foci]', config)
+            name_save = config['name_save']
+    
+            # Generate name for temporary image
+            if name_save == 'tmp':
+                name_base = self.name_base
+                path_save = self.path_analysis / 'imjoy-tmp' 
+                create_folder(path_save)
+                name_save = str(path_save / f'{name_base}__foci_calling')
+    
+            # Detect foci
+            spots_post_clustering, foci = detection.detect_foci(
+                spots =  self.spots_post_decomposition, 
+                voxel_size_z = config['voxel_size_z'], 
+                voxel_size_yx = config['voxel_size_yx'],
+                radius = config['foci_radius'], 
+                nb_min_spots = config['foci_nb_min_spots'])
+    
+            api.log(f'[FISH-QUANT][detect_foci] found {len(foci)} foci for {len(self.spots_post_decomposition)} spots')
+            
+            self.spots_post_clustering = spots_post_clustering
+            self.foci = foci
+    
+            # Save image with detections
+            if name_save:
+    
+                # Create contrasted image
+                image_contrasted = stack.rescale(self.image_filt, channel_to_stretch=0)
+                image_contrasted = stack.maximum_projection(image_contrasted)
+    
+                # Consider entire image as a cell
+                fov_results = stack.extract_cell(
+                    cell_label=np.ones(image_contrasted.shape).astype('uint8'),   # Consider entire image as a cell
+                    ndim=3, 
+                    rna_coord=spots_post_clustering, 
+                    others_coord={"foci": foci},
+                    image=image_contrasted,
+                    remove_cropped_cell=False)
+    
+                # Plot image as one cell with foci
+                plot.plot_cell(
+                    ndim=3, 
+                    cell_coord=fov_results[0]["cell_coord"],  
+                    rna_coord=fov_results[0]["rna_coord"], 
+                    foci_coord=fov_results[0]["foci"],  
+                    image=image_contrasted, 
+                    cell_mask=fov_results[0]["cell_mask"],  
+                    title="", 
+                    remove_frame=True, framesize=(10, 8),
+                    path_output=name_save,
+                    ext = 'png',
+                    show = False)
+    
+                api.log(f'[FISH-QUANT][detect_foci] foci plot saved as {name_save}.png')
+    
+            if config['show_status']:
+                show_png(name_save+'.png')
+    
+            self.analysis_details['spot_detection']['settings']['foci_decomposition'] = {
+                'nb_min_spots': config['foci_nb_min_spots'],
+                'radius': config['foci_radius'],
+                'voxel_size_z': config['voxel_size_z'],
+                'voxel_size_yx': config['voxel_size_yx'],
+                'psf_size_z': config['psf_size_z'],
+                'psf_size_xy': config['psf_size_xy'],
+                'cluster_alpha': config['cluster_alpha'],
+                'cluster_beta': config['cluster_beta']
+            }
+    
+            self.analysis_details['spot_detection']['counts']['spots_decomposed'] = len(self.spots_post_decomposition)
+            self.analysis_details['spot_detection']['counts']['foci'] = len(foci)
+    
+        async def detection_file(self,config):
+            '''
+            Process all files with specified settings.
+            '''
+    
+            # Parameters
+            log_config('[FISH-QUANT][detection_file]', config)
+            
+            # Path to save results
+            path_save = self.path_analysis / 'spot_detection' 
+            create_folder(path_save)
+    
+            if config['create_plots']:
+                path_plots_detection = self.path_analysis / 'spot_detection' / 'plots_detection'
+                create_folder(path_plots_detection)
+    
+                if config['analyze_clusters']:
+                    path_plots_foci = self.path_analysis / 'spot_detection' / 'plots_foci'
+                    create_folder(path_plots_foci)
+    
+            # Change parts of the config to process entire file
+            config['create_mips'] = False
+            config['show_status'] = False
+            config['analysis_region'] = []  # Reset analysis region to analyze full size image
+    
+            # >>> Check if full size image has been processed already - if yes, filtering and local max can be reused
+            
+            if not self.filter_full:
+    
+                # Filter
+                api.showStatus(f'Processing file: filtering image')
+    
+                self.analysis_region = []
+                await self.filter_image(config)
+                
+                # Detection
+                api.showStatus(f'Processing file: spot detection')
+                await self.calc_local_max(config)
+    
+            # >>> SPOT DETECTION
+    
+            # Apply spot detection
+            name_base = self.name_base
+    
+            if config['create_plots']:
+                config['name_save'] = str(path_plots_detection / f'{name_base}__detection.png')
+            else:
+                config['name_save'] = False
+    
+            await self.detect_apply(config)
+    
+            # Save spot positions
+            save_spots(self.spots, 'ZYX',  path_save / f'{name_base}__spots.csv')
+    
+            # Save detection plot (if present)
+            if hasattr(self, 'detection_plot'): 
+                save_encoded_plot(self.detection_plot, path_save / f'{name_base}__detection_tests.png')
+    
+            # >>> Cluster decomposition
+            if config['analyze_clusters']:
+                await self.decompose_clusters(config)
+    
+                if config['create_plots']:
+                    config['name_save'] = str(path_plots_foci / f'{name_base}__foci_calling')
+                else:
+                    config['name_save'] = False
+    
+                await self.detect_foci(config)
+    
+                save_spots(self.spots_post_clustering, 'ZYXF',  path_save / f'{name_base}__spots_foci.csv')
+                save_foci(self.foci,  path_save / f'{name_base}__foci.csv')
+    
+            # >>> Save analysis details
+            await self.save_analysis_details(path_save / f'{name_base}__analysis_details.json')
+    
+            # Update status
+            det_th = config['detection_threshold']
+            if not config['batch_analysis']:
+                api.alert(f'Processing of loaded file finished:\n{name_base}\nDetection with threshold {det_th} yields  {len(self.spots)} spots')
+            api.showStatus(f'Processing of loaded file finished: {len(self.spots)} spots detected')
+    
+    
+        async def detection_batch(self,config):
+            '''
+            Process all files with specified settings.
+            '''
+    
+            # Parameters
+            log_config('[FISH-QUANT][detection_batch]', config)
+    
+            # Some preparation
+            path_save = self.path_analysis / 'spot_detection' 
+            create_folder(path_save)
+      
+            # Set some parameters in config for batch processing        
+            config['create_mips'] = False
+            config['show_status'] = False
+            config['analysis_region'] = []  # Reset analysis region to analyze full size image
+    
+            # Scan folder
+            files_process = self.scan_folder(config)
+    
+            # Loop over all files
+            for idx, file_process in enumerate(files_process):
+    
+                # Load image
+                api.showProgress((idx+1)/len(files_process))
+                api.showStatus(f'Processing file {idx+1} of {len(files_process)}: loading image')
+                config['file'] = file_process
+                
+                await self.load_image(config)
+                
+                # Process file
+                self.filter_full = False  # Perform filtering and local max on file
+                await self.detection_file(config)
+    
+            api.alert('Batch processing finished!')
+            api.showStatus('Batch processing finished!')
+    
+    api.export(ImJoyPlugin())
+    </script>
