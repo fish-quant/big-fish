@@ -925,6 +925,14 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
                             fontweight="bold", fontsize=10)
         plt.tight_layout()
 
+        # output
+        if path_output is not None:
+            save_plot(path_output, ext)
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
     # plot coordinate representation only
     elif cell_coord is not None and image is None:
         if remove_frame:
@@ -974,6 +982,14 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         if not remove_frame:
             plt.tight_layout()
 
+        # output
+        if path_output is not None:
+            save_plot(path_output, ext)
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
     # plot original image only
     elif cell_coord is None and image is not None:
         plot_segmentation_boundary(
@@ -981,13 +997,5 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             rescale=rescale, contrast=contrast, title=title,
             framesize=framesize, remove_frame=remove_frame,
             path_output=path_output, ext=ext, show=show)
-
-    # output
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
 
     return
