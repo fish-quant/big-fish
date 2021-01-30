@@ -11,7 +11,8 @@ from .utils import label_instances
 from .utils import merge_labels
 from .utils import thresholding
 from .utils import clean_segmentation
-from .utils import compute_instances_mean_diameter
+from .utils import compute_mean_diameter
+from .utils import count_instances
 from .utils import match_nuc_cell
 
 from .nuc_segmentation import remove_segmented_nuc
@@ -26,7 +27,8 @@ _utils = [
     "merge_labels",
     "thresholding",
     "clean_segmentation",
-    "compute_instances_mean_diameter",
+    "compute_mean_diameter",
+    "count_instances",
     "match_nuc_cell"]
 
 _nuc = [

@@ -290,7 +290,7 @@ def _delimit_instance(image):
 
 # ### Instances measures ###
 
-def compute_instances_mean_diameter(image_label):
+def compute_mean_diameter(image_label):
     """Compute the averaged size of the segmented instances.
 
     For each instance, we compute the diameter of an object with an equivalent
@@ -298,7 +298,7 @@ def compute_instances_mean_diameter(image_label):
 
     Parameters
     ----------
-    image_label : np.ndarray, np.int64
+    image_label : np.ndarray, np.int or np.uint
         Labelled image with shape (y, x).
 
     Returns
@@ -308,18 +308,52 @@ def compute_instances_mean_diameter(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label, ndim=2, dtype=np.int64)
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
 
     # get equivalent diameter and average it
-    diameter = []
+    diameter = 0
+    n = len(props)
     for prop in props:
-        diameter.append(prop.equivalent_diameter)
-    mean_diameter = np.mean(diameter)
+        diameter += prop.equivalent_diameter
+    if n > 0:
+        mean_diameter = diameter / n
+    else:
+        mean_diameter = np.nan
 
     return mean_diameter
+
+
+def count_instances(image_label):
+    """Count the number of instances annotated in the image.
+
+    Parameters
+    ----------
+    image_label : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
+
+    Returns
+    -------
+    nb_instances : int
+        Number of instances in the image.
+
+    """
+    # check parameters
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+
+    indices = set(image_label.ravel())
+    if 0 in indices:
+        nb_instances = len(indices) - 1
+    else:
+        nb_instances = len(indices)
+
+    return nb_instances
 
 
 # ### Nuclei-cells matching
