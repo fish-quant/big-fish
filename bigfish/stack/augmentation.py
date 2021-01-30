@@ -42,6 +42,34 @@ def augment_2d(image):
     return image_augmented
 
 
+def augment_2d_function(identity=False):
+    """Choose a random operation to augment a 2-d image.
+
+    Parameters
+    ----------
+    identity : bool
+        Return identity function instead of a random transformation.
+
+    Returns
+    -------
+    random_operation : callable
+        Function to transform a 2-d image.
+
+    """
+    # no random transformation
+    if identity:
+        return _identity
+
+    # randomly choose an operator
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_90, _rotation_180, _rotation_270]
+    random_operation = np.random.choice(operations)
+
+    return random_operation
+
+
 def _identity(image):
     """Do not apply any operation to the image.
 
