@@ -116,7 +116,7 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
 
 
 def plot_images(images, rescale=False, contrast=False, titles=None,
-                framesize=(15, 5), remove_frame=True, path_output=None,
+                framesize=(15, 10), remove_frame=True, path_output=None,
                 ext="png", show=True):
     """Plot or subplot of 2-d images.
 
@@ -250,7 +250,7 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
 # ### Segmentation plot ###
 
 def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
-                      framesize=(15, 5), remove_frame=True,
+                      framesize=(15, 10), remove_frame=True,
                       path_output=None, ext="png", show=True):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
