@@ -288,6 +288,61 @@ def _delimit_instance(image):
     return image_cleaned
 
 
+def remove_disjoint(image):
+    """For each instances with disconnected parts, keep the larger one.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
+
+    Returns
+    -------
+    image_cleaned : np.ndarray, np.int or np.uint
+        Cleaned image with shape (y, x).
+
+    """
+    # check parameters
+    stack.check_array(image,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+
+    # initialize cleaned labels
+    image_cleaned = np.zeros_like(image)
+
+    # loop over instances
+    max_label = image.max()
+    for i in range(1, max_label + 1):
+
+        # get instance mask
+        mask = image == i
+
+        # check if an instance is labelled with this value
+        if mask.sum() == 0:
+            continue
+
+        # get an index for each disconnected part of the instance
+        labelled_mask = label(mask)
+        indices = sorted(list(set(labelled_mask.ravel())))
+        if 0 in indices:
+            indices = indices[1:]
+
+        # keep the largest part of the instance
+        max_area = 0
+        mask_instance = None
+        for j in indices:
+            mask_part_j = labelled_mask == j
+            area_j = mask_part_j.sum()
+            if area_j > max_area:
+                max_area = area_j
+                mask_instance = mask_part_j
+
+        # add instance in the final label
+        image_cleaned[mask_instance] = i
+
+    return image_cleaned
+
+
 # ### Instances measures ###
 
 def compute_mean_diameter(image_label):
@@ -328,6 +383,73 @@ def compute_mean_diameter(image_label):
     return mean_diameter
 
 
+def compute_mean_convexity_ratio(image_label):
+    """Compute the averaged convexity ratio of the segmented instances.
+
+    For each instance, we compute the ratio between its area and the area of
+    its convex hull. Then, we average the diameters.
+
+    Parameters
+    ----------
+    image_label : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
+
+    Returns
+    -------
+    mean_convexity_ratio : float
+        Averaged convexity ratio of the segmented instances.
+
+    """
+    # check parameters
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+
+    # compute properties of the segmented instances
+    props = regionprops(image_label)
+
+    # get convexity ratio and average it
+    n = len(props)
+    convexity_ratio = 0
+    for prop in props:
+        convexity_ratio += prop.area / prop.convex_area
+    if n > 0:
+        mean_convexity_ratio = convexity_ratio / n
+    else:
+        mean_convexity_ratio = np.nan
+
+    return mean_convexity_ratio
+
+
+def compute_surface_ratio(image_label):
+    """Compute the averaged surface ratio of the segmented instances.
+
+    We compute the proportion of surface occupied by instances.
+
+    Parameters
+    ----------
+    image_label : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
+
+    Returns
+    -------
+    surface_ratio : float
+        Surface ratio of the segmented instances.
+
+    """
+    # check parameters
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+
+    # compute surface ratio
+    surface_instances = image_label > 0
+    area_instances = surface_instances.sum()
+    surface_ratio = area_instances / image_label.size
+
+    return surface_ratio
+
+
 def count_instances(image_label):
     """Count the number of instances annotated in the image.
 
@@ -358,7 +480,8 @@ def count_instances(image_label):
 
 # ### Nuclei-cells matching
 
-def match_nuc_cell(nuc_label, cell_label):
+
+def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
     """Match each nucleus instance with the most overlapping cell instance.
 
     Parameters
@@ -367,6 +490,10 @@ def match_nuc_cell(nuc_label, cell_label):
         Labelled image of nuclei with shape (y, x).
     cell_label : np.ndarray, np.int or np.uint
         Labelled image of cells with shape (y, x).
+    single_nuc : bool
+        Authorized only one nucleus in a cell.
+    cell_alone : bool
+        Authorized cell without nucleus.
 
     Returns
     -------
@@ -387,26 +514,64 @@ def match_nuc_cell(nuc_label, cell_label):
     # initialize new labelled images
     new_nuc_label = np.zeros_like(nuc_label)
     new_cell_label = np.zeros_like(cell_label)
+    remaining_cell_label = cell_label.copy()
 
-    # match nuclei and cells
-    label_max = nuc_label.max()
-    for i_nuc in range(1, label_max + 1):
-        # check if a nucleus is labelled with this value
+    # loop over nuclei
+    i_instance = 1
+    max_nuc_label = nuc_label.max()
+    for i_nuc in range(1, max_nuc_label + 1):
+
+        # get nuc mask
         nuc_mask = nuc_label == i_nuc
+
+        # check if a nucleus is labelled with this value
         if nuc_mask.sum() == 0:
             continue
+
         # check if a cell is labelled with this value
         i_cell = _get_most_frequent_value(cell_label[nuc_mask])
         if i_cell == 0:
             continue
-        # assign cell and nucleus
+
+        # get cell mask
         cell_mask = cell_label == i_cell
+
+        # ensure nucleus is totally included in cell
         cell_mask |= nuc_mask
-        new_nuc_label[nuc_mask] = i_nuc
-        new_cell_label[cell_mask] = i_nuc
+        cell_label[cell_mask] = i_cell
+        remaining_cell_label[cell_mask] = i_cell
+
+        # assign cell and nucleus
+        new_nuc_label[nuc_mask] = i_instance
+        new_cell_label[cell_mask] = i_instance
+        i_instance += 1
+
         # remove pixel already assigned
         nuc_label[nuc_mask] = 0
-        cell_label[cell_mask] = 0
+        remaining_cell_label[cell_mask] = 0
+
+        # if one nucleus per cell only, we remove the cell as candidate
+        if single_nuc:
+            cell_label[cell_mask] = 0
+
+    # if only cell with nucleus are authorized we stop here
+    if not cell_alone:
+        return new_nuc_label, new_cell_label
+
+    # loop over remaining cells
+    max_remaining_cell_label = remaining_cell_label.max()
+    for i_cell in range(1, max_remaining_cell_label + 1):
+
+        # get cell mask
+        cell_mask = remaining_cell_label == i_cell
+
+        # check if a cell is labelled with this value
+        if cell_mask.sum() == 0:
+            continue
+
+        # add cell in the result
+        new_cell_label[cell_mask] = i_instance
+        i_instance += 1
 
     return new_nuc_label, new_cell_label
 

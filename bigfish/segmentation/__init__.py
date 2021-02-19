@@ -11,7 +11,10 @@ from .utils import label_instances
 from .utils import merge_labels
 from .utils import thresholding
 from .utils import clean_segmentation
+from .utils import remove_disjoint
 from .utils import compute_mean_diameter
+from .utils import compute_mean_convexity_ratio
+from .utils import compute_surface_ratio
 from .utils import count_instances
 from .utils import match_nuc_cell
 
@@ -27,7 +30,10 @@ _utils = [
     "merge_labels",
     "thresholding",
     "clean_segmentation",
+    "remove_disjoint",
     "compute_mean_diameter",
+    "compute_mean_convexity_ratio",
+    "compute_surface_ratio",
     "count_instances",
     "match_nuc_cell"]
 
