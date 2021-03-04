@@ -10,6 +10,8 @@ from .plot_images import plot_yx
 from .plot_images import plot_images
 from .plot_images import plot_segmentation
 from .plot_images import plot_segmentation_boundary
+from .plot_images import plot_segmentation_diff
+
 from .plot_images import plot_detection
 from .plot_images import plot_reference_spot
 from .plot_images import plot_cell
@@ -26,6 +28,7 @@ _images = [
     "plot_images",
     "plot_segmentation",
     "plot_segmentation_boundary",
+    "plot_segmentation_diff",
     "plot_detection",
     "plot_reference_spot",
     "plot_cell"]

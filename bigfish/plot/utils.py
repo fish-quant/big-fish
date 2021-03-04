@@ -9,6 +9,8 @@ Utility functions for bigfish.plot subpackage.
 import matplotlib.pyplot as plt
 import numpy as np
 
+from matplotlib.colors import ListedColormap
+
 
 def save_plot(path_output, ext):
     """Save the plot.
@@ -81,3 +83,31 @@ def get_minmax_values(tensor):
         vmin, vmax = 0, 1
 
     return vmin, vmax
+
+
+def create_colormap():
+    """Create a customized colormap to display segmentation masks.
+
+    Returns
+    -------
+    colormap : ListedColormap object
+        Colormap for matplotlib.
+
+    """
+    colors = ['#525252', '#b8e186', '#8c510a', '#9970ab', '#de77ae', '#bdbdbd',
+              '#d6604d', '#c51b7d', '#d1e5f0', '#969696', '#f4a582', '#fddbc7',
+              '#fde0ef', '#d9d9d9', '#35978f', '#dfc27d', '#f6e8c3', '#b35806',
+              '#5aae61', '#7f3b08', '#4d9221', '#543005', '#d9f0d3', '#4575b4',
+              '#8e0152', '#f46d43', '#c2a5cf', '#a50026', '#7fbc41', '#40004b',
+              '#fee0b6', '#bf812d', '#313695', '#4393c3', '#737373', '#f1b6da',
+              '#67001f', '#e7d4e8', '#e0f3f8', '#e6f5d0', '#74add1', '#053061',
+              '#00441b', '#fee090', '#e08214', '#f5f5f5', '#01665e', '#f7f7f7',
+              '#1b7837', '#b2abd2', '#542788', '#2d004b', '#b2182b', '#d8daeb',
+              '#92c5de', '#ffffbf', '#762a83', '#8073ac', '#fdae61', '#a6dba0',
+              '#80cdc1', '#003c30', '#d73027', '#fdb863', '#2166ac', '#abd9e9',
+              '#276419', '#252525', '#c7eae5'] * 50
+    colors.insert(0, "#000000")
+
+    colormap = ListedColormap(colors, name='color_mask')
+
+    return colormap
