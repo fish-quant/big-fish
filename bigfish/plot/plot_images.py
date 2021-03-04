@@ -542,15 +542,17 @@ def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
     cmap = create_colormap()
 
     # prediction
+    im_mask_pred = np.ma.masked_where(mask_pred == 0, mask_pred)
     if remove_frame:
         ax[1].axis("off")
-    ax[1].imshow(mask_pred, cmap=cmap)
+    ax[1].imshow(im_mask_pred, cmap=cmap)
     ax[1].set_title("Prediction", fontweight="bold", fontsize=10)
 
     # ground truth
+    im_mask_gt = np.ma.masked_where(mask_gt == 0, mask_gt)
     if remove_frame:
         ax[2].axis("off")
-    ax[2].imshow(mask_gt, cmap=cmap)
+    ax[2].imshow(im_mask_gt, cmap=cmap)
     ax[2].set_title("Ground truth", fontweight="bold", fontsize=10)
 
     plt.tight_layout()
