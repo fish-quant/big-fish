@@ -17,7 +17,7 @@ def augment_2d(image):
     Parameters
     ----------
     image : np.ndarray
-        Image to augment with shape (y, x, channels).
+        Image to augment with shape (y, x, channels) or (y, x, channels).
 
     Returns
     -------
@@ -68,6 +68,39 @@ def augment_2d_function(identity=False):
     random_operation = np.random.choice(operations)
 
     return random_operation
+
+
+def augment_8_times(image):
+    """Apply every transformation to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to augment with shape (y, x, channels).
+
+    Returns
+    -------
+    images_augmented : List[np.ndarray]
+        List of images augmented with shape (y, x, channels).
+
+    """
+    # check input image
+    check_parameter(image=np.ndarray)
+    check_array(image, ndim=[2, 3])
+
+    # initialization
+    images_augmented = []
+
+    # apply all operators
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_90, _rotation_180, _rotation_270]
+    for operation in operations:
+        augmented_image = operation(image)
+        images_augmented.append(augmented_image)
+
+    return images_augmented
 
 
 def _identity(image):

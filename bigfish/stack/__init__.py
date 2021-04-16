@@ -81,6 +81,7 @@ from .postprocess import from_coord_to_surface
 
 from .augmentation import augment_2d
 from .augmentation import augment_2d_function
+from .augmentation import augment_8_times
 
 from .quality import compute_snr_spots
 from .quality import compute_focus
@@ -167,7 +168,8 @@ _postprocess = [
 
 _augmentation = [
     "augment_2d",
-    "augment_2d_function"]
+    "augment_2d_function",
+    "augment_8_times"]
 
 _quality = [
     "compute_snr_spots",
