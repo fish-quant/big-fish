@@ -547,7 +547,6 @@ def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
         i_instance += 1
 
         # remove pixel already assigned
-        nuc_label[nuc_mask] = 0
         remaining_cell_label[cell_mask] = 0
 
         # if one nucleus per cell only, we remove the cell as candidate
