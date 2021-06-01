@@ -20,6 +20,10 @@ from .spot_modeling import fit_subpixel
 from .spot_modeling import build_reference_spot
 from .spot_modeling import modelize_spot
 from .spot_modeling import precompute_erf
+from .spot_modeling import initialize_grid
+from .spot_modeling import gaussian_2d
+from .spot_modeling import gaussian_3d
+
 
 from .cluster_detection import detect_clusters
 
@@ -39,7 +43,10 @@ _model = [
     "fit_subpixel",
     "build_reference_spot",
     "modelize_spot",
-    "precompute_erf"]
+    "precompute_erf",
+    "initialize_grid",
+    "gaussian_2d",
+    "gaussian_3d"]
 
 _clusters = [
     "detect_clusters"]

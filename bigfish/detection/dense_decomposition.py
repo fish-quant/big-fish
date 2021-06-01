@@ -13,8 +13,8 @@ import numpy as np
 
 import bigfish.stack as stack
 from .spot_modeling import build_reference_spot, modelize_spot, precompute_erf
-from .spot_modeling import _gaussian_2d, _initialize_grid_2d
-from .spot_modeling import _gaussian_3d, _initialize_grid_3d
+from .spot_modeling import gaussian_2d, _initialize_grid_2d
+from .spot_modeling import gaussian_3d, _initialize_grid_3d
 
 from skimage.measure import regionprops
 from skimage.measure import label
@@ -174,7 +174,7 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
         return spots, dense_regions, reference_spot
 
     # precompute gaussian function values
-    max_grid = max(200, region_size + 1)
+    max_grid = region_size + 1
     precomputed_gaussian = precompute_erf(
         voxel_size_z, voxel_size_yx, sigma_z, sigma_yx, max_grid=max_grid)
 
@@ -650,17 +650,17 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
     while diff_ssr < 0 or nb_gaussian == limit_gaussian:
         position_gaussian = np.argmax(residual)
         positions_gaussian.append(list(grid[:, position_gaussian]))
-        simulation += _gaussian_3d(grid=grid,
-                                   mu_z=float(positions_gaussian[-1][0]),
-                                   mu_y=float(positions_gaussian[-1][1]),
-                                   mu_x=float(positions_gaussian[-1][2]),
-                                   sigma_z=sigma_z,
-                                   sigma_yx=sigma_yx,
-                                   voxel_size_z=voxel_size_z,
-                                   voxel_size_yx=voxel_size_yx,
-                                   psf_amplitude=amplitude,
-                                   psf_background=background,
-                                   precomputed=precomputed_gaussian)
+        simulation += gaussian_3d(grid=grid,
+                                  mu_z=float(positions_gaussian[-1][0]),
+                                  mu_y=float(positions_gaussian[-1][1]),
+                                  mu_x=float(positions_gaussian[-1][2]),
+                                  sigma_z=sigma_z,
+                                  sigma_yx=sigma_yx,
+                                  voxel_size_z=voxel_size_z,
+                                  voxel_size_yx=voxel_size_yx,
+                                  psf_amplitude=amplitude,
+                                  psf_background=background,
+                                  precomputed=precomputed_gaussian)
         residual = image_region_raw - simulation
         new_ssr = np.sum(residual ** 2)
         diff_ssr = new_ssr - ssr
@@ -746,14 +746,14 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
     while diff_ssr < 0 or nb_gaussian == limit_gaussian:
         position_gaussian = np.argmax(residual)
         positions_gaussian.append(list(grid[:, position_gaussian]))
-        simulation += _gaussian_2d(grid=grid,
-                                   mu_y=float(positions_gaussian[-1][0]),
-                                   mu_x=float(positions_gaussian[-1][1]),
-                                   sigma_yx=sigma_yx,
-                                   voxel_size_yx=voxel_size_yx,
-                                   psf_amplitude=amplitude,
-                                   psf_background=background,
-                                   precomputed=precomputed_gaussian)
+        simulation += gaussian_2d(grid=grid,
+                                  mu_y=float(positions_gaussian[-1][0]),
+                                  mu_x=float(positions_gaussian[-1][1]),
+                                  sigma_yx=sigma_yx,
+                                  voxel_size_yx=voxel_size_yx,
+                                  psf_amplitude=amplitude,
+                                  psf_background=background,
+                                  precomputed=precomputed_gaussian)
         residual = image_region_raw - simulation
         new_ssr = np.sum(residual ** 2)
         diff_ssr = new_ssr - ssr
