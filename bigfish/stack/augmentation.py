@@ -103,6 +103,41 @@ def augment_8_times(image):
     return images_augmented
 
 
+def augment_8_times_reversed(images_augmented):
+    """Apply every transformation back to return the original 2-d image.
+
+    Parameters
+    ----------
+    images_augmented : List[np.ndarray]
+        List of images augmented with shape (y, x, channels).
+
+    Returns
+    -------
+    images_original : List[np.ndarray]
+        List of original images with shape (y, x, channels).
+
+    """
+    # check input image
+    check_parameter(images_augmented=list)
+    for image_augmented in images_augmented:
+        check_array(image_augmented, ndim=[2, 3])
+
+    # initialization
+    images_original = []
+
+    # apply all operators
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_270, _rotation_180, _rotation_90]
+    for i, image_augmented in enumerate(images_augmented):
+        operation = operations[i]
+        image_original = operation(image_augmented)
+        images_original.append(image_original)
+
+    return images_original
+
+
 def _identity(image):
     """Do not apply any operation to the image.
 
