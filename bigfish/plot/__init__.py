@@ -22,6 +22,10 @@ from .plot_quality import plot_snr_spots
 from .plot_classification import plot_confusion_matrix
 from .plot_classification import plot_2d_projection
 
+from .utils import save_plot
+from .utils import get_minmax_values
+from .utils import create_colormap
+
 
 _images = [
     "plot_yx",
@@ -41,4 +45,9 @@ _quality = [
     "plot_sharpness",
     "plot_snr_spots"]
 
-__all__ = _images + _classification + _quality
+_utils = [
+    "save_plot",
+    "get_minmax_values",
+    "create_colormap"]
+
+__all__ = _images + _classification + _quality + _utils

@@ -73,7 +73,8 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
                           framesize=tuple,
                           remove_frame=bool,
                           path_output=(str, type(None)),
-                          ext=(str, list))
+                          ext=(str, list),
+                          show=bool)
 
     # get the 2-d image
     if image.ndim == 2:
