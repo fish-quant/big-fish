@@ -6,7 +6,7 @@
 Class and functions to segment nucleus.
 """
 
-from bigfish import stack
+import bigfish.stack as stack
 from .utils import clean_segmentation
 
 import numpy as np
@@ -14,6 +14,29 @@ import numpy as np
 from skimage.morphology.selem import disk
 from skimage.morphology import reconstruction
 
+
+# ### Unet model ###
+
+def unet_3_classes_nuc():
+    """Load a pretrained Unet model to predict 3 classes from nucleus images:
+    background, edge and foreground.
+
+    Returns
+    -------
+    model : tensorflow.keras.model object
+        Pretrained Unet model.
+
+    """
+    # import  deep_learning subpackage
+    import bigfish.deep_learning as dl
+
+    # load model
+    model = dl.load_pretrained_model("3_classes", "nuc")
+
+    return model
+
+
+# ### Utility functions ###
 
 def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
     """Remove the nuclei we have already segmented in an image.

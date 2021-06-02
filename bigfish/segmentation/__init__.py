@@ -18,8 +18,11 @@ from .utils import compute_surface_ratio
 from .utils import count_instances
 from .utils import match_nuc_cell
 
+from .nuc_segmentation import unet_3_classes_nuc
 from .nuc_segmentation import remove_segmented_nuc
 
+from .cell_segmentation import unet_3_classes_cell
+from .cell_segmentation import unet_distance_edge_cell
 from .cell_segmentation import cell_watershed
 from .cell_segmentation import get_watershed_relief
 from .cell_segmentation import apply_watershed
@@ -38,12 +41,15 @@ _utils = [
     "match_nuc_cell"]
 
 _nuc = [
+    "unet_3_classes_nuc",
     "remove_segmented_nuc"]
 
-_cyt = [
+_cell = [
+    "unet_3_classes_cell",
+    "unet_distance_edge_cell",
     "cell_watershed",
     "get_watershed_relief",
     "apply_watershed"]
 
 
-__all__ = _utils + _nuc + _cyt
+__all__ = _utils + _nuc + _cell

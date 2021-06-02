@@ -15,6 +15,48 @@ from scipy import ndimage as ndi
 from skimage.morphology import watershed
 
 
+# ### Unet models ###
+
+def unet_3_classes_cell():
+    """Load a pretrained Unet model to predict 3 classes from cell images:
+    background, edge and foreground.
+
+    Returns
+    -------
+    model : tensorflow.keras.model object
+        Pretrained Unet model.
+
+    """
+    # import  deep_learning subpackage
+    import bigfish.deep_learning as dl
+
+    # load model
+    model = dl.load_pretrained_model("3_classes", "cell")
+
+    return model
+
+
+def unet_distance_edge_cell():
+    """Load a pretrained Unet model to predict foreground and a distance map
+    to edge from cell images.
+
+    Returns
+    -------
+    model : tensorflow.keras.model object
+        Pretrained Unet model.
+
+    """
+    # import  deep_learning subpackage
+    import bigfish.deep_learning as dl
+
+    # load model
+    model = dl.load_pretrained_model("distance_edge", "cell")
+
+    return model
+
+
+# ### Watershed ###
+
 def cell_watershed(image, nuc_label, threshold, alpha=0.8):
     """Apply watershed algorithm to segment cell instances.
 

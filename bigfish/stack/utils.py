@@ -662,6 +662,8 @@ def load_and_save_url(remote_url, directory, filename=None):
 
     Returns
     -------
+    path : str
+        Path of the downloaded file.
 
     """
     # check parameters
@@ -677,7 +679,7 @@ def load_and_save_url(remote_url, directory, filename=None):
     # download and save data
     urlretrieve(remote_url, path)
 
-    return
+    return path
 
 
 def check_hash(path, expected_hash):
@@ -749,11 +751,6 @@ def compute_hash(path):
 
 def check_input_data(input_directory):
     """Check input images exists and download them if necessary.
-
-    Returns
-    -------
-    input_directory : str
-        Path of the input data directory.
 
     """
     # parameters
