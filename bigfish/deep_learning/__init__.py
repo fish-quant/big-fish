@@ -46,6 +46,7 @@ from .models_segmentation import load_pretrained_model
 from .models_segmentation import check_pretrained_weights
 from .models_segmentation import build_compile_3_classes_model
 from .models_segmentation import build_compile_distance_model
+from .models_segmentation import build_compile_double_distance_model
 
 
 _utils_models = [
@@ -60,7 +61,8 @@ _models_segmentation = [
     "load_pretrained_model",
     "check_pretrained_weights",
     "build_compile_3_classes_model",
-    "build_compile_distance_model"]
+    "build_compile_distance_model",
+    "build_compile_double_distance_model"]
 
 
 __all__ = (_utils_models, _models_segmentation)
