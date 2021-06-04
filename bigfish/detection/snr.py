@@ -81,6 +81,9 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     if spots.dtype == np.float64:
         spots = np.round(spots).astype(np.int64)
 
+    # cast image if needed
+    image_to_process = image.copy().astype(np.float64)
+
     # compute spot radius
     radius_signal_ = stack.get_radius(voxel_size_z=voxel_size_z,
                                       voxel_size_yx=voxel_size_yx,
@@ -90,6 +93,7 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     radius_background_ = tuple(i * background_factor for i in radius_signal_)
 
     # ceil radii
+    radius_signal = np.ceil(radius_signal_).astype(np.int)
     radius_background = np.ceil(radius_background_).astype(np.int)
 
     # loop over spots
@@ -99,23 +103,51 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
         # extract spot images
         spot_y = spot[ndim - 2]
         spot_x = spot[ndim - 1]
+        radius_signal_yx = radius_signal[-1]
         radius_background_yx = radius_background[-1]
+        edge_background_yx = radius_background_yx - radius_signal_yx
         if ndim == 3:
             spot_z = spot[0]
+            radius_signal_z = radius_signal[0]
             radius_background_z = radius_background[0]
-            max_signal = image[spot_z, spot_y, spot_x]
-            spot_background, _ = _get_spot_volume(
-                image, spot_z, spot_y, spot_x,
+            edge_background_z = radius_background_z - radius_signal_z
+            max_signal = image_to_process[spot_z, spot_y, spot_x]
+            spot_background_, _ = _get_spot_volume(
+                image_to_process, spot_z, spot_y, spot_x,
                 radius_background_z, radius_background_yx)
+            spot_background = spot_background_.copy()
+
+            # discard spot if cropped at the border
+            expected_size = ((2 * radius_background_yx + 1)
+                             * (2 * radius_background_yx + 1)
+                             * (2 * radius_background_z + 1))
+            if expected_size != spot_background.size:
+                continue
+
+            # remove signal from background crop
+            spot_background[edge_background_z:-edge_background_z,
+                            edge_background_yx:-edge_background_yx,
+                            edge_background_yx:-edge_background_yx] = -1
+            spot_background = spot_background[spot_background >= 0]
+
         else:
-            max_signal = image[spot_y, spot_x]
-            spot_background, _ = _get_spot_surface(
-                image, spot_y, spot_x, radius_background_yx)
+            max_signal = image_to_process[spot_y, spot_x]
+            spot_background_, _ = _get_spot_surface(
+                image_to_process, spot_y, spot_x, radius_background_yx)
+            spot_background = spot_background_.copy()
+
+            # discard spot if cropped at the border
+            expected_size = (2 * radius_background_yx + 1) ** 2
+            if expected_size != spot_background.size:
+                continue
+
+            # remove signal from background crop
+            spot_background[edge_background_yx:-edge_background_yx,
+                            edge_background_yx:-edge_background_yx] = -1
+            spot_background = spot_background[spot_background >= 0]
 
         # compute mean background
-        sum_background = np.sum(spot_background) - max_signal
-        n_background = spot_background.size - 1
-        mean_background = sum_background / n_background
+        mean_background = np.mean(spot_background)
 
         # compute standard deviation background
         std_background = np.std(spot_background)
