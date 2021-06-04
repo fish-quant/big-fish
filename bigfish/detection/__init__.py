@@ -24,8 +24,9 @@ from .spot_modeling import initialize_grid
 from .spot_modeling import gaussian_2d
 from .spot_modeling import gaussian_3d
 
-
 from .cluster_detection import detect_clusters
+
+from .snr import compute_snr_spots
 
 
 _spots = [
@@ -51,4 +52,7 @@ _model = [
 _clusters = [
     "detect_clusters"]
 
-__all__ = _spots + _dense + _model + _clusters
+_snr = [
+    "compute_snr_spots"]
+
+__all__ = _spots + _dense + _model + _clusters + _snr

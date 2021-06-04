@@ -84,7 +84,6 @@ from .augmentation import augment_2d_function
 from .augmentation import augment_8_times
 from .augmentation import augment_8_times_reversed
 
-from .quality import compute_snr_spots
 from .quality import compute_focus
 
 
@@ -174,7 +173,6 @@ _augmentation = [
     "augment_8_times_reversed"]
 
 _quality = [
-    "compute_snr_spots",
     "compute_focus"]
 
 
