@@ -16,12 +16,13 @@ from .spot_modeling import _get_spot_surface
 # ### SNR ###
 
 def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                      psf_z=None, psf_yx=200, background_factor=3):
-    """Compute Signal-to-Noise ratio for every detected spot.
+                      psf_z=None, psf_yx=200):
+    """Compute Signal-to-Noise ratio based on detected spot.
 
         SNR = (max_spot_signal - mean_background) / std_background
 
-    Background is a larger region surrounding the spot region.
+    Background is a region twice larger surrounding the spot region. Only the
+    y and x dimensions are taking into account to compute the SNR.
 
     Parameters
     ----------
@@ -41,21 +42,17 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan,
         in nanometer.
-    background_factor : float or int
-        Factor to define the surrounding background of the spot from its
-        radius.
     Returns
     -------
-    snr_spots : np.ndarray, np.float64
-        Signal-to-Noise ratio for each spot.
+    snr : float
+        Median Signal-to-Noise ratio computed for every spots.
 
     """
     # check parameters
     stack.check_parameter(voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),
                           psf_z=(int, float, type(None)),
-                          psf_yx=(int, float),
-                          background_factor=(float, int))
+                          psf_yx=(int, float))
     stack.check_array(image,
                       ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.float32, np.float64])
@@ -90,7 +87,7 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
                                       psf_z=psf_z, psf_yx=psf_yx)
 
     # compute the neighbourhood radius
-    radius_background_ = tuple(i * background_factor for i in radius_signal_)
+    radius_background_ = tuple(i * 2 for i in radius_signal_)
 
     # ceil radii
     radius_signal = np.ceil(radius_signal_).astype(np.int)
@@ -108,24 +105,21 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
         edge_background_yx = radius_background_yx - radius_signal_yx
         if ndim == 3:
             spot_z = spot[0]
-            radius_signal_z = radius_signal[0]
             radius_background_z = radius_background[0]
-            edge_background_z = radius_background_z - radius_signal_z
             max_signal = image_to_process[spot_z, spot_y, spot_x]
             spot_background_, _ = _get_spot_volume(
                 image_to_process, spot_z, spot_y, spot_x,
                 radius_background_z, radius_background_yx)
             spot_background = spot_background_.copy()
 
-            # discard spot if cropped at the border
-            expected_size = ((2 * radius_background_yx + 1)
-                             * (2 * radius_background_yx + 1)
-                             * (2 * radius_background_z + 1))
-            if expected_size != spot_background.size:
+            # discard spot if cropped at the border (along y and x dimensions)
+            expected_size = (2 * radius_background_yx + 1) ** 2
+            actual_size = spot_background.shape[1] * spot_background.shape[2]
+            if expected_size != actual_size:
                 continue
 
             # remove signal from background crop
-            spot_background[edge_background_z:-edge_background_z,
+            spot_background[:,
                             edge_background_yx:-edge_background_yx,
                             edge_background_yx:-edge_background_yx] = -1
             spot_background = spot_background[spot_background >= 0]
@@ -156,7 +150,10 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
         snr = (max_signal - mean_background) / std_background
         snr_spots.append(snr)
 
-    #  format results
-    snr_spots = np.array(snr_spots, dtype=np.float64)
+    #  average SNR
+    if len(snr_spots) == 0:
+        snr = 0.
+    else:
+        snr = np.median(snr_spots)
 
-    return snr_spots
+    return snr
