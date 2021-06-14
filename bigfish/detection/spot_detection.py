@@ -544,3 +544,94 @@ def _get_breaking_point(x, y):
     breaking_point = float(x[i])
 
     return breaking_point, x, y
+
+
+def get_elbow_values(images, voxel_size_z=None, voxel_size_yx=100, psf_z=None,
+                     psf_yx=200):
+    # check parameters
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float))
+
+    # if one image is provided we enlist it
+    if not isinstance(images, list):
+        stack.check_array(images,
+                          ndim=[2, 3],
+                          dtype=[np.uint8, np.uint16,
+                                 np.float32, np.float64])
+        ndim = images.ndim
+        images = [images]
+        n = 1
+    else:
+        ndim = None
+        for i, image in enumerate(images):
+            stack.check_array(image,
+                              ndim=[2, 3],
+                              dtype=[np.uint8, np.uint16,
+                                     np.float32, np.float64])
+            if i == 0:
+                ndim = image.ndim
+            else:
+                if ndim != image.ndim:
+                    raise ValueError("Provided images should have the same "
+                                     "number of dimensions.")
+        n = len(images)
+
+    # check consistency between parameters
+    if ndim == 3 and voxel_size_z is None:
+        raise ValueError("Provided images has {0} dimensions but "
+                         "'voxel_size_z' parameter is missing.".format(ndim))
+    if ndim == 3 and psf_z is None:
+        raise ValueError("Provided images has {0} dimensions but "
+                         "'psf_z' parameter is missing.".format(ndim))
+    if ndim == 2:
+        voxel_size_z = None
+        psf_z = None
+
+    # compute sigma
+    sigma = stack.get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+
+    # apply LoG filter and find local maximum
+    images_filtered = []
+    pixel_values = []
+    masks = []
+    for image in images:
+        # filter image
+        image_filtered = stack.log_filter(image, sigma)
+        images_filtered.append(image_filtered)
+
+        # get pixels value
+        pixel_values += list(image_filtered.ravel())
+
+        # find local maximum
+        mask_local_max = local_maximum_detection(
+            image_filtered, sigma)
+        masks.append(mask_local_max)
+
+    # get threshold values we want to test
+    thresholds = _get_candidate_thresholds(pixel_values)
+
+    # get spots count and its logarithm
+    all_value_spots = []
+    minimum_threshold = float(thresholds[0])
+    for i in range(n):
+        image_filtered = images_filtered[i]
+        mask_local_max = masks[i]
+        spots, mask_spots = spots_thresholding(
+            image_filtered, mask_local_max,
+            threshold=minimum_threshold,
+            remove_duplicate=False)
+        value_spots = image_filtered[mask_spots]
+        all_value_spots.append(value_spots)
+    all_value_spots = np.concatenate(all_value_spots)
+    thresholds, count_spots = _get_spot_counts(
+        thresholds, all_value_spots)
+
+    # select threshold where the kink of the distribution is located
+    if count_spots.size > 0:
+        threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+    else:
+        threshold = None
+
+    return thresholds, count_spots, threshold

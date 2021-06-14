@@ -7,12 +7,15 @@ Function to plot quality control indicators.
 """
 
 import bigfish.stack as stack
+import bigfish.detection as detection
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from .utils import save_plot
 
+
+# ### Focus - sharpness ###
 
 def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
                    size_title=20, size_axes=15, size_legend=15,
@@ -97,53 +100,13 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
     return
 
 
-def plot_snr_spots(snr_spots, labels=None, colors=None, x_lim=None, y_lim=None,
-                   title=None, framesize=(10, 5), size_title=20, size_axes=15,
-                   size_legend=15, path_output=None, ext="png", show=True):
-    """Plot Signal-to-Noise Ratio computed for all detected spots.
+# ### Elbow plot ###
 
-    Parameters
-    ----------
-    snr_spots : List[np.ndarray] or np.ndarray
-        A list of 1-d arrays with the SNR computed for every spot of an image.
-        One array per image.
-    labels : List[str], str or None
-        Labels or the curves.
-    colors : List[str], str or None
-        Colors or the curves.
-    x_lim : tuple or None
-        Limits of the x-axis.
-    y_lim : tuple or None
-        Limits of the y-axis.
-    title : str or None
-        Title of the plot.
-    framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
-    size_title : int
-        Size of the title.
-    size_axes : int
-        Size of the axes label.
-    size_legend : int
-        Size of the legend.
-    path_output : str or None
-        Path to save the image (without extension).
-    ext : str or List[str]
-        Extension used to save the plot. If it is a list of strings, the plot
-        will be saved several times.
-    show : bool
-        Show the figure or not.
-
-    Returns
-    -------
-
-    """
+def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
+               framesize=(5, 5), size_title=20, size_axes=15, size_legend=15,
+               path_output=None, ext="png", show=True):
     # check parameters
-    stack.check_parameter(snr_spots=(list, np.ndarray),
-                          labels=(list, str, type(None)),
-                          colors=(list, str, type(None)),
-                          x_lim=(tuple, type(None)),
-                          y_lim=(tuple, type(None)),
-                          title=(str, type(None)),
+    stack.check_parameter(title=(str, list, type(None)),
                           framesize=tuple,
                           size_title=int,
                           size_axes=int,
@@ -152,61 +115,30 @@ def plot_snr_spots(snr_spots, labels=None, colors=None, x_lim=None, y_lim=None,
                           ext=(str, list),
                           show=bool)
 
-    # enlist values if necessary
-    if isinstance(snr_spots, np.ndarray):
-        snr_spots = [snr_spots]
-    if labels is not None and isinstance(labels, str):
-        labels = [labels]
-    if colors is not None and isinstance(colors, str):
-        colors = [colors]
-
-    # check arrays
-    for snr_spots_ in snr_spots:
-        stack.check_array(snr_spots_,
-                          ndim=1,
-                          dtype=[np.float32, np.float64])
-
-    # check number of parameters
-    if labels is not None and len(snr_spots) != len(labels):
-        raise ValueError("The number of labels provided ({0}) differs from "
-                         "the number of arrays to plot ({1})."
-                         .format(len(labels), len(snr_spots)))
-    if colors is not None and len(snr_spots) != len(colors):
-        raise ValueError("The number of colors provided ({0}) differs from "
-                         "the number of arrays to plot ({1})."
-                         .format(len(colors), len(snr_spots)))
-
-    # frame
-    plt.figure(figsize=framesize)
+    # get candidate thresholds and spots count to plot the elbow curve
+    thresholds, count_spots, threshold = detection.get_elbow_values(
+        images=images,
+        voxel_size_z=voxel_size_z,
+        voxel_size_yx=voxel_size_yx,
+        psf_z=psf_z,
+        psf_yx=psf_yx)
 
     # plot
-    for i, snr_spots_ in enumerate(snr_spots):
-        values = sorted(snr_spots_, reverse=True)
-        if labels is None and colors is None:
-            plt.plot(values, lw=2)
-        elif labels is None and colors is not None:
-            color = colors[i]
-            plt.plot(values, lw=2, c=color)
-        elif labels is not None and colors is None:
-            label = labels[i]
-            plt.plot(values, lw=2, label=label)
-        else:
-            label = labels[i]
-            color = colors[i]
-            plt.plot(values, lw=2, c=color, label=label)
+    plt.figure(figsize=framesize)
+    plt.plot(thresholds, count_spots, c="#2c7bb6", lw=2)
+    if threshold is not None:
+        i_threshold = np.argmax(thresholds == threshold)
+        plt.scatter(threshold, count_spots[i_threshold],
+                    marker="D", c="#d7191c", s=60, label="Selected threshold")
 
     # axes
     if title is not None:
         plt.title(title, fontweight="bold", fontsize=size_title)
-    plt.xlabel("Detected Spots", fontweight="bold", fontsize=size_axes)
-    plt.ylabel("Signal-to-Noise Ratio", fontweight="bold", fontsize=size_axes)
-    if x_lim is not None:
-        plt.xlim(x_lim)
-    if y_lim is not None:
-        plt.ylim(y_lim)
-    if labels is not None:
+    plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
+    plt.ylabel("Number of mRNAs detected (log scale)",
+               fontweight="bold", fontsize=size_axes)
+    if threshold is not None:
         plt.legend(prop={'size': size_legend})
-
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
@@ -216,5 +148,3 @@ def plot_snr_spots(snr_spots, labels=None, colors=None, x_lim=None, y_lim=None,
         plt.close()
 
     return
-
-

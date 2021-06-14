@@ -11,6 +11,7 @@ from .spot_detection import detect_spots
 from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
 from .spot_detection import automated_threshold_setting
+from .spot_detection import get_elbow_values
 
 from .dense_decomposition import decompose_dense
 from .dense_decomposition import get_dense_region
@@ -33,7 +34,8 @@ _spots = [
     "detect_spots",
     "local_maximum_detection",
     "spots_thresholding",
-    "automated_threshold_setting"]
+    "automated_threshold_setting",
+    "get_elbow_values"]
 
 _dense = [
     "decompose_dense",
