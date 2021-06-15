@@ -81,6 +81,15 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     # cast image if needed
     image_to_process = image.copy().astype(np.float64)
 
+    # clip coordinate if needed
+    if ndim == 3:
+        spots[:, 0] = np.clip(spots[:, 0], 0, image_to_process.shape[0] - 1)
+        spots[:, 1] = np.clip(spots[:, 1], 0, image_to_process.shape[1] - 1)
+        spots[:, 2] = np.clip(spots[:, 2], 0, image_to_process.shape[2] - 1)
+    else:
+        spots[:, 0] = np.clip(spots[:, 0], 0, image_to_process.shape[0] - 1)
+        spots[:, 1] = np.clip(spots[:, 1], 0, image_to_process.shape[1] - 1)
+
     # compute spot radius
     radius_signal_ = stack.get_radius(voxel_size_z=voxel_size_z,
                                       voxel_size_yx=voxel_size_yx,
