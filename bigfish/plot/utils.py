@@ -81,3 +81,22 @@ def get_minmax_values(tensor):
         vmin, vmax = 0, 1
 
     return vmin, vmax
+
+
+def create_colormap():
+    """Create a shuffled colormap to display segmentation masks.
+
+    Returns
+    -------
+    colormap : ListedColormap object
+        Colormap for matplotlib.
+
+    """
+    import matplotlib.pyplot as plt
+
+    values = np.linspace(0, 1, 256)
+    np.random.shuffle(values)
+    colormap = plt.cm.colors.ListedColormap(plt.cm.YlGnBu(values))
+    colormap.set_bad(color='black')
+
+    return colormap

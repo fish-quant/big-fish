@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.foci_detection module.
+Unitary tests for bigfish.detection.cluster_detection module.
 """
 
-# TODO test bigfish.detection.detect_foci
+# TODO test bigfish.detection.detect_clusters

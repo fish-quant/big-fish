@@ -10,15 +10,21 @@ from .plot_images import plot_yx
 from .plot_images import plot_images
 from .plot_images import plot_segmentation
 from .plot_images import plot_segmentation_boundary
+from .plot_images import plot_segmentation_diff
+
 from .plot_images import plot_detection
 from .plot_images import plot_reference_spot
 from .plot_images import plot_cell
 
 from .plot_quality import plot_sharpness
-from .plot_quality import plot_snr_spots
+from .plot_quality import plot_elbow
 
 from .plot_classification import plot_confusion_matrix
 from .plot_classification import plot_2d_projection
+
+from .utils import save_plot
+from .utils import get_minmax_values
+from .utils import create_colormap
 
 
 _images = [
@@ -26,6 +32,7 @@ _images = [
     "plot_images",
     "plot_segmentation",
     "plot_segmentation_boundary",
+    "plot_segmentation_diff",
     "plot_detection",
     "plot_reference_spot",
     "plot_cell"]
@@ -36,6 +43,11 @@ _classification = [
 
 _quality = [
     "plot_sharpness",
-    "plot_snr_spots"]
+    "plot_elbow"]
 
-__all__ = _images + _classification + _quality
+_utils = [
+    "save_plot",
+    "get_minmax_values",
+    "create_colormap"]
+
+__all__ = _images + _classification + _quality + _utils

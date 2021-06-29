@@ -3,7 +3,8 @@
 # License: BSD 3 clause
 
 """
-Functions to detected aggregated spots and foci.
+Functions to cluster spots in point cloud and detect relevant aggregated
+structures.
 """
 
 import numpy as np
@@ -11,15 +12,15 @@ import bigfish.stack as stack
 from sklearn.cluster import DBSCAN
 
 
-# ### Detect foci ###
+# ### Detect clusters ###
 
-def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
-                nb_min_spots=4):
-    """Detect clustered spots we can define as foci.
+def detect_clusters(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
+                    nb_min_spots=4):
+    """Cluster spots and detect relevant aggregated structures.
 
     1) If two spots are distant within a specific radius, we consider they are
     related to each other.
-    2) A minimum number spots related to each others defines a foci.
+    2) A minimum number spots related to each others defines a cluster.
 
     Parameters
     ----------
@@ -46,10 +47,10 @@ def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the cluster assigned to the spot. If no cluster was
         assigned, value is -1.
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx coordinates), the number of
-        spots detected in the foci and its index.
+    clusters : np.ndarray, np.int64
+        Array with shape (nb_clusters, 5) or (nb_clusters, 4). One coordinate
+        per dimension for the clusters centroid (zyx or yx coordinates), the
+        number of spots detected in the clusters and its index.
 
     """
     # check parameters
@@ -73,17 +74,17 @@ def detect_foci(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
     # case where no spot were detected
     if spots.size == 0:
         clustered_spots = np.array([], dtype=np.int64).reshape((0, ndim + 1))
-        foci = np.array([], dtype=np.int64).reshape((0, ndim + 2))
-        return clustered_spots, foci
+        clusters = np.array([], dtype=np.int64).reshape((0, ndim + 2))
+        return clustered_spots, clusters
 
     # cluster spots
     clustered_spots = _cluster_spots(
         spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots)
 
-    # extract and shape foci information
-    foci = _extract_information(clustered_spots)
+    # extract and shape clusters information
+    clusters = _extract_information(clustered_spots)
 
-    return clustered_spots, foci
+    return clustered_spots, clusters
 
 
 def _convert_spot_coordinates(spots, voxel_size_z, voxel_size_yx):
@@ -166,7 +167,7 @@ def _cluster_spots(spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots):
 
 
 def _extract_information(clustered_spots):
-    """Extract foci information from clustered spots.
+    """Extract clusters information from clustered spots.
 
     Parameters
     ----------
@@ -178,48 +179,51 @@ def _extract_information(clustered_spots):
 
     Returns
     -------
-    foci : np.ndarray, np.int64
-        Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
-        dimension for the foci centroid (zyx or yx coordinates), the number of
-        spots detected in the foci and its index.
+    clusters : np.ndarray, np.int64
+        Array with shape (nb_clusters, 5) or (nb_clusters, 4). One coordinate
+        per dimension for the cluster centroid (zyx or yx coordinates), the
+        number of spots detected in the cluster and its index.
 
     """
-    # extract information for 3-d foci...
+    # extract information for 3-d cluster...
     if clustered_spots.shape[1] == 4:
 
-        # get 3-d foci labels
-        labels_foci = np.unique(
+        # get 3-d cluster labels
+        labels_clusters = np.unique(
             clustered_spots[clustered_spots[:, 3] != -1, 3])
-        if labels_foci.size == 0:
-            foci = np.array([], dtype=np.int64).reshape((0, 5))
-            return foci
+        if labels_clusters.size == 0:
+            clusters = np.array([], dtype=np.int64).reshape((0, 5))
+            return clusters
 
         # shape information
-        foci = []
-        for label in labels_foci:
-            spots_in_foci = clustered_spots[clustered_spots[:, 3] == label, :3]
-            z_foci, y_foci, x_foci = spots_in_foci.mean(axis=0)
-            nb_spots_foci = len(spots_in_foci)
-            foci.append([z_foci, y_foci, x_foci, nb_spots_foci, label])
-        foci = np.array(foci, dtype=np.int64)
+        clusters = []
+        for label in labels_clusters:
+            spots_in_cluster = clustered_spots[clustered_spots[:, 3] == label,
+                                               :3]
+            z_cluster, y_cluster, x_cluster = spots_in_cluster.mean(axis=0)
+            nb_spots_cluster = len(spots_in_cluster)
+            clusters.append([z_cluster, y_cluster, x_cluster,
+                             nb_spots_cluster, label])
+        clusters = np.array(clusters, dtype=np.int64)
 
-    # ... and 2-d foci
+    # ... and 2-d cluster
     else:
 
-        # get 2-d foci labels
-        labels_foci = np.unique(
+        # get 2-d cluster labels
+        labels_clusters = np.unique(
             clustered_spots[clustered_spots[:, 2] != -1, 2])
-        if labels_foci.size == 0:
-            foci = np.array([], dtype=np.int64).reshape((0, 4))
-            return foci
+        if labels_clusters.size == 0:
+            clusters = np.array([], dtype=np.int64).reshape((0, 4))
+            return clusters
 
         # shape information
-        foci = []
-        for label in labels_foci:
-            spots_in_foci = clustered_spots[clustered_spots[:, 2] == label, :2]
-            y_foci, x_foci = spots_in_foci.mean(axis=0)
-            nb_spots_foci = len(spots_in_foci)
-            foci.append([y_foci, x_foci, nb_spots_foci, label])
-        foci = np.array(foci, dtype=np.int64)
+        clusters = []
+        for label in labels_clusters:
+            spots_in_cluster = clustered_spots[clustered_spots[:, 2] == label,
+                                               :2]
+            y_cluster, x_cluster = spots_in_cluster.mean(axis=0)
+            nb_spots_cluster = len(spots_in_cluster)
+            clusters.append([y_cluster, x_cluster, nb_spots_cluster, label])
+        clusters = np.array(clusters, dtype=np.int64)
 
-    return foci
+    return clusters

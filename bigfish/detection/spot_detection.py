@@ -3,9 +3,10 @@
 # License: BSD 3 clause
 
 """
-Class and functions to detect RNA spots in 2-d and 3-d.
+Functions to detect spots in 2-d and 3-d.
 """
 
+import warnings
 import scipy.ndimage as ndi
 import numpy as np
 
@@ -232,7 +233,8 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
         thresholds, count_spots = _get_spot_counts(thresholds, all_value_spots)
 
         # select threshold where the kink of the distribution is located
-        threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+        if count_spots.size > 0:
+            threshold, _, _ = _get_breaking_point(thresholds, count_spots)
 
     # detect spots
     all_spots = []
@@ -326,8 +328,9 @@ def spots_thresholding(image, mask_local_max, threshold,
         Image with shape (z, y, x) or (y, x).
     mask_local_max : np.ndarray, bool
         Mask with shape (z, y, x) or (y, x) indicating the local peaks.
-    threshold : float or int
-        A threshold to discriminate relevant spots from noisy blobs.
+    threshold : float, int or None
+        A threshold to discriminate relevant spots from noisy blobs. If None,
+        detection is aborted with a warning.
     remove_duplicate : bool
         Remove potential duplicate coordinates for the same spots. Slow the
         running.
@@ -348,8 +351,16 @@ def spots_thresholding(image, mask_local_max, threshold,
     stack.check_array(mask_local_max,
                       ndim=[2, 3],
                       dtype=[bool])
-    stack.check_parameter(threshold=(float, int),
+    stack.check_parameter(threshold=(float, int, type(None)),
                           remove_duplicate=bool)
+
+    if threshold is None:
+        mask = np.zeros_like(image, dtype=bool)
+        spots = np.array([], dtype=np.int64).reshape((0, image.ndim))
+        warnings.warn("No spots were detected (threshold is {0})."
+                      .format(threshold),
+                      UserWarning)
+        return spots, mask
 
     # remove peak with a low intensity
     mask = (mask_local_max & (image > threshold))
@@ -376,6 +387,12 @@ def spots_thresholding(image, mask_local_max, threshold,
         # get peak coordinates
         spots = np.nonzero(mask)
         spots = np.column_stack(spots)
+
+    # case where no spots were detected
+    if spots.size == 0:
+        warnings.warn("No spots were detected (threshold is {0})."
+                      .format(threshold),
+                      UserWarning)
 
     return spots, mask
 
@@ -423,7 +440,12 @@ def automated_threshold_setting(image, mask_local_max):
     thresholds, count_spots = _get_spot_counts(thresholds, value_spots)
 
     # select threshold where the kink of the distribution is located
-    optimal_threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+    if count_spots.size > 0:
+        optimal_threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+
+    # case where no spots were detected
+    else:
+        optimal_threshold = None
 
     return optimal_threshold
 
@@ -466,6 +488,8 @@ def _get_spot_counts(thresholds, value_spots):
 
     Returns
     -------
+    thresholds : np.ndarray, np.float64
+        Candidate threshold values.
     count_spots : np.ndarray, np.float64
         Spots count function.
 
@@ -520,3 +544,94 @@ def _get_breaking_point(x, y):
     breaking_point = float(x[i])
 
     return breaking_point, x, y
+
+
+def get_elbow_values(images, voxel_size_z=None, voxel_size_yx=100, psf_z=None,
+                     psf_yx=200):
+    # check parameters
+    stack.check_parameter(voxel_size_z=(int, float, type(None)),
+                          voxel_size_yx=(int, float),
+                          psf_z=(int, float, type(None)),
+                          psf_yx=(int, float))
+
+    # if one image is provided we enlist it
+    if not isinstance(images, list):
+        stack.check_array(images,
+                          ndim=[2, 3],
+                          dtype=[np.uint8, np.uint16,
+                                 np.float32, np.float64])
+        ndim = images.ndim
+        images = [images]
+        n = 1
+    else:
+        ndim = None
+        for i, image in enumerate(images):
+            stack.check_array(image,
+                              ndim=[2, 3],
+                              dtype=[np.uint8, np.uint16,
+                                     np.float32, np.float64])
+            if i == 0:
+                ndim = image.ndim
+            else:
+                if ndim != image.ndim:
+                    raise ValueError("Provided images should have the same "
+                                     "number of dimensions.")
+        n = len(images)
+
+    # check consistency between parameters
+    if ndim == 3 and voxel_size_z is None:
+        raise ValueError("Provided images has {0} dimensions but "
+                         "'voxel_size_z' parameter is missing.".format(ndim))
+    if ndim == 3 and psf_z is None:
+        raise ValueError("Provided images has {0} dimensions but "
+                         "'psf_z' parameter is missing.".format(ndim))
+    if ndim == 2:
+        voxel_size_z = None
+        psf_z = None
+
+    # compute sigma
+    sigma = stack.get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+
+    # apply LoG filter and find local maximum
+    images_filtered = []
+    pixel_values = []
+    masks = []
+    for image in images:
+        # filter image
+        image_filtered = stack.log_filter(image, sigma)
+        images_filtered.append(image_filtered)
+
+        # get pixels value
+        pixel_values += list(image_filtered.ravel())
+
+        # find local maximum
+        mask_local_max = local_maximum_detection(
+            image_filtered, sigma)
+        masks.append(mask_local_max)
+
+    # get threshold values we want to test
+    thresholds = _get_candidate_thresholds(pixel_values)
+
+    # get spots count and its logarithm
+    all_value_spots = []
+    minimum_threshold = float(thresholds[0])
+    for i in range(n):
+        image_filtered = images_filtered[i]
+        mask_local_max = masks[i]
+        spots, mask_spots = spots_thresholding(
+            image_filtered, mask_local_max,
+            threshold=minimum_threshold,
+            remove_duplicate=False)
+        value_spots = image_filtered[mask_spots]
+        all_value_spots.append(value_spots)
+    all_value_spots = np.concatenate(all_value_spots)
+    thresholds, count_spots = _get_spot_counts(
+        thresholds, all_value_spots)
+
+    # select threshold where the kink of the distribution is located
+    if count_spots.size > 0:
+        threshold, _, _ = _get_breaking_point(thresholds, count_spots)
+    else:
+        threshold = None
+
+    return thresholds, count_spots, threshold
