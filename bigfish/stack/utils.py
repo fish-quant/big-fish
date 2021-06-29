@@ -662,6 +662,8 @@ def load_and_save_url(remote_url, directory, filename=None):
 
     Returns
     -------
+    path : str
+        Path of the downloaded file.
 
     """
     # check parameters
@@ -677,7 +679,7 @@ def load_and_save_url(remote_url, directory, filename=None):
     # download and save data
     urlretrieve(remote_url, path)
 
-    return
+    return path
 
 
 def check_hash(path, expected_hash):
@@ -747,13 +749,18 @@ def compute_hash(path):
     return sha256
 
 
-def check_input_data(input_directory):
+def check_input_data(input_directory, input_segmentation=False):
     """Check input images exists and download them if necessary.
+
+    Parameters
+    ----------
+    input_directory : str
+        Path of the image directory.
+    input_segmentation : bool
+        Check 2-d example images for segmentation.
 
     Returns
     -------
-    input_directory : str
-        Path of the input data directory.
 
     """
     # parameters
@@ -763,6 +770,12 @@ def check_input_data(input_directory):
     filename_input_smfish = "experiment_1_smfish_fov_1.tif"
     url_input_smfish = "https://github.com/fish-quant/big-fish-examples/releases/download/data/experiment_1_smfish_fov_1.tif"
     hash_input_smfish = "bc6aec1f3da4c25f3c6b579c274584ce1e88112c7f980e5437b5ad5223bc8ff6"
+    filename_input_nuc_full = "example_nuc_full.tif"
+    url_input_nuc_full = "https://github.com/fish-quant/big-fish-examples/releases/download/data/example_nuc_full.tif"
+    hash_input_nuc_full = "3bf70c7b5a02c60725baba3dfddff3010e0957de9ab78f0f65166248ead84ec4"
+    filename_input_cell_full = "example_cell_full.tif"
+    url_input_cell_full = "https://github.com/fish-quant/big-fish-examples/releases/download/data/example_cell_full.tif"
+    hash_input_cell_full = "36981955ed97e9cab8a69241140a9aac3bdcf32dc157d6957fd37edcb16b34bd"
 
     # check if input dapi image exists
     path = os.path.join(input_directory, filename_input_dapi)
@@ -817,6 +830,64 @@ def check_input_data(input_directory):
                           input_directory,
                           filename_input_smfish)
         check_hash(path, hash_input_smfish)
+
+    # stop here or check segmentation examples
+    if not input_segmentation:
+        return
+
+    # check if example nucleus exists
+    path = os.path.join(input_directory, filename_input_nuc_full)
+    if os.path.isfile(path):
+
+        # check that image is not corrupted
+        try:
+            check_hash(path, hash_input_nuc_full)
+            print("{0} is already in the directory"
+                  .format(filename_input_nuc_full))
+
+        # otherwise download it
+        except IOError:
+            print("{0} seems corrupted".format(filename_input_nuc_full))
+            print("downloading {0}...".format(filename_input_nuc_full))
+            load_and_save_url(url_input_nuc_full,
+                              input_directory,
+                              filename_input_nuc_full)
+            check_hash(path, hash_input_nuc_full)
+
+    # if file does not exist we directly download it
+    else:
+        print("downloading {0}...".format(filename_input_nuc_full))
+        load_and_save_url(url_input_nuc_full,
+                          input_directory,
+                          filename_input_nuc_full)
+        check_hash(path, hash_input_nuc_full)
+
+    # check if example cell exists
+    path = os.path.join(input_directory, filename_input_cell_full)
+    if os.path.isfile(path):
+
+        # check that image is not corrupted
+        try:
+            check_hash(path, hash_input_cell_full)
+            print("{0} is already in the directory"
+                  .format(filename_input_cell_full))
+
+        # otherwise download it
+        except IOError:
+            print("{0} seems corrupted".format(filename_input_cell_full))
+            print("downloading {0}...".format(filename_input_cell_full))
+            load_and_save_url(url_input_cell_full,
+                              input_directory,
+                              filename_input_cell_full)
+            check_hash(path, hash_input_cell_full)
+
+    # if file does not exist we directly download it
+    else:
+        print("downloading {0}...".format(filename_input_cell_full))
+        load_and_save_url(url_input_cell_full,
+                          input_directory,
+                          filename_input_cell_full)
+        check_hash(path, hash_input_cell_full)
 
     return
 

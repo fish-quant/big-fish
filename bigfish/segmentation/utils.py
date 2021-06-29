@@ -9,80 +9,14 @@ Utility functions for bigfish.segmentation subpackage.
 import bigfish.stack as stack
 
 import numpy as np
-from scipy import ndimage as ndi
 
-from skimage.measure import label, regionprops
-from skimage.morphology import remove_small_objects
+from skimage.measure import regionprops
+from skimage.transform import resize
 
 
 # TODO make functions compatible with different type of integers
 
-# ### Labelled images ###
-
-def label_instances(image_binary):
-    """Count and label the different instances previously segmented in an
-    image.
-
-    Parameters
-    ----------
-    image_binary : np.ndarray, bool
-        Binary segmented image with shape (y, x).
-
-    Returns
-    -------
-    image_label : np.ndarray, np.int64
-        Labelled image. Each instance is characterized by the same pixel value.
-
-    """
-    # check parameters
-    stack.check_array(image_binary, ndim=2, dtype=bool)
-
-    # label instances
-    image_label = label(image_binary)
-
-    return image_label
-
-
-def merge_labels(image_label_1, image_label_2):
-    """Combine two partial labels of the same image.
-
-    To prevent merging conflict, labels should not be rescale.
-
-    Parameters
-    ----------
-    image_label_1 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
-    image_label_2 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
-
-    Returns
-    -------
-    image_label : np.ndarray, np.int64
-        Labelled image with shape (y, x).
-
-    """
-    # check parameters
-    stack.check_array(image_label_1, ndim=2, dtype=np.int64)
-    stack.check_array(image_label_2, ndim=2, dtype=np.int64)
-
-    # count number of instances
-    nb_instances_1 = image_label_1.max()
-    nb_instances_2 = image_label_2.max()
-    nb_instances = nb_instances_1 + nb_instances_2
-
-    # check if labels can be merged
-    if nb_instances > np.iinfo(np.int64).max:
-        raise ValueError("Labels can not be merged. There are too many "
-                         "instances for a 64 bit image, labels could overlap.")
-
-    # merge labels
-    image_label_2[image_label_2 > 0] += image_label_1
-    image_label = np.maximum(image_label_1, image_label_2)
-
-    return image_label
-
-
-# ### Basic segmentation ###
+# ### Thresholding method ###
 
 def thresholding(image, threshold):
     """Segment a 2-d image to discriminate object from background applying a
@@ -112,185 +46,9 @@ def thresholding(image, threshold):
     return image_segmented
 
 
-def clean_segmentation(image, small_object_size=None, fill_holes=False,
-                       smoothness=None, delimit_instance=False):
-    """Clean segmentation results (binary masks or integer labels).
-
-    Parameters
-    ----------
-    image : np.ndarray, np.int64 or bool
-        Labelled or masked image with shape (y, x).
-    small_object_size : int or None
-        Areas with a smaller surface (in pixels) are removed.
-    fill_holes : bool
-        Fill holes within a labelled or masked area.
-    smoothness : int or None
-        Radius of a median kernel filter. The higher the smoother instance
-        boundaries are.
-    delimit_instance : bool
-        Delimit clearly instances boundaries by preventing contact between each
-        others.
-
-    Returns
-    -------
-    image_cleaned : np.ndarray, np.int64 or bool
-        Cleaned image with shape (y, x).
-
-    """
-    # check parameters
-    stack.check_array(image, ndim=2, dtype=[np.int64, bool])
-    stack.check_parameter(small_object_size=(int, type(None)),
-                          fill_holes=bool,
-                          smoothness=(int, type(None)),
-                          delimit_instance=bool)
-
-    # initialize cleaned image
-    image_cleaned = image.copy()
-
-    # remove small object
-    if small_object_size is not None:
-        image_cleaned = _remove_small_area(image_cleaned, small_object_size)
-
-    # fill holes
-    if fill_holes:
-        image_cleaned = _fill_hole(image_cleaned)
-
-    if smoothness:
-        image_cleaned = _smooth_instance(image_cleaned, smoothness)
-
-    if delimit_instance:
-        image_cleaned = _delimit_instance(image_cleaned)
-
-    return image_cleaned
-
-
-def _remove_small_area(image, min_size):
-    """Remove segmented areas with a small surface.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.int64 or bool
-        Labelled or masked image with shape (y, x).
-    min_size : int
-        Areas with a smaller surface (in pixels) are removed.
-
-    Returns
-    -------
-    image_cleaned : np.ndarray, np.int64 or bool
-        Cleaned image with shape (y, x).
-
-    """
-    # remove small object
-    image_cleaned = remove_small_objects(image, min_size=min_size)
-
-    return image_cleaned
-
-
-def _fill_hole(image):
-    """Fill holes within the segmented areas.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.int64 or bool
-        Labelled or masked image with shape (y, x).
-
-    Returns
-    -------
-    image_cleaned : np.ndarray, np.int64 or bool
-        Cleaned image with shape (y, x).
-
-    """
-    # fill holes in a binary mask
-    if image.dtype == bool:
-        image_cleaned = ndi.binary_fill_holes(image)
-
-    # fill holes in a labelled image
-    else:
-        image_cleaned = np.zeros_like(image)
-        for i in range(1, image.max() + 1):
-            image_binary = image == i
-            image_binary = ndi.binary_fill_holes(image_binary)
-            image_cleaned[image_binary] = i
-
-    return image_cleaned
-
-
-def _smooth_instance(image, radius):
-    """Apply a median filter to smooth instance boundaries.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.int64 or bool
-        Labelled or masked image with shape (y, x).
-    radius : int
-        Radius of the kernel for the median filter. The higher the smoother.
-
-    Returns
-    -------
-    image_cleaned : np.ndarray, np.int64 or bool
-        Cleaned image with shape (y, x).
-
-    """
-    # smooth instance boundaries for a binary mask
-    if image.dtype == bool:
-        image_cleaned = image.astype(np.uint8)
-        image_cleaned = stack.median_filter(image_cleaned, "disk", radius)
-        image_cleaned = image_cleaned.astype(bool)
-
-    # smooth instance boundaries for a labelled image
-    else:
-        if image.max() <= 65535 and image.min() >= 0:
-            image_cleaned = image.astype(np.uint16)
-            image_cleaned = stack.median_filter(image_cleaned, "disk", radius)
-            image_cleaned = image_cleaned.astype(np.int64)
-        else:
-            raise ValueError("Segmentation boundaries can't be smoothed "
-                             "because more than 65535 has been detected in "
-                             "the image. Smoothing is performed with 16-bit "
-                             "unsigned integer images.")
-
-    return image_cleaned
-
-
-def _delimit_instance(image):
-    """Subtract an eroded image to a dilated one in order to prevent
-    boundaries contact.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.int64 or bool
-        Labelled or masked image with shape (y, x).
-
-    Returns
-    -------
-    image_cleaned : np.ndarray, np.int64 or bool
-        Cleaned image with shape (y, x).
-
-    """
-    # handle 64 bit integer
-    original_dtype = image.dtype
-    if image.dtype == np.int64:
-        image = image.astype(np.float64)
-
-    # erode-dilate mask
-    image_dilated = stack.dilation_filter(image, "disk", 1)
-    image_eroded = stack.erosion_filter(image, "disk", 1)
-    if original_dtype == bool:
-        borders = image_dilated & ~image_eroded
-        image_cleaned = image.copy()
-        image_cleaned[borders] = False
-    else:
-        borders = image_dilated - image_eroded
-        image_cleaned = image.copy()
-        image_cleaned[borders > 0] = 0
-        image_cleaned = image_cleaned.astype(original_dtype)
-
-    return image_cleaned
-
-
 # ### Instances measures ###
 
-def compute_instances_mean_diameter(image_label):
+def compute_mean_diameter(image_label):
     """Compute the averaged size of the segmented instances.
 
     For each instance, we compute the diameter of an object with an equivalent
@@ -298,7 +56,7 @@ def compute_instances_mean_diameter(image_label):
 
     Parameters
     ----------
-    image_label : np.ndarray, np.int64
+    image_label : np.ndarray, np.int or np.uint
         Labelled image with shape (y, x).
 
     Returns
@@ -308,89 +66,228 @@ def compute_instances_mean_diameter(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label, ndim=2, dtype=np.int64)
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
 
     # get equivalent diameter and average it
-    diameter = []
+    diameter = 0
+    n = len(props)
     for prop in props:
-        diameter.append(prop.equivalent_diameter)
-    mean_diameter = np.mean(diameter)
+        diameter += prop.equivalent_diameter
+    if n > 0:
+        mean_diameter = diameter / n
+    else:
+        mean_diameter = np.nan
 
     return mean_diameter
 
 
-# ### Nuclei-cells matching
+def compute_mean_convexity_ratio(image_label):
+    """Compute the averaged convexity ratio of the segmented instances.
 
-def match_nuc_cell(nuc_label, cell_label):
-    """Match each nucleus instance with the most overlapping cell instance.
+    For each instance, we compute the ratio between its area and the area of
+    its convex hull. Then, we average the diameters.
 
     Parameters
     ----------
-    nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
-    cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
+    image_label : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
 
     Returns
     -------
-    new_nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
-    new_cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
+    mean_convexity_ratio : float
+        Averaged convexity ratio of the segmented instances.
 
     """
     # check parameters
-    stack.check_array(nuc_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
-    stack.check_array(cell_label,
+    stack.check_array(image_label,
                       ndim=2,
                       dtype=[np.uint8, np.uint16, np.int64])
 
-    # initialize new labelled images
-    new_nuc_label = np.zeros_like(nuc_label)
-    new_cell_label = np.zeros_like(cell_label)
+    # compute properties of the segmented instances
+    props = regionprops(image_label)
 
-    # match nuclei and cells
-    label_max = nuc_label.max()
-    for i_nuc in range(1, label_max + 1):
-        # check if a nucleus is labelled with this value
-        nuc_mask = nuc_label == i_nuc
-        if nuc_mask.sum() == 0:
-            continue
-        # check if a cell is labelled with this value
-        i_cell = _get_most_frequent_value(cell_label[nuc_mask])
-        if i_cell == 0:
-            continue
-        # assign cell and nucleus
-        cell_mask = cell_label == i_cell
-        cell_mask |= nuc_mask
-        new_nuc_label[nuc_mask] = i_nuc
-        new_cell_label[cell_mask] = i_nuc
-        # remove pixel already assigned
-        nuc_label[nuc_mask] = 0
-        cell_label[cell_mask] = 0
+    # get convexity ratio and average it
+    n = len(props)
+    convexity_ratio = 0
+    for prop in props:
+        convexity_ratio += prop.area / prop.convex_area
+    if n > 0:
+        mean_convexity_ratio = convexity_ratio / n
+    else:
+        mean_convexity_ratio = np.nan
 
-    return new_nuc_label, new_cell_label
+    return mean_convexity_ratio
 
 
-def _get_most_frequent_value(array):
-    """Count the most frequent value in a array.
+def compute_surface_ratio(image_label):
+    """Compute the averaged surface ratio of the segmented instances.
+
+    We compute the proportion of surface occupied by instances.
 
     Parameters
     ----------
-    array : np.ndarray, np.uint or np.int
-        Array-like object.
+    image_label : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
 
     Returns
     -------
-    value : int
-        Most frequent integer in the array.
+    surface_ratio : float
+        Surface ratio of the segmented instances.
 
     """
-    value = np.argmax(np.bincount(array))
+    # check parameters
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
 
-    return value
+    # compute surface ratio
+    surface_instances = image_label > 0
+    area_instances = surface_instances.sum()
+    surface_ratio = area_instances / image_label.size
+
+    return surface_ratio
+
+
+def count_instances(image_label):
+    """Count the number of instances annotated in the image.
+
+    Parameters
+    ----------
+    image_label : np.ndarray, np.int or np.uint
+        Labelled image with shape (y, x).
+
+    Returns
+    -------
+    nb_instances : int
+        Number of instances in the image.
+
+    """
+    # check parameters
+    stack.check_array(image_label,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64])
+
+    indices = set(image_label.ravel())
+    if 0 in indices:
+        nb_instances = len(indices) - 1
+    else:
+        nb_instances = len(indices)
+
+    return nb_instances
+
+
+# ### Format and crop images ###
+
+def resize_image(image, output_shape, method="bilinear"):
+    """Resize an image with bilinear interpolation or nearest neighbor method.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to resize.
+    output_shape : Tuple[int]
+        Shape of the resized image.
+    method : str
+        Interpolation method to use.
+
+    Returns
+    -------
+    image_resized : np.ndarray
+        Resized image.
+
+    """
+    # check parameters
+    stack.check_parameter(output_shape=tuple, method=str)
+    stack.check_array(image,
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.float32])
+
+    # resize image
+    if method == "bilinear":
+        image_resized = resize(image, output_shape,
+                               mode="reflect", preserve_range=True,
+                               order=1, anti_aliasing=True)
+    elif method == "nearest":
+        image_resized = resize(image, output_shape,
+                               mode="reflect", preserve_range=True,
+                               order=0, anti_aliasing=False)
+    else:
+        raise ValueError("Method {0} is not available. Choose between "
+                         "'bilinear' or 'nearest' instead.".format(method))
+
+    # cast output dtype
+    image_resized = image_resized.astype(image.dtype)
+
+    return image_resized
+
+
+def get_marge_padding(height, width, x):
+    """Pad image to make its shape a multiple of x.
+
+    Parameters
+    ----------
+    height : int
+        Original height of the image.
+    width : int
+        Original width of the image.
+    x : int
+        Padded image have a height and width multiple of x.
+
+    Returns
+    -------
+    marge_padding : List[List]
+        List of lists with the format
+        [[marge_height_t, marge_height_b], [marge_width_l, marge_width_r]].
+
+    """
+    # check parameters
+    stack.check_parameter(height=int, width=int, x=int)
+
+    # pad height and width to make it multiple of x
+    marge_sup_height = x - (height % x)
+    marge_sup_height_l = int(marge_sup_height / 2)
+    marge_sup_height_r = marge_sup_height - marge_sup_height_l
+    marge_sup_width = x - (width % x)
+    marge_sup_width_l = int(marge_sup_width / 2)
+    marge_sup_width_r = marge_sup_width - marge_sup_width_l
+    marge_padding = [[marge_sup_height_l, marge_sup_height_r],
+                     [marge_sup_width_l, marge_sup_width_r]]
+
+    return marge_padding
+
+
+def compute_image_standardization(image):
+    """Normalize image by computing its z score.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to normalize with shape (y, x).
+
+    Returns
+    -------
+    normalized_image : np.ndarray
+        Normalized image with shape (y, x).
+
+    """
+    # check parameters
+    stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16, np.float32])
+
+    # check image is in 2D
+    if len(image.shape) != 2:
+        raise ValueError("'image' should be a 2-d array. Not {0}-d array"
+                         .format(len(image.shape)))
+
+    # compute mean and standard deviation
+    m = np.mean(image)
+    adjusted_stddev = max(np.std(image), 1.0 / np.sqrt(image.size))
+
+    # normalize image
+    normalized_image = (image - m) / adjusted_stddev
+
+    return normalized_image

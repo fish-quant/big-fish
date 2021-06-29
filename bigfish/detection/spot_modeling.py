@@ -377,7 +377,7 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
         voxel_size_z, psf_z = None, None
 
     # initialize a grid representing the reference spot
-    grid, centroid_coord = _initialize_grid(
+    grid, centroid_coord = initialize_grid(
         image_spot=reference_spot,
         voxel_size_z=voxel_size_z,
         voxel_size_yx=voxel_size_yx,
@@ -445,8 +445,8 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
 
 # ### Spot modelization: initialization ###
 
-def _initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
-                     return_centroid=False):
+def initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
+                    return_centroid=False):
     """Build a grid in nanometer to compute gaussian function values over a
     full volume or surface.
 
@@ -583,7 +583,6 @@ def _initialize_grid_2d(image_spot, voxel_size_yx, return_centroid=False):
 
     # build meshgrid
     yy, xx = np.meshgrid(np.arange(nb_y), np.arange(nb_x), indexing="ij")
-
     yy = yy.astype(np.float32) * float(voxel_size_yx)
     xx = xx.astype(np.float32) * float(voxel_size_yx)
 
@@ -704,16 +703,16 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
             and psf_yx is not None
             and psf_amplitude is None):
         def f(grid, mu_z, mu_y, mu_x, psf_amplitude, psf_background):
-            values = _gaussian_3d(grid=grid,
-                                  mu_z=mu_z,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_z=psf_z,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_z=voxel_size_z,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_3d(grid=grid,
+                                 mu_z=mu_z,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_z=psf_z,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_z=voxel_size_z,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     # amplitude is known, we fit sigma, mu and background
@@ -721,16 +720,16 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
           and psf_z is None
           and psf_yx is None):
         def f(grid, mu_z, mu_y, mu_x, psf_z, psf_yx, psf_background):
-            values = _gaussian_3d(grid=grid,
-                                  mu_z=mu_z,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_z=psf_z,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_z=voxel_size_z,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_3d(grid=grid,
+                                 mu_z=mu_z,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_z=psf_z,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_z=voxel_size_z,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     # amplitude and sigma are known, we fit mu and background
@@ -738,16 +737,16 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
           and psf_z is not None
           and psf_yx is not None):
         def f(grid, mu_z, mu_y, mu_x, psf_background):
-            values = _gaussian_3d(grid=grid,
-                                  mu_z=mu_z,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_z=psf_z,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_z=voxel_size_z,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_3d(grid=grid,
+                                 mu_z=mu_z,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_z=psf_z,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_z=voxel_size_z,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     # we fit mu, sigma, amplitude and background
@@ -756,16 +755,16 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
           and psf_yx is None):
         def f(grid, mu_z, mu_y, mu_x, psf_z, psf_yx, psf_amplitude,
               psf_background):
-            values = _gaussian_3d(grid=grid,
-                                  mu_z=mu_z,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_z=psf_z,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_z=voxel_size_z,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_3d(grid=grid,
+                                 mu_z=mu_z,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_z=psf_z,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_z=voxel_size_z,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     else:
@@ -775,11 +774,11 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
     return f
 
 
-def _gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
-                 voxel_size_yx, psf_amplitude, psf_background,
-                 precomputed=None):
-    """Compute the gaussian function over the grid 'xdata' representing a
-    volume V with shape (V_z, V_y, V_x).
+def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
+                voxel_size_yx, psf_amplitude, psf_background,
+                precomputed=None):
+    """Compute the gaussian function over the grid representing a volume V
+    with shape (V_z, V_y, V_x).
 
     # TODO add equations
 
@@ -830,9 +829,9 @@ def _gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
         table_erf_x = precomputed[2]
 
         # get indices for the tables
-        i_z = np.around(np.abs(meshgrid_z - mu_z) / 5).astype(np.int64)
-        i_y = np.around(np.abs(meshgrid_y - mu_y) / 5).astype(np.int64)
-        i_x = np.around(np.abs(meshgrid_x - mu_x) / 5).astype(np.int64)
+        i_z = np.abs(meshgrid_z - mu_z).astype(np.int64)
+        i_y = np.abs(meshgrid_y - mu_y).astype(np.int64)
+        i_x = np.abs(meshgrid_x - mu_x).astype(np.int64)
 
         # get precomputed values
         voxel_integral_z = table_erf_z[i_z, 1]
@@ -893,58 +892,58 @@ def _objective_function_2d(voxel_size_yx, psf_yx, psf_amplitude=None):
     # sigma is known, we fit mu, amplitude and background
     if psf_yx is not None and psf_amplitude is None:
         def f(grid, mu_y, mu_x, psf_amplitude, psf_background):
-            values = _gaussian_2d(grid=grid,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_2d(grid=grid,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     # amplitude is known, we fit sigma, mu and background
     elif psf_amplitude is not None and psf_yx is None:
         def f(grid, mu_y, mu_x, psf_yx, psf_background):
-            values = _gaussian_2d(grid=grid,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_2d(grid=grid,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     # amplitude and sigma are known, we fit mu and background
     elif psf_amplitude is not None and psf_yx is not None:
         def f(grid, mu_y, mu_x, psf_background):
-            values = _gaussian_2d(grid=grid,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_2d(grid=grid,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     # we fit mu, sigma, amplitude and background
     else:
         def f(grid, mu_y, mu_x, psf_yx, psf_amplitude, psf_background):
-            values = _gaussian_2d(grid=grid,
-                                  mu_y=mu_y,
-                                  mu_x=mu_x,
-                                  sigma_yx=psf_yx,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=psf_amplitude,
-                                  psf_background=psf_background)
+            values = gaussian_2d(grid=grid,
+                                 mu_y=mu_y,
+                                 mu_x=mu_x,
+                                 sigma_yx=psf_yx,
+                                 voxel_size_yx=voxel_size_yx,
+                                 psf_amplitude=psf_amplitude,
+                                 psf_background=psf_background)
             return values
 
     return f
 
 
-def _gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
-                 psf_background, precomputed=None):
-    """Compute the gaussian function over the grid 'xdata' representing a
-    surface S with shape (S_y, S_x).
+def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
+                psf_background, precomputed=None):
+    """Compute the gaussian function over the grid representing a surface S
+    with shape (S_y, S_x).
 
     # TODO add equations
 
@@ -987,8 +986,8 @@ def _gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
         table_erf_x = precomputed[1]
 
         # get indices for the tables
-        i_y = np.around(np.abs(meshgrid_y - mu_y) / 5).astype(np.int64)
-        i_x = np.around(np.abs(meshgrid_x - mu_x) / 5).astype(np.int64)
+        i_y = np.abs(meshgrid_y - mu_y).astype(np.int64)
+        i_x = np.abs(meshgrid_x - mu_x).astype(np.int64)
 
         # get precomputed values
         voxel_integral_y = table_erf_y[i_y, 1]
@@ -1100,7 +1099,7 @@ def _fit_gaussian(f, grid, image_spot, p0, lower_bound=None, upper_bound=None):
 
 def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
                    sigma_yx=200, max_grid=200):
-    """Precompute different values for the erf with a resolution of 5 nm.
+    """Precompute different values for the erf with a nanometer resolution.
 
     Parameters
     ----------
@@ -1131,10 +1130,11 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
                           sigma_yx=(int, float),
                           max_grid=int)
 
-    # build a grid with a spatial resolution of 5 nm and a size of
+    # build a grid with a spatial resolution of 1 nm and a size of
     # max_grid * resolution nm
-    yy = np.array([i for i in range(0, int(max_grid * voxel_size_yx), 5)])
-    xx = np.array([i for i in range(0, int(max_grid * voxel_size_yx), 5)])
+    max_size_yx = np.ceil(max_grid * voxel_size_yx).astype(np.int64)
+    yy = np.array([i for i in range(0, max_size_yx)])
+    xx = np.array([i for i in range(0, max_size_yx)])
     mu_y, mu_x = 0, 0
 
     # compute erf values for this grid
@@ -1155,7 +1155,8 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
         return table_erf_y, table_erf_x
 
     else:
-        zz = np.array([i for i in range(0, int(max_grid * voxel_size_z), 5)])
+        max_size_z = np.ceil(max_grid * voxel_size_z).astype(np.int64)
+        zz = np.array([i for i in range(0, max_size_z)])
         mu_z = 0
         erf_z = _rescaled_erf(low=zz - voxel_size_z / 2,
                               high=zz + voxel_size_z / 2,
