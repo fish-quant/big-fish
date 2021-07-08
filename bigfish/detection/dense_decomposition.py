@@ -210,8 +210,8 @@ def get_dense_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
                      psf_z=None, psf_yx=200, beta=1):
     """Detect and filter dense and bright regions.
 
-    A candidate region follows has at least 2 connected pixels above a
-    specific threshold.
+    A candidate region has at least 2 connected pixels above a specific
+    threshold.
 
     Parameters
     ----------
