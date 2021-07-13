@@ -227,8 +227,7 @@ def in_focus_selection(image, focus, proportion):
         A 3-d tensor with shape (z, y, x).
     focus : np.ndarray, np.float64
         A 3-d tensor with a focus metric computed for each pixel of the
-        original image. See :func:`compute_focus()
-        <bigfish.stack.compute_focus>`.
+        original image. See :func:`bigfish.stack.compute_focus`.
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
         z-slices to keep (positive integer).
@@ -261,8 +260,7 @@ def get_in_focus_indices(focus, proportion):
     ----------
     focus : np.ndarray, np.float64
         A 3-d tensor with a focus metric computed for each pixel of the
-        original image. See :func:`compute_focus()
-        <bigfish.stack.compute_focus>`.
+        original image. See :func:`bigfish.stack.compute_focus`.
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
         z-slices to keep (positive integer).

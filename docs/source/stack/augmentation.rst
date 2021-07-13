@@ -1,9 +1,9 @@
 .. _augmentation overview:
 
-Image augmentation
-******************
+Augmentation
+************
 
-.. currentmodule:: bigfish.stack.augmentation
+.. currentmodule:: bigfish.stack
 
 Functions used to increase and diversify a dataset by duplicating and
 transforming images. Available transformations are:
@@ -19,13 +19,13 @@ transforming images. Available transformations are:
 
 Apply a random transformation on a 2D image:
 
-* :func:`bigfish.stack.augment_2d<augment_2d>`
-* :func:`bigfish.stack.augment_2d_function<augment_2d_function>`
+* :func:`bigfish.stack.augment_2d`
+* :func:`bigfish.stack.augment_2d_function`
 
 Apply all the possible transformations on a 2D image:
 
-* :func:`bigfish.stack.augment_8_times<augment_8_times>`
-* :func:`bigfish.stack.augment_8_times_reversed<augment_8_times_reversed>`
+* :func:`bigfish.stack.augment_8_times`
+* :func:`bigfish.stack.augment_8_times_reversed`
 
 .. autofunction:: augment_2d
 .. autofunction:: augment_2d_function

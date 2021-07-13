@@ -211,7 +211,7 @@ def read_uncompressed(path, verbose=False):
 
 def read_cell_extracted(path, verbose=False):
     """Read a NpzFile object with ``npz`` extension, previously written with
-    :func:`save_cell_extracted`.
+    :func:`bigfish.stack.save_cell_extracted`.
 
     Parameters
     ----------
@@ -271,8 +271,8 @@ def save_image(image, path, extension="tif"):
     * A 2-d boolean image can be saved in ``png``, ``jpg`` or ``jpeg`` (cast in
       np.uint8).
     * A multidimensional boolean image should be saved with
-      :func:`save_array` function or as a boolean images with ``tif``/``tiff``
-      extension.
+      :func:`bigfish.stack.save_array` or as a boolean images with ``tif``/
+      ``tiff`` extension.
 
     """
     # check image and parameters
@@ -426,8 +426,8 @@ def save_data_to_csv(data, path, delimiter=";"):
 
 
 def save_cell_extracted(cell_results, path):
-    """Save cell-level results from :func:`extract_cell` in a NpzFile object
-    with ``npz`` extension.
+    """Save cell-level results from :func:`bigfish.stack.extract_cell` in a
+    NpzFile object with ``npz`` extension.
 
     Parameters
     ----------

@@ -22,10 +22,9 @@ Overview
 ------------
 
 .. toctree::
-   :caption: Image manipulation
+   :caption: Preprocessing
 
    stack/io
-   stack/projections
    stack/preprocessing
    stack/augmentation
 
