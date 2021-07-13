@@ -45,10 +45,11 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     psf_yx : int or float
         Theoretical size of the PSF emitted by a spot in the yx plan, in
         nanometer.
+
     Returns
     -------
     snr : float
-        Median Signal-to-Noise ratio computed for every spots.
+        Median signal-to-noise ratio computed for every spots.
 
     """
     # check parameters

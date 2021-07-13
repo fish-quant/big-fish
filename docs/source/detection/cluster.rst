@@ -3,7 +3,7 @@
 Cluster detection
 ************************
 
-.. currentmodule:: bigfish.detection.cluster_detection
+.. currentmodule:: bigfish.detection
 
 Function to cluster spots in point cloud and detect relevant aggregated
 structures. A DBSCAN algorithm is performed.

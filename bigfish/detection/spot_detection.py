@@ -269,8 +269,7 @@ def local_maximum_detection(image, min_distance):
     local maximum is not unique.
 
     In order to make the detection robust, it should be applied to a
-    filtered image (using :func:`log_filter()<bigfish.stack.filter.log_filter>`
-    for example).
+    filtered image (using :func:`bigfish.stack.log_filter` for example).
 
     Parameters
     ----------
@@ -321,7 +320,7 @@ def spots_thresholding(image, mask_local_max, threshold,
     """Filter detected spots and get coordinates of the remaining spots.
 
     In order to make the thresholding robust, it should be applied to a
-    filtered image (using :func:`log_filter()<bigfish.stack.filter.log_filter>`
+    filtered image (using :func:`bigfish.stack.log_filter`
     for example). If the local maximum is not unique (it can happen if connected
     pixels have the same value), a connected component algorithm is applied to
     keep only one coordinate per spot.
@@ -407,10 +406,10 @@ def automated_threshold_setting(image, mask_local_max):
     """Automatically set the optimal threshold to detect spots.
 
     In order to make the thresholding robust, it should be applied to a
-    filtered image (using :func:`log_filter()<bigfish.stack.filter.log_filter>`
-    for example). The optimal threshold is selected based on the spots
-    distribution. The latter should have an elbow curve discriminating a fast
-    decreasing stage from a more stable one (a plateau).
+    filtered image (using :func:`bigfish.stack.log_filter` for example). The
+    optimal threshold is selected based on the spots distribution. The latter
+    should have an elbow curve discriminating a fast decreasing stage from a
+    more stable one (a plateau).
 
     Parameters
     ----------
