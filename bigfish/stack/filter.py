@@ -37,13 +37,13 @@ def _define_kernel(shape, size, dtype):
     Parameters
     ----------
     shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`).
     size : int, Tuple(int) or List(int)
         The size of the kernel:
-            - For the rectangle we expect two values (height, width).
-            - For the square one value (width).
-            - For the disk and the diamond one value (radius).
+            - For the rectangle we expect two values (`height`, `width`).
+            - For the square one value (`width`).
+            - For the disk and the diamond one value (`radius`).
     dtype : type
         Dtype used for the kernel (the same as the image).
 
@@ -78,11 +78,11 @@ def mean_filter(image, kernel_shape, kernel_size):
     image : np.ndarray, np.uint or np.float
         Image with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`).
     kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (`height`, `width`).
 
     Returns
     -------
@@ -118,11 +118,11 @@ def median_filter(image, kernel_shape, kernel_size):
     image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`).
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (`height`, `width`).
 
     Returns
     -------
@@ -156,11 +156,11 @@ def maximum_filter(image, kernel_shape, kernel_size):
     image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`).
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (`height`, `width`).
 
     Returns
     -------
@@ -194,11 +194,11 @@ def minimum_filter(image, kernel_shape, kernel_size):
     image : np.ndarray, np.uint
         Image with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`).
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (`height`, `width`).
 
     Returns
     -------
@@ -349,11 +349,11 @@ def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
     image : np.ndarray, np.uint
         Image to process with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square').
-    kernel_size : int or Tuple(int)
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`).
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width).
+        (`height`, `width`).
 
     Returns
     -------
@@ -416,13 +416,13 @@ def dilation_filter(image, kernel_shape=None, kernel_size=None):
     image : np.ndarray
         Image with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square'). If None, use cross-shaped structuring
-        element (connectivity=1).
-    kernel_size : int or Tuple(int)
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`). If None, use cross-shaped structuring
+        element (``connectivity=1``).
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width). If None, use cross-shaped structuring element
-        (connectivity=1).
+        (`height`, `width`). If None, use cross-shaped structuring element
+        (``connectivity=1``).
 
     Returns
     -------
@@ -462,13 +462,13 @@ def erosion_filter(image, kernel_shape=None, kernel_size=None):
     image : np.ndarray
         Image with shape (y, x).
     kernel_shape : str
-        Shape of the kernel used to compute the filter ('diamond', 'disk',
-        'rectangle' or 'square'). If None, use cross-shaped structuring
-        element (connectivity=1).
-    kernel_size : int or Tuple(int)
+        Shape of the kernel used to compute the filter (`diamond`, `disk`,
+        `rectangle` or `square`). If None, use cross-shaped structuring
+        element (``connectivity=1``).
+    kernel_size : int, Tuple(int) or List(int)
         The size of the kernel. For the rectangle we expect two integers
-        (height, width). If None, use cross-shaped structuring element
-        (connectivity=1).
+        (`height`, `width`). If None, use cross-shaped structuring element
+        (``connectivity=1``).
 
     Returns
     -------

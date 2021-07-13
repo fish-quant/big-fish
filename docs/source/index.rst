@@ -19,29 +19,26 @@ Overview
    overview/pipeline
    overview/examples
 
-
-Image stacks
-============
+------------
 
 .. toctree::
-   :caption: Image stacks
-   :hidden:
+   :caption: Image manipulation
 
-   stack/documentation
+   stack/io
+   stack/projections
+   stack/preprocessing
+   stack/augmentation
 
-
-Spots detection
-===============
+------------
 
 .. toctree::
-   :caption: Spots detection
-   :hidden:
+   :caption: Spot detection
 
    detection/documentation
 
+* This is a link to the I/O operations: :ref:`detection Documentation`
 
-Segmentation
-============
+------------
 
 .. toctree::
    :caption: Segmentation
@@ -49,9 +46,15 @@ Segmentation
 
    segmentation/documentation
 
+------------
 
-Analysis
-========
+.. toctree::
+   :caption: Blabla
+   :hidden:
+
+   segmentation/documentation
+
+------------
 
 .. toctree::
    :caption: Analysis
@@ -60,14 +63,35 @@ Analysis
    classification/documentation
 
 
-Plot
-=============
+
+
+This is a link to the Plot: :ref:`Plot`
+
+Learn how to :ref:`link to a different section<Plot>`.
+
+`Link text <https://distill.pub/2021/distill-hiatus/>`_
+
+.. This is a link to the RST Overview: :ref:`RST Overview`
+
+.. This is a link to the Sphinx Overview: :ref:`Sphinx Overview`
+
+------------
 
 .. toctree::
    :caption: Plot
    :hidden:
 
    plot/documentation
+
+------------
+
+.. toctree::
+   :hidden:
+
+   utils/utils
+
+* :ref:`Utility functions<utils overview>`: Sanity checks, get constant values,
+  compute hash, etc...
 
 
 Indices and tables

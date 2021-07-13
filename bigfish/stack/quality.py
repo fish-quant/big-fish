@@ -15,16 +15,18 @@ from .filter import mean_filter
 # ### Focus ###
 
 def compute_focus(image, neighborhood_size=31):
-    """Helmli and Scherer’s mean method used as a focus metric.
+    """Helmli and Scherer’s mean method is used as a focus metric.
 
     For each pixel yx in a 2-d image, we compute the ratio:
 
-        R(y, x) = I(y, x) / mu(y, x)  if I(y, x) >= mu(y, x)
-    or
-        R(y, x) = mu(y, x) / I(y, x), otherwise
+    .. math::
 
-    with I(y, x) the intensity of the pixel yx and mu(y, x) the mean intensity
-    of the pixels in its neighborhood.
+        R(y, x) = \\left \\{ \\begin{array}{rcl} \\frac{I(y, x)}{\\mu(y, x)} &
+        \\mbox{if} & I(y, x) \\ge \\mu(y, x) \\\ \\frac{\\mu(y, x)}{I(y, x)} &
+        \\mbox{otherwise} & \\end{array} \\right.
+
+    with :math:`I(y, x)` the intensity of the pixel yx and :math:`\\mu(y, x)`
+    the mean intensity of the pixels in its neighborhood.
 
     For a 3-d image, we compute this metric for each z surface.
 
