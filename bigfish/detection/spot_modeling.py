@@ -38,16 +38,15 @@ def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, image is considered in 2-d.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
     alpha : int or float
         Intensity score of the reference spot, between 0 and 1. If 0, reference
         spot approximates the spot with the lowest intensity. If 1, reference
         spot approximates the brightest spot. Default is 0.5.
-
 
     Returns
     -------
@@ -327,31 +326,31 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, reference spot is considered in 2-d.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, reference spot is considered in 2-d.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
     return_coord : bool
         Return spot coordinates.
 
     Returns
     -------
     parameters_fitted : Tuple[float]
-        - mu_z : float (optional)
+        * mu_z : float (optional)
             Coordinate of the spot center along the z axis, in pixel.
-        - mu_y : float (optional)
+        * mu_y : float (optional)
             Coordinate of the spot center along the y axis, in pixel.
-        - mu_x : float (optional)
+        * mu_x : float (optional)
             Coordinate of the spot center along the x axis, in pixel.
-        - sigma_z : float
+        * sigma_z : float
             Standard deviation of the spot along the z axis, in pixel.
             Available only for a 3-d modelization.
-        - sigma_yx : float
+        * sigma_yx : float
             Standard deviation of the spot along the yx axis, in pixel.
-        - amplitude : float
+        * amplitude : float
             Amplitude of the spot.
-        - background : float
+        * background : float
             Background minimum value of the image.
 
     """
@@ -774,13 +773,12 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
     return f
 
 
+# TODO add equations in the docstring
 def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
                 voxel_size_yx, psf_amplitude, psf_background,
                 precomputed=None):
     """Compute the gaussian function over the grid representing a volume V
     with shape (V_z, V_y, V_x).
-
-    # TODO add equations
 
     Parameters
     ----------
@@ -940,12 +938,11 @@ def _objective_function_2d(voxel_size_yx, psf_yx, psf_amplitude=None):
     return f
 
 
+# TODO add equations in the docstring
 def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
                 psf_background, precomputed=None):
     """Compute the gaussian function over the grid representing a surface S
     with shape (S_y, S_x).
-
-    # TODO add equations
 
     Parameters
     ----------
@@ -1185,11 +1182,11 @@ def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, image is considered in 2-d.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
 
     Returns
     -------

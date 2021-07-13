@@ -24,12 +24,12 @@ def detect_spots(images, threshold=None, remove_duplicate=True,
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
-    1) We smooth the image with a LoG filter.
-    2) We apply a multidimensional maximum filter.
-    3) A pixel which has the same value in the original and filtered images
-    is a local maximum.
-    4) We remove local peaks under a threshold.
-    5) We keep only one pixel coordinate per detected spot.
+    #. We smooth the image with a LoG filter.
+    #. We apply a multidimensional maximum filter.
+    #. A pixel which has the same value in the original and filtered images
+       is a local maximum.
+    #. We remove local peaks under a threshold.
+    #. We keep only one pixel coordinate per detected spot.
 
     Parameters
     ----------
@@ -149,12 +149,12 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
-    1) We smooth the image with a LoG filter.
-    2) We apply a multidimensional maximum filter.
-    3) A pixel which has the same value in the original and filtered images
-    is a local maximum.
-    4) We remove local peaks under a threshold.
-    5) We keep only one pixel coordinate per detected spot.
+    #. We smooth the image with a LoG filter.
+    #. We apply a multidimensional maximum filter.
+    #. A pixel which has the same value in the original and filtered images
+       is a local maximum.
+    #. We remove local peaks under a threshold.
+    #. We keep only one pixel coordinate per detected spot.
 
     Parameters
     ----------
@@ -176,11 +176,11 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, image is considered in 2-d.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
 
     Returns
     -------
@@ -261,12 +261,16 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
 def local_maximum_detection(image, min_distance):
     """Compute a mask to keep only local maximum, in 2-d and 3-d.
 
-    1) We apply a multidimensional maximum filter.
-    2) A pixel which has the same value in the original and filtered images
-    is a local maximum.
+    #. We apply a multidimensional maximum filter.
+    #. A pixel which has the same value in the original and filtered images
+       is a local maximum.
 
     Several connected pixels can have the same value. In such a case, the
     local maximum is not unique.
+
+    In order to make the detection robust, it should be applied to a
+    filtered image (using :func:`log_filter()<bigfish.stack.filter.log_filter>`
+    for example).
 
     Parameters
     ----------
@@ -274,9 +278,9 @@ def local_maximum_detection(image, min_distance):
         Image to process with shape (z, y, x) or (y, x).
     min_distance : int, float or Tuple(float)
         Minimum distance (in pixels) between two spots we want to be able to
-        detect separately. One value per spatial dimension (zyx or
-        yx dimensions). If it's a scalar, the same distance is applied to
-        every dimensions.
+        detect separately. One value per spatial dimension (zyx or yx
+        dimensions). If it's a scalar, the same distance is applied to every
+        dimensions.
 
     Returns
     -------
@@ -317,10 +321,10 @@ def spots_thresholding(image, mask_local_max, threshold,
     """Filter detected spots and get coordinates of the remaining spots.
 
     In order to make the thresholding robust, it should be applied to a
-    filtered image (bigfish.stack.log_filter for example). If the local
-    maximum is not unique (it can happen with connected pixels with the same
-    value), connected component algorithm is applied to keep only one
-    coordinate per spot.
+    filtered image (using :func:`log_filter()<bigfish.stack.filter.log_filter>`
+    for example). If the local maximum is not unique (it can happen if connected
+    pixels have the same value), a connected component algorithm is applied to
+    keep only one coordinate per spot.
 
     Parameters
     ----------
@@ -403,10 +407,10 @@ def automated_threshold_setting(image, mask_local_max):
     """Automatically set the optimal threshold to detect spots.
 
     In order to make the thresholding robust, it should be applied to a
-    filtered image (bigfish.stack.log_filter for example). The optimal
-    threshold is selected based on the spots distribution. The latter should
-    have a kink discriminating a fast decreasing stage from a more stable one
-    (a plateau).
+    filtered image (using :func:`log_filter()<bigfish.stack.filter.log_filter>`
+    for example). The optimal threshold is selected based on the spots
+    distribution. The latter should have an elbow curve discriminating a fast
+    decreasing stage from a more stable one (a plateau).
 
     Parameters
     ----------
@@ -439,7 +443,7 @@ def automated_threshold_setting(image, mask_local_max):
     value_spots = image[mask_spots]
     thresholds, count_spots = _get_spot_counts(thresholds, value_spots)
 
-    # select threshold where the kink of the distribution is located
+    # select threshold where the break of the distribution is located
     if count_spots.size > 0:
         optimal_threshold, _, _ = _get_breaking_point(thresholds, count_spots)
 
@@ -548,6 +552,36 @@ def _get_breaking_point(x, y):
 
 def get_elbow_values(images, voxel_size_z=None, voxel_size_yx=100, psf_z=None,
                      psf_yx=200):
+    """Get values to plot the elbow curve used to automatically set the
+    threshold.
+
+    Parameters
+    ----------
+    images : List[np.ndarray] or np.ndarray
+        Image (or list of images) with shape (z, y, x) or (y, x). If several
+        images are provided, the same threshold is applied.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan,
+        in nanometer. If None, image is considered in 2-d.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan,
+        in nanometer.
+
+    Returns
+    -------
+    thresholds : np.ndarray, np.float64
+        Candidate threshold values.
+    count_spots : np.ndarray, np.float64
+        Spots count function.
+    threshold : float or None
+        Threshold automatically set.
+
+    """
     # check parameters
     stack.check_parameter(voxel_size_z=(int, float, type(None)),
                           voxel_size_yx=(int, float),

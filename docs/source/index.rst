@@ -34,22 +34,15 @@ Overview
 .. toctree::
    :caption: Spot detection
 
-   detection/documentation
-
-* This is a link to the I/O operations: :ref:`detection Documentation`
+   detection/spots
+   detection/dense
+   detection/subpixel
+   detection/cluster
 
 ------------
 
 .. toctree::
    :caption: Segmentation
-   :hidden:
-
-   segmentation/documentation
-
-------------
-
-.. toctree::
-   :caption: Blabla
    :hidden:
 
    segmentation/documentation
@@ -86,6 +79,7 @@ Learn how to :ref:`link to a different section<Plot>`.
 ------------
 
 .. toctree::
+   :caption: Blabla
    :hidden:
 
    utils/utils

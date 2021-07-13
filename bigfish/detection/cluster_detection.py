@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Functions to cluster spots in point cloud and detect relevant aggregated
+Function to cluster spots in point cloud and detect relevant aggregated
 structures.
 """
 
@@ -18,9 +18,9 @@ def detect_clusters(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
                     nb_min_spots=4):
     """Cluster spots and detect relevant aggregated structures.
 
-    1) If two spots are distant within a specific radius, we consider they are
-    related to each other.
-    2) A minimum number spots related to each others defines a cluster.
+    #. If two spots are distant within a specific radius, we consider they are
+       related to each other.
+    #. A minimum number spots related to each others defines a cluster.
 
     Parameters
     ----------
