@@ -42,43 +42,31 @@ Overview
 
 .. toctree::
    :caption: Segmentation
-   :hidden:
 
-   segmentation/documentation
+   segmentation/nucleus
+   segmentation/cell
+   segmentation/postprocessing
+   segmentation/utils
 
 ------------
 
 .. toctree::
    :caption: Analysis
-   :hidden:
 
-   classification/documentation
-
-
-
-
-This is a link to the Plot: :ref:`Plot`
-
-Learn how to :ref:`link to a different section<Plot>`.
-
-`Link text <https://distill.pub/2021/distill-hiatus/>`_
-
-.. This is a link to the RST Overview: :ref:`RST Overview`
-
-.. This is a link to the Sphinx Overview: :ref:`Sphinx Overview`
+   classification/extraction
+   classification/features
 
 ------------
 
 .. toctree::
    :caption: Plot
-   :hidden:
 
-   plot/documentation
+   plot/plot
 
 ------------
 
 .. toctree::
-   :caption: Blabla
+   :caption: Utils
    :hidden:
 
    utils/utils

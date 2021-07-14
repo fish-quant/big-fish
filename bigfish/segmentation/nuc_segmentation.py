@@ -28,7 +28,7 @@ def unet_3_classes_nuc():
 
     Returns
     -------
-    model : tensorflow.keras.model object
+    model : ``tensorflow.keras.model`` object
         Pretrained Unet model.
 
     """
@@ -47,15 +47,15 @@ def apply_unet_3_classes(model, image, target_size=None,
 
     Parameters
     ----------
-     model : tensorflow.keras.model object
-        Pretrained Unet model that predicts 3 classes from nucleus or
-        cell images (background, edge and foreground).
+     model : ``tensorflow.keras.model`` object
+        Pretrained Unet model that predicts 3 classes from nucleus or cell
+        images (background, edge and foreground).
     image : np.ndarray, np.uint
         Original image to segment with shape (y, x).
     target_size : int
         Resize image before segmentation. A squared image is resize to
-        'target_size'. A rectangular image is resize such that its smaller
-        dimension equals 'target_size'.
+        `target_size`. A rectangular image is resize such that its smaller
+        dimension equals `target_size`.
     test_time_augmentation : bool
         Apply test time augmentation or not. The image is augmented 8 times
         and the final segmentation is the average result over these
@@ -159,8 +159,9 @@ def from_3_classes_to_instances(label_3_classes):
     Parameters
     ----------
     label_3_classes : np.ndarray, np.float32
-        Model prediction about the nucleus surface and boundaries, with
-        shape (y, x, 3).
+        Model prediction about the nucleus surface and boundaries, with shape
+        (y, x, 3).
+
     Returns
     -------
     label : np.ndarray, np.int64
@@ -192,19 +193,21 @@ def from_3_classes_to_instances(label_3_classes):
 def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
     """Remove the nuclei we have already segmented in an image.
 
-    1) We start from the segmented nuclei with a light dilation. The missed
-    nuclei and the background are set to 0 and removed from the original image.
-    2) We reconstruct the missing nuclei by small dilation. As we used the
-    original image to set the maximum allowed value at each pixel, the
-    background pixels remain unchanged. However, pixels from the missing
-    nuclei are partially reconstructed by the dilation. The reconstructed
-    image only differs from the original one where the nuclei have been missed.
-    3) We subtract the reconstructed image from the original one.
-    4) From the few missing nuclei kept and restored, we build a binary mask
-    (dilation, small object removal).
-    5) We apply this mask to the original image to get the original pixel
-    intensity of the missing nuclei.
-    6) We remove pixels with a too low intensity.
+    #. We start from the segmented nuclei with a light dilation. The missed
+       nuclei and the background are set to 0 and removed from the original
+       image.
+    #. We reconstruct the missing nuclei by small dilation. As we used the
+       original image to set the maximum allowed value at each pixel, the
+       background pixels remain unchanged. However, pixels from the missing
+       nuclei are partially reconstructed by the dilation. The reconstructed
+       image only differs from the original one where the nuclei have been
+       missed.
+    #. We subtract the reconstructed image from the original one.
+    #. From the few missing nuclei kept and restored, we build a binary mask
+       (dilation, small object removal).
+    #. We apply this mask to the original image to get the original pixel
+       intensity of the missing nuclei.
+    #. We remove pixels with a too low intensity.
 
     Parameters
     ----------

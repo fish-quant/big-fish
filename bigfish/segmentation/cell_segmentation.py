@@ -29,7 +29,7 @@ def unet_distance_edge_double():
 
     Returns
     -------
-    model : tensorflow.keras.model object
+    model : ``tensorflow.keras.model`` object
         Pretrained Unet model.
 
     """
@@ -44,11 +44,12 @@ def unet_distance_edge_double():
 
 def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
                                test_time_augmentation=False):
-    """Segment cell with a distance edge trained model and watershed method.
+    """Segment cell with a pretrained model to predict distance map and  use
+    it with a watershed algorithm.
 
     Parameters
     ----------
-    model : tensorflow.keras.model object
+    model : ``tensorflow.keras.model`` object
         Pretrained Unet model that predict distance to edges and cell surface.
     nuc : np.ndarray, np.uint
         Original nucleus image with shape (y, x).
@@ -59,8 +60,8 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
         value.
     target_size : int
         Resize image before segmentation. A squared image is resize to
-        'target_size'. A rectangular image is resize such that its smaller
-        dimension equals 'target_size'.
+        `target_size`. A rectangular image is resize such that its smaller
+        dimension equals `target_size`.
     test_time_augmentation : bool
         Apply test time augmentation or not. The image is augmented 8 times
         and the final segmentation is the average result over these
@@ -200,14 +201,14 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
 
 def from_distance_to_instances(label_x_nuc, label_2_cell, label_distance,
                                nuc_3_classes=False, compute_nuc_label=False):
-    """Extract instance labels from distance edge Unet output with a watershed
-    method.
+    """Extract instance labels from a distance map and a binary surface
+    prediction with a watershed algorithm.
 
     Parameters
     ----------
     label_x_nuc : np.ndarray, np.float32
-        Model prediction about the nucleus surface (and boundaries), with
-        shape (y, x, 1) or (y, x, 3).
+        Model prediction about the nucleus surface (and boundaries), with shape
+        (y, x, 1) or (y, x, 3).
     label_2_cell : np.ndarray, np.float32
         Model prediction about cell surface, with shape (y, x, 1).
     label_distance : np.ndarray, np.uint16
@@ -300,6 +301,7 @@ def cell_watershed(image, nuc_label, threshold, alpha=0.8):
     relief = get_watershed_relief(image, nuc_label, alpha)
 
     # TODO improve cell mask methods
+    # TODO add options for clean_segmentation
     # build cells mask
     if image.ndim == 3:
         image_2d = stack.maximum_projection(image)

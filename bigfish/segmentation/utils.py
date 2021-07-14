@@ -227,7 +227,7 @@ def resize_image(image, output_shape, method="bilinear"):
 
 
 def get_marge_padding(height, width, x):
-    """Pad image to make its shape a multiple of x.
+    """Pad image to make its shape a multiple of `x`.
 
     Parameters
     ----------
@@ -236,13 +236,14 @@ def get_marge_padding(height, width, x):
     width : int
         Original width of the image.
     x : int
-        Padded image have a height and width multiple of x.
+        Padded image have a `height` and `width` multiple of `x`.
 
     Returns
     -------
     marge_padding : List[List]
         List of lists with the format
-        [[marge_height_t, marge_height_b], [marge_width_l, marge_width_r]].
+        [[`marge_height_t`, `marge_height_b`], [`marge_width_l`,
+        `marge_width_r`]].
 
     """
     # check parameters
