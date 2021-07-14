@@ -226,10 +226,11 @@ def read_cell_extracted(path, verbose=False):
         Dictionary including information about the cell (image, masks,
         coordinates arrays). Minimal information are :
 
-        * `bbox` : bounding box coordinates with the order (`min_y`, `min_x`,
+        * `cell_id`: Unique id of the cell.
+        * `bbox`: bounding box coordinates with the order (`min_y`, `min_x`,
           `max_y`, `max_x`).
-        * `cell_coord` : boundary coordinates of the cell.
-        * `cell_mask` : mask of the cell.
+        * `cell_coord`: boundary coordinates of the cell.
+        * `cell_mask`: mask of the cell.
 
     """
     # read compressed file

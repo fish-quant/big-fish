@@ -525,7 +525,7 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
 
 def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
                         centroid_cell, centroid_nuc, ndim, check_input=True):
-    """Compute RNA Distribution Index features (RDI) described in
+    """Compute RNA Distribution Index features (RDI) described in:
 
     RDI Calculator: An analysis Tool to assess RNA distributions in cells,
     Stueland M., Wang T., Park H. Y., Mili, S., 2019.

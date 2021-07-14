@@ -1,11 +1,11 @@
 .. _segmentation_input overview:
 
-Input preparation
-*****************
+Input images preparation
+************************
 
 .. currentmodule:: bigfish.segmentation
 
-Resize, pad and normalize input image before feeding a deep learning model:
+Resize, pad and normalize input images before feeding a deep learning model:
 
 * :func:`bigfish.segmentation.resize_image`
 * :func:`bigfish.segmentation.get_marge_padding`
