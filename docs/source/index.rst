@@ -43,10 +43,11 @@ Overview
 .. toctree::
    :caption: Segmentation
 
+   segmentation/thresholding
+   segmentation/input
    segmentation/nucleus
    segmentation/cell
    segmentation/postprocessing
-   segmentation/utils
 
 ------------
 

@@ -10,7 +10,6 @@ Functions used to normalize, cast, project or filter images.
 Normalize images
 ================
 
-
 Rescale or contrast pixel intensity:
 
 * :func:`bigfish.stack.rescale`
