@@ -34,6 +34,4 @@ Remove segmented nuclei
 Remove segmented nucleus instances to perform a new segmentation on the
 residual image:
 
-* :func:`bigfish.segmentation.remove_segmented_nuc`
-
 .. autofunction:: remove_segmented_nuc

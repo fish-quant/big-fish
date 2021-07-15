@@ -25,6 +25,4 @@ Plot quality measure of an image
 
 Plot focus measures for a 3D image:
 
-* :func:`bigfish.plot.plot_sharpness`
-
 .. autofunction:: plot_sharpness
