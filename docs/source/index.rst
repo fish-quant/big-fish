@@ -72,11 +72,5 @@ Overview
 
 ------------
 
-.. toctree::
-   :caption: Utils
-   :hidden:
-
-   utils/utils
-
 * :ref:`Utility functions<utils overview>`: Sanity checks, get constant values,
-  compute hash, etc...
+  compute hash, save plots, etc...

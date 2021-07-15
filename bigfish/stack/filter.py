@@ -238,7 +238,8 @@ def log_filter(image, sigma):
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions. Can be computed
+        with :func:`bigfish.stack.get_sigma`.
 
     Returns
     -------
@@ -293,7 +294,8 @@ def gaussian_filter(image, sigma, allow_negative=False):
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions. Can be computed
+        with :func:`bigfish.stack.get_sigma`.
     allow_negative : bool
         Allow negative values after the filtering or clip them to 0. Not
         compatible with unsigned integer images.
@@ -386,7 +388,8 @@ def remove_background_gaussian(image, sigma):
         Image to process with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
         Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions.
+        scalar, the same sigma is applied to every dimensions. Can be computed
+        with :func:`bigfish.stack.get_sigma`.
 
     Returns
     -------

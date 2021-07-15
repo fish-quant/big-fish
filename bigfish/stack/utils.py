@@ -65,17 +65,12 @@ def _check_features_df(df, features):
     features : List[str]
         Names of the expected features.
 
-    Returns
-    -------
-
     """
     # check columns
     if not set(features).issubset(df.columns):
         raise ValueError("The dataframe does not seem to have the right "
                          "features. {0} instead of {1}"
                          .format(list(df.columns.values), features))
-
-    return
 
 
 def _check_nan_df(df, features_to_check=None):
@@ -87,9 +82,6 @@ def _check_nan_df(df, features_to_check=None):
         Dataframe to check.
     features_to_check : List[str]
         Names of the checked features.
-
-    Returns
-    -------
 
     """
     # count NaN
@@ -108,8 +100,6 @@ def _check_nan_df(df, features_to_check=None):
         if x > 0:
             raise ValueError("The dataframe has {0} NaN values for the "
                              "requested features: \n{1}.".format(x, nan_count))
-
-    return
 
 
 # ### Sanity checks array ###
@@ -165,20 +155,22 @@ def _check_dtype_array(array, dtype):
     dtype : type or List[type]
         Type expected.
 
-    Returns
-    -------
-
     """
     # enlist the dtype expected
     if isinstance(dtype, type):
         dtype = [dtype]
 
+    # TODO simplify
     # check the dtype of the array
+    error = True
     for dtype_expected in dtype:
         if array.dtype == dtype_expected:
-            return
-    raise TypeError("{0} is not supported yet. Use one of those dtypes "
-                    "instead: {1}.".format(array.dtype, dtype))
+            error = False
+            break
+
+    if error:
+        raise TypeError("{0} is not supported yet. Use one of those dtypes "
+                        "instead: {1}.".format(array.dtype, dtype))
 
 
 def _check_dim_array(array, ndim):
@@ -190,9 +182,6 @@ def _check_dim_array(array, ndim):
         Array to check.
     ndim : int or List[int]
         Number of dimensions expected
-
-    Returns
-    -------
 
     """
     # enlist the number of expected dimensions
@@ -212,9 +201,6 @@ def _check_nan_array(array):
     ----------
     array : np.ndarray
         Array to check.
-
-    Returns
-    -------
 
     """
     # count nan
@@ -268,7 +254,7 @@ def check_recipe(recipe, data_directory=None):
     recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Can only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+        `pattern`, `fov`, `r`, `c`, `z`, `ext` or `opt`.
     data_directory : str
         Path of the directory with the files describes in the recipe. If it is
         provided, the function check that the files exist.
@@ -335,8 +321,8 @@ def check_recipe(recipe, data_directory=None):
 def fit_recipe(recipe):
     """Fit a recipe.
 
-    Fitting a recipe consists in wrapping every values of 'fov', 'r', 'c' and
-    'z' in a list (an empty one if necessary). Values for 'ext' and 'opt' are
+    Fitting a recipe consists in wrapping every values of `fov`, `r`, `c` and
+    `z` in a list (an empty one if necessary). Values for `ext` and `opt` are
     also initialized.
 
     Parameters
@@ -344,14 +330,14 @@ def fit_recipe(recipe):
     recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Can only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+        `pattern`, `fov`, `r`, `c`, `z`, `ext` or `opt`.
 
     Returns
     -------
     new_recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' and 'opt', initialized if
+        `pattern`, `fov`, `r`, `c`, `z`, `ext` and `opt`, initialized if
         necessary.
 
     """
@@ -380,8 +366,8 @@ def fit_recipe(recipe):
 def _is_recipe_fitted(recipe):
     """Check if a recipe is ready to be used.
 
-    Fitting a recipe consists in wrapping every values of 'fov', 'r', 'c' and
-    'z' in a list (an empty one if necessary). Values for 'ext' and 'opt' are
+    Fitting a recipe consists in wrapping every values of `fov`, `r`, `c` and
+    `z` in a list (an empty one if necessary). Values for `ext` and `opt` are
     also initialized.
 
     Parameters
@@ -389,7 +375,7 @@ def _is_recipe_fitted(recipe):
     recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Can only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+        `pattern`, `fov`, `r`, `c`, `z`, `ext` or `opt`.
 
     Returns
     -------
@@ -419,17 +405,17 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
     recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+        `pattern`, `fov`, `r`, `c`, `z`, `ext` or `opt`.
     input_folder : str
         Path of the folder containing the images.
     fov : int
-        Index of the 'fov' element in the recipe to use in the filename.
+        Index of the `fov` element in the recipe to use in the filename.
     r : int
-        Index of the 'r' element in the recipe to use in the filename.
+        Index of the `r` element in the recipe to use in the filename.
     c : int
-        Index of the 'c' element in the recipe to use in the filename.
+        Index of the `c` element in the recipe to use in the filename.
     z : int
-        Index of the 'z' element in the recipe to use in the filename.
+        Index of the `z` element in the recipe to use in the filename.
 
     Returns
     -------
@@ -483,15 +469,15 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
 
 
 def get_nb_element_per_dimension(recipe):
-    """Count the number of element to stack for each dimension ('r', 'c'
-    and 'z').
+    """Count the number of element to stack for each dimension (`r`, `c`
+    and `z`).
 
     Parameters
     ----------
     recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Only contain the keys
-        'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+        `fov`, `r`, `c`, `z`, `ext` or `opt`.
 
     Returns
     -------
@@ -522,7 +508,7 @@ def count_nb_fov(recipe):
     recipe : dict
         Map the images according to their field of view, their round,
         their channel and their spatial dimensions. Can only contain the keys
-        'pattern', 'fov', 'r', 'c', 'z', 'ext' or 'opt'.
+        `pattern`, `fov`, `r`, `c`, `z`, `ext` or `opt`.
 
     Returns
     -------
@@ -759,9 +745,6 @@ def check_input_data(input_directory, input_segmentation=False):
     input_segmentation : bool
         Check 2-d example images for segmentation.
 
-    Returns
-    -------
-
     """
     # parameters
     filename_input_dapi = "experiment_1_dapi_fov_1.tif"
@@ -832,64 +815,61 @@ def check_input_data(input_directory, input_segmentation=False):
         check_hash(path, hash_input_smfish)
 
     # stop here or check segmentation examples
-    if not input_segmentation:
-        return
+    if input_segmentation:
 
-    # check if example nucleus exists
-    path = os.path.join(input_directory, filename_input_nuc_full)
-    if os.path.isfile(path):
+        # check if example nucleus exists
+        path = os.path.join(input_directory, filename_input_nuc_full)
+        if os.path.isfile(path):
 
-        # check that image is not corrupted
-        try:
-            check_hash(path, hash_input_nuc_full)
-            print("{0} is already in the directory"
-                  .format(filename_input_nuc_full))
+            # check that image is not corrupted
+            try:
+                check_hash(path, hash_input_nuc_full)
+                print("{0} is already in the directory"
+                      .format(filename_input_nuc_full))
 
-        # otherwise download it
-        except IOError:
-            print("{0} seems corrupted".format(filename_input_nuc_full))
+            # otherwise download it
+            except IOError:
+                print("{0} seems corrupted".format(filename_input_nuc_full))
+                print("downloading {0}...".format(filename_input_nuc_full))
+                load_and_save_url(url_input_nuc_full,
+                                  input_directory,
+                                  filename_input_nuc_full)
+                check_hash(path, hash_input_nuc_full)
+
+        # if file does not exist we directly download it
+        else:
             print("downloading {0}...".format(filename_input_nuc_full))
             load_and_save_url(url_input_nuc_full,
                               input_directory,
                               filename_input_nuc_full)
             check_hash(path, hash_input_nuc_full)
 
-    # if file does not exist we directly download it
-    else:
-        print("downloading {0}...".format(filename_input_nuc_full))
-        load_and_save_url(url_input_nuc_full,
-                          input_directory,
-                          filename_input_nuc_full)
-        check_hash(path, hash_input_nuc_full)
+        # check if example cell exists
+        path = os.path.join(input_directory, filename_input_cell_full)
+        if os.path.isfile(path):
 
-    # check if example cell exists
-    path = os.path.join(input_directory, filename_input_cell_full)
-    if os.path.isfile(path):
+            # check that image is not corrupted
+            try:
+                check_hash(path, hash_input_cell_full)
+                print("{0} is already in the directory"
+                      .format(filename_input_cell_full))
 
-        # check that image is not corrupted
-        try:
-            check_hash(path, hash_input_cell_full)
-            print("{0} is already in the directory"
-                  .format(filename_input_cell_full))
+            # otherwise download it
+            except IOError:
+                print("{0} seems corrupted".format(filename_input_cell_full))
+                print("downloading {0}...".format(filename_input_cell_full))
+                load_and_save_url(url_input_cell_full,
+                                  input_directory,
+                                  filename_input_cell_full)
+                check_hash(path, hash_input_cell_full)
 
-        # otherwise download it
-        except IOError:
-            print("{0} seems corrupted".format(filename_input_cell_full))
+        # if file does not exist we directly download it
+        else:
             print("downloading {0}...".format(filename_input_cell_full))
             load_and_save_url(url_input_cell_full,
                               input_directory,
                               filename_input_cell_full)
             check_hash(path, hash_input_cell_full)
-
-    # if file does not exist we directly download it
-    else:
-        print("downloading {0}...".format(filename_input_cell_full))
-        load_and_save_url(url_input_cell_full,
-                          input_directory,
-                          filename_input_cell_full)
-        check_hash(path, hash_input_cell_full)
-
-    return
 
 
 # ### Computation ###
@@ -906,6 +886,8 @@ def moving_average(array, n):
 
     Returns
     -------
+    results : np.ndarray
+        Moving average values.
 
     """
     # check parameter
@@ -914,15 +896,15 @@ def moving_average(array, n):
 
     # compute moving average
     cumsum = [0]
-    res = []
+    results = []
     for i, x in enumerate(array, 1):
         cumsum.append(cumsum[i-1] + x)
         if i >= n:
             ma = (cumsum[i] - cumsum[i - n]) / n
-            res.append(ma)
-    res = np.array(res)
+            results.append(ma)
+    results = np.array(results)
 
-    return res
+    return results
 
 
 def centered_moving_average(array, n):
@@ -937,6 +919,8 @@ def centered_moving_average(array, n):
 
     Returns
     -------
+    results : np.ndarray
+        Centered moving average values.
 
     """
     # check parameter
@@ -952,9 +936,9 @@ def centered_moving_average(array, n):
     array_padded = np.pad(array, pad_width=r, mode="reflect")
 
     # compute centered moving average
-    res = moving_average(array_padded, n)
+    results = moving_average(array_padded, n)
 
-    return res
+    return results
 
 
 # ### Spot utilities ###
@@ -965,16 +949,16 @@ def get_sigma(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
     Parameters
     ----------
     voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we
-        consider a 2-d PSF.
+        Height of a voxel, along the z axis, in nanometer. If None, we consider
+        a 2-d PSF.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, we consider a 2-d PSF.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, we consider a 2-d PSF.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
 
     Returns
     -------
@@ -1004,24 +988,26 @@ def get_radius(voxel_size_z=None, voxel_size_yx=100, psf_z=None, psf_yx=200):
 
     We use the formula:
 
-        sqrt(ndim) * sigma
+    .. math::
 
-    with ndim the number of dimension of the image and sigma the standard
-    deviation (in pixel) of the detected spot.
+        \\mbox{radius} = \\mbox{sqrt(ndim)} * \\sigma
+
+    with :math:`\\mbox{ndim}` the number of dimension of the image and
+    :math:`\\sigma` the standard deviation (in pixel) of the detected spot.
 
     Parameters
     ----------
     voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we
-        consider a 2-d spot.
+        Height of a voxel, along the z axis, in nanometer. If None, we consider
+        a 2-d spot.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, we consider a 2-d spot.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, we consider a 2-d spot.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
 
     Returns
     -------
