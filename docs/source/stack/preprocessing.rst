@@ -12,8 +12,6 @@ Normalize images
 
 Rescale or contrast pixel intensity:
 
-* :func:`bigfish.stack.rescale`
-
 .. autofunction:: rescale
 
 ------------

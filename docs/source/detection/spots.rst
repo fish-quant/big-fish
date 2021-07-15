@@ -56,6 +56,4 @@ Compute signal-to-noise ratio
 
 Compute a signal-to-noise ratio (SNR) for the image:
 
-* :func:`bigfish.detection.compute_snr_spots`
-
 .. autofunction:: compute_snr_spots
