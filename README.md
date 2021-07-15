@@ -26,7 +26,11 @@ Big-FISH requires Python 3.6 or newer. Additionally, it has the following depend
 - pandas (== 0.24.0)
 - mrc (== 0.1.5)
 
-Updated dependencies might break.
+For segmentation purpose, two additional dependencies can be requested:
+- tensorflow (== 2.3.0)
+- tensorflow-addons (== 0.12.1)
+
+Updated dependencies are not tested yet and might break.
 
 ### Virtual environment
 
@@ -59,15 +63,9 @@ pip install .
 
 ## Usage
 
-Big-FISH provides a toolbox for the full analysis pipeline of smFISH images:
+Big-FISH provides a toolbox for the full analysis pipeline of smFISH images. A complete [documentation](https://big-fish.readthedocs.io/en/stable/) is available online. 
 
-- Use `bigfish.stack` subpackage for I/O operations, preprocessing and postprocessing.
-- Use `bigfish.segmentation` subpackage for nucleus and cell segmentation.
-- Use `bigfish.detection` subpackage for mRNAs detection.
-- Use `bigfish.plot` subpackage for plotting routines.
-- Use `bigfish.classification` subpackage for pattern recognition tasks.
-
-Several examples are available as [Jupyter notebooks](https://github.com/fish-quant/big-fish-examples/tree/master/notebooks).
+This package is part of the [FISH-Quant](https://fish-quant.github.io/) framework and several examples are also available as [Jupyter notebooks](https://github.com/fish-quant/big-fish-examples/tree/master/notebooks).
 
 ## Support
 
@@ -75,13 +73,8 @@ If you have any question relative to the repository, please open an [issue](http
 
 ## Roadmap (suggestion)
 
-Version 0.5.0:
-- Switch to tensorflow 2.2.0.
-- Integrate a deep learning model for segmentation.
-
 Version 1.0.0:
 - Complete code coverage.
-- Add sphinx documentation.
 
 ## Development
 
