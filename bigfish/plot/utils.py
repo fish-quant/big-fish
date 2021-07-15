@@ -21,9 +21,6 @@ def save_plot(path_output, ext):
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
 
-    Returns
-    -------
-
     """
     # add extension at the end of the filename
     extension = "." + ext
@@ -47,8 +44,6 @@ def save_plot(path_output, ext):
     else:
         Warning("Plot is not saved because the extension is not valid: "
                 "{0}.".format(ext))
-
-    return
 
 
 def get_minmax_values(tensor):

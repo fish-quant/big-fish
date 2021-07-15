@@ -20,7 +20,10 @@ from .utils import save_plot
 def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
                    size_title=20, size_axes=15, size_legend=15,
                    path_output=None, ext="png", show=True):
-    """Plot focus measures.
+    """Plot focus measures of a 3-d image, at the z-slice level.
+
+    A measure of focus for each z-slice can be computed by averaging the
+    pixel-wise focus measure returned from :func:`bigfish.stack.compute_focus`.
 
     Parameters
     ----------
@@ -31,7 +34,7 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
     title : str or None
         Title of the plot.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     size_title : int
         Size of the title.
     size_axes : int
@@ -45,9 +48,6 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # enlist values if necessary
@@ -97,8 +97,6 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
     else:
         plt.close()
 
-    return
-
 
 # ### Elbow plot ###
 
@@ -118,15 +116,15 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, image is considered in 2-d.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
     title : str or None
         Title of the plot.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     size_title : int
         Size of the title.
     size_axes : int
@@ -140,9 +138,6 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -186,5 +181,3 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
         plt.show()
     else:
         plt.close()
-
-    return

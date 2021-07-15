@@ -62,9 +62,13 @@ Overview
 ------------
 
 .. toctree::
-   :caption: Plot
+   :caption: Visualization
 
-   plot/plot
+   plot/plot_image
+   plot/plot_detection
+   plot/plot_segmentation
+   plot/plot_coordinate
+
 
 ------------
 
@@ -76,11 +80,3 @@ Overview
 
 * :ref:`Utility functions<utils overview>`: Sanity checks, get constant values,
   compute hash, etc...
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
