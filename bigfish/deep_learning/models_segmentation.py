@@ -225,7 +225,6 @@ def _get_weights_directory():
     path = os.path.realpath(__file__)
     path = os.path.dirname(path)
     path = os.path.dirname(path)
-    path = os.path.dirname(path)
     path = os.path.join(path, "weights")
 
     return path
