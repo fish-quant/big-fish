@@ -12,10 +12,11 @@
 
 import os
 import sys
-import bigfish
 import sphinx_rtd_theme
 
+# import Big-FISH
 sys.path.insert(0, os.path.abspath('../..'))
+import bigfish
 
 
 # -- Project information -----------------------------------------------------
