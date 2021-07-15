@@ -7,8 +7,8 @@ Nucleus segmentation
 
 Functions used to segment nuclei.
 
-Apply a Unet-based model
-========================
+Apply a Unet-based model (3-classes)
+====================================
 
 Load a pretrained model:
 

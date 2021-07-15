@@ -26,14 +26,14 @@ separated steps:
 
 ------------
 
-Apply a Unet-based model
-========================
+Apply a Unet-based model (distance map)
+=======================================
 
 Load a pretrained model:
 
 * :func:`bigfish.segmentation.unet_distance_edge_double`
 
-Segment nuclei:
+Segment cells:
 
 * :func:`bigfish.segmentation.apply_unet_distance_double`
 * :func:`bigfish.segmentation.from_distance_to_instances`
