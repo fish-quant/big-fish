@@ -91,64 +91,6 @@ def median_projection(image):
     return projected_image
 
 
-# TODO to deprecate
-def focus_projection_classic(image):
-    """Project the z-dimension of an image as describe in Samacoits Aubin's
-    thesis (part 5.3, strategy 5).
-
-    1) We keep 75% best in-focus z-slices.
-    2) Compute a new focus value for each pixel yx with a 7x7 neighborhood
-    window.
-    3) Keep the median pixel intensity among the top 5 best focus z-slices.
-
-    Parameters
-    ----------
-    image : np.ndarray, np.uint
-        A 3-d image with shape (z, y, x).
-
-    Returns
-    -------
-    projected_image : np.ndarray, np.uint
-        A 2-d image with shape (y, x).
-
-    """
-    # check parameters
-    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
-
-    # compute focus measure for each pixel
-    large_focus = compute_focus(image, neighborhood_size=31)
-
-    # remove out-of-focus z-slices
-    in_focus_image = in_focus_selection(image,
-                                        focus=large_focus,
-                                        proportion=0.75)
-
-    # compute focus value for each pixel with a smaller window
-    small_focus = compute_focus(in_focus_image, neighborhood_size=7)
-
-    # for each yx pixel, get the indices of the 5 best focus values
-    top_focus_indices = np.argsort(small_focus, axis=0)
-    top_focus_indices = top_focus_indices[-5:, :, :]
-
-    # build a binary matrix with the same shape of our in-focus image to keep
-    # the top focus pixels only
-    mask = [mask_ for mask_ in map(
-        lambda indices: _one_hot_3d(indices, depth=in_focus_image.shape[0]),
-        top_focus_indices)]
-    mask = np.sum(mask, axis=0, dtype=in_focus_image.dtype)
-
-    # filter top focus pixels in our in-focus image
-    in_focus_image = np.multiply(in_focus_image, mask)
-
-    # project image
-    in_focus_image = in_focus_image.astype(np.float64)
-    in_focus_image[in_focus_image == 0] = np.nan
-    projected_image = np.nanmedian(in_focus_image, axis=0)
-    projected_image = projected_image.astype(image.dtype)
-
-    return projected_image
-
-
 def focus_projection(image, proportion=5, neighborhood_size=7,
                      method="median"):
     """Project the z-dimension of an image.
@@ -157,10 +99,10 @@ def focus_projection(image, proportion=5, neighborhood_size=7,
     the original algorithm we use the same focus measures to select the
     in-focus z-slices and project our image.
 
-    1) Compute a focus value for each pixel yx with a fixed neighborhood size.
-    2) We keep 75% best in-focus z-slices (based on the focus scores).
-    3) Keep the median/maximum pixel intensity among the top 5 best focus
-    z-slices.
+    #. Compute a focus score for each pixel yx with a fixed neighborhood size.
+    #. We keep 75% of z-slices with the highest average focus score.
+    #. Keep the median/maximum pixel intensity among the top 5 z-slices with
+       the highest focus score.
 
     Parameters
     ----------
@@ -172,8 +114,8 @@ def focus_projection(image, proportion=5, neighborhood_size=7,
     neighborhood_size : int
         The size of the square used to define the neighborhood of each pixel.
     method : str
-        Projection method applied on the selected pixel values ('median' or
-        'max').
+        Projection method applied on the selected pixel values (`median` or
+        `max`).
 
     Returns
     -------
@@ -277,7 +219,7 @@ def _one_hot_3d(indices, depth, return_boolean=False):
 def in_focus_selection(image, focus, proportion):
     """Select and keep the 2-d slices with the highest level of focus.
 
-    Helmli and Scherer’s mean method used as a focus metric.
+    Helmli and Scherer’s mean method is used as a focus metric.
 
     Parameters
     ----------
@@ -285,7 +227,7 @@ def in_focus_selection(image, focus, proportion):
         A 3-d tensor with shape (z, y, x).
     focus : np.ndarray, np.float64
         A 3-d tensor with a focus metric computed for each pixel of the
-        original image. See bigfish.stack.quality.compute_focus.
+        original image. See :func:`bigfish.stack.compute_focus`.
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
         z-slices to keep (positive integer).
@@ -312,11 +254,13 @@ def in_focus_selection(image, focus, proportion):
 def get_in_focus_indices(focus, proportion):
     """ Select the best in-focus z-slices.
 
+    Helmli and Scherer’s mean method is used as a focus metric.
+
     Parameters
     ----------
     focus : np.ndarray, np.float64
         A 3-d tensor with a focus metric computed for each pixel of the
-        original image. See bigfish.stack.quality.compute_focus.
+        original image. See :func:`bigfish.stack.compute_focus`.
     proportion : float or int
         Proportion of z-slices to keep (float between 0 and 1) or number of
         z-slices to keep (positive integer).

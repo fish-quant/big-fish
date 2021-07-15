@@ -27,12 +27,12 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
     """Detect dense and bright regions with potential clustered spots and
     simulate a more realistic number of spots in these regions.
 
-    1) We estimate image background with a large gaussian filter. We then
-    remove the background from the original image to denoise it.
-    2) We build a reference spot by aggregating predetected spots.
-    3) We fit gaussian parameters on the reference spots.
-    4) We detect dense regions to decompose.
-    5) We simulate as many gaussians as possible in the candidate regions.
+    #. We estimate image background with a large gaussian filter. We then
+       remove the background from the original image to denoise it.
+    #. We build a reference spot by aggregating predetected spots.
+    #. We fit gaussian parameters on the reference spots.
+    #. We detect dense regions to decompose.
+    #. We simulate as many gaussians as possible in the candidate regions.
 
     Parameters
     ----------
@@ -47,11 +47,11 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, image is considered in 2-d.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, image is considered in 2-d.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
     alpha : int or float
         Intensity percentile used to compute the reference spot, between 0
         and 1. The higher, the brighter are the spots simulated in the dense
@@ -60,11 +60,19 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
         the median spot.
     beta : int or float
         Multiplicative factor for the intensity threshold of a dense region.
-        Default is 1. Threshold is computed with the formula :
-            threshold = beta * max(median_spot)
+        Default is 1. Threshold is computed with the formula:
+
+        .. math::
+            \\mbox{threshold} = \\beta * \\mbox{max(median spot)}
+
+        With :math:`\\mbox{median spot}` the median value of all detected spot
+        signals.
     gamma : int or float
-        Multiplicative factor use to compute a gaussian scale :
-            large_sigma = gamma * psf / voxel_size
+        Multiplicative factor use to compute a gaussian scale:
+
+        .. math::
+            \\mbox{scale} = \\frac{\\gamma * \\mbox{PSF}}{\\mbox{voxel size}}
+
         We perform a large gaussian filter with such scale to estimate image
         background and remove it from original image. A large gamma increases
         the scale of the gaussian filter and smooth the estimated background.
@@ -210,8 +218,8 @@ def get_dense_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
                      psf_z=None, psf_yx=200, beta=1):
     """Detect and filter dense and bright regions.
 
-    A candidate region follows has at least 2 connected pixels above a
-    specific threshold.
+    A candidate region has at least 2 connected pixels above a specific
+    threshold.
 
     Parameters
     ----------
@@ -225,20 +233,26 @@ def get_dense_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, we consider a 2-d image.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, we consider a 2-d image.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
     beta : int or float
         Multiplicative factor for the intensity threshold of a dense region.
-        Default is 1. Threshold is computed with the formula :
-            threshold = beta * max(median_spot)
+        Default is 1. Threshold is computed with the formula:
+
+        .. math::
+            \\mbox{threshold} = \\beta * \\mbox{max(median spot)}
+
+        With :math:`\\mbox{median spot}` the median value of all detected spot
+        signals.
 
     Returns
     -------
     dense_regions : np.ndarray
-        Array with filtered skimage.measure._regionprops._RegionProperties.
+        Array with selected ``skimage.measure._regionprops._RegionProperties``
+        objects.
     spots_out_region : np.ndarray, np.int64
         Coordinate of the spots detected out of dense regions, with shape
         (nb_spots, 3) or (nb_spots, 2). One coordinate per dimension (zyx or
@@ -450,8 +464,8 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size_z=None,
                               voxel_size_yx=100, sigma_z=None, sigma_yx=200,
                               amplitude=100, background=0,
                               precomputed_gaussian=None):
-    """Simulate as many gaussians as possible in the candidate dense
-    regions in order to get a more realistic number of spots.
+    """Simulate as many gaussians as possible in the candidate dense regions in
+    order to get a more realistic number of spots.
 
     Parameters
     ----------
@@ -460,13 +474,13 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size_z=None,
     candidate_regions : np.ndarray
         Array with filtered skimage.measure._regionprops._RegionProperties.
     voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we
-        consider a 2-d image.
+        Height of a voxel, along the z axis, in nanometer. If None, we consider
+        a 2-d image.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     sigma_z : int or float or None
-        Standard deviation of the gaussian along the z axis, in nanometer.
-        If None, we consider a 2-d image.
+        Standard deviation of the gaussian along the z axis, in nanometer. If
+        None, we consider a 2-d image.
     sigma_yx : int or float
         Standard deviation of the gaussian along the yx axis, in nanometer.
     amplitude : float

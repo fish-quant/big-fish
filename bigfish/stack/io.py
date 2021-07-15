@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Function used to read data from various sources and store them in a
+Functions used to read data from various sources and store them in a
 multidimensional tensor (numpy.ndarray).
 """
 
@@ -24,14 +24,15 @@ from .utils import check_parameter
 # ### Read ###
 
 def read_image(path, sanity_check=False):
-    """Read an image with .png, .jpg, .jpeg, .tif or .tiff extension.
+    """Read an image with ``png``, ``jpg``, ``jpeg``, ``tif`` or ``tiff``
+    extension.
 
     Parameters
     ----------
     path : str
         Path of the image to read.
     sanity_check : bool
-        Check if the array returned fit with bigfish pipeline.
+        Check if the array returned fits with bigfish pipeline.
 
     Returns
     -------
@@ -60,14 +61,14 @@ def read_image(path, sanity_check=False):
 
 
 def read_dv(path, sanity_check=False):
-    """Read a video file with .dv extension.
+    """Read a video file with ``dv`` extension.
 
     Parameters
     ----------
     path : str
         Path of the file to read.
     sanity_check : bool
-        Check if the array returned fit with bigfish pipeline.
+        Check if the array returned fits with bigfish pipeline.
 
     Returns
     -------
@@ -93,7 +94,7 @@ def read_dv(path, sanity_check=False):
 
 
 def read_array(path):
-    """Read a numpy array with .npy extension.
+    """Read a numpy array with ``npy`` extension.
 
     Parameters
     ----------
@@ -116,16 +117,16 @@ def read_array(path):
 
 
 def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8"):
-    """Read a numpy array saved in a csv file.
+    """Read a numpy array saved in a ``csv`` file.
 
     Parameters
     ----------
     path : str
-        Path of the csv file to read.
+        Path of the ``csv`` file to read.
     dtype : type or None
         Expected dtype to cast the array.
     delimiter : str
-        Delimiter used in the csv file to separate columns.
+        Delimiter used to separate columns.
     encoding : str
         Encoding to use.
 
@@ -152,14 +153,14 @@ def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8"):
 
 
 def read_dataframe_from_csv(path, delimiter=";", encoding="utf-8"):
-    """Read a numpy array or a pandas object saved in a csv file.
+    """Read a numpy array or a pandas object saved in a ``csv`` file.
 
     Parameters
     ----------
     path : str
-        Path of the csv file to read.
+        Path of the ``csv`` file to read.
     delimiter : str
-        Delimiter used in the csv file to separate columns.
+        Delimiter used to separate columns.
     encoding : str
         Encoding to use.
 
@@ -181,7 +182,7 @@ def read_dataframe_from_csv(path, delimiter=";", encoding="utf-8"):
 
 
 def read_uncompressed(path, verbose=False):
-    """Read a NpzFile object with .npz extension.
+    """Read a NpzFile object with ``npz`` extension.
 
     Parameters
     ----------
@@ -209,8 +210,8 @@ def read_uncompressed(path, verbose=False):
 
 
 def read_cell_extracted(path, verbose=False):
-    """Read a NpzFile object with .npz extension, previously written with
-    bigfish.stack.save_cell_extracted.
+    """Read a NpzFile object with ``npz`` extension, previously written with
+    :func:`bigfish.stack.save_cell_extracted`.
 
     Parameters
     ----------
@@ -224,9 +225,12 @@ def read_cell_extracted(path, verbose=False):
     cell_results : Dict
         Dictionary including information about the cell (image, masks,
         coordinates arrays). Minimal information are :
-        - bbox : bounding box coordinates (min_y, min_x, max_y, max_x).
-        - cell_coord : boundary coordinates of the cell.
-        - cell_mask : mask of the cell.
+
+        * `cell_id`: Unique id of the cell.
+        * `bbox`: bounding box coordinates with the order (`min_y`, `min_x`,
+          `max_y`, `max_x`).
+        * `cell_coord`: boundary coordinates of the cell.
+        * `cell_mask`: mask of the cell.
 
     """
     # read compressed file
@@ -250,16 +254,6 @@ def save_image(image, path, extension="tif"):
 
     The dimensions should be in the following order: (round, channel, z, y, x).
 
-    Additional notes:
-    - If the image has more than 2 dimensions, 'tif' and 'tiff' extensions are
-    required ('png' extension does not handle 3-d images other than (M, N, 3)
-    or (M, N, 4) shapes).
-    - A 2-d boolean image can be saved in 'png', 'jpg' or 'jpeg'
-    (cast in np.uint8).
-    - A multidimensional boolean image should be saved with
-    bigfish.stack.save_array function or as a 0-1 images with 'tif'/'tiff'
-    extension.
-
     Parameters
     ----------
     image : np.ndarray
@@ -267,11 +261,19 @@ def save_image(image, path, extension="tif"):
     path : str
         Path of the saved image.
     extension : str
-        Default extension to save the image (among 'png', 'jpg', 'jpeg', 'tif'
-        or 'tiff').
+        Default extension to save the image (among ``png``, ``jpg``, ``jpeg``,
+        ``tif`` or ``tiff``).
 
-    Returns
-    -------
+    Notes
+    -----
+    * If the image has more than 2 dimensions, ``tif`` and ``tiff`` extensions
+      are required (``png`` extension does not handle 3-d images other than
+      (M, N, 3) or (M, N, 4) shapes).
+    * A 2-d boolean image can be saved in ``png``, ``jpg`` or ``jpeg`` (cast in
+      np.uint8).
+    * A multidimensional boolean image should be saved with
+      :func:`bigfish.stack.save_array` or as a boolean images with ``tif``/
+      ``tiff`` extension.
 
     """
     # check image and parameters
@@ -339,11 +341,9 @@ def save_image(image, path, extension="tif"):
         warnings.filterwarnings(action="ignore", category=UserWarning)
         io.imsave(path, image)
 
-    return
-
 
 def save_array(array, path):
-    """Save an array in a .npy extension file.
+    """Save an array in a ``npy`` extension file.
 
     The input array should have between 2 and 5 dimensions, with boolean,
     (unsigned) integer, or float.
@@ -354,9 +354,6 @@ def save_array(array, path):
         Array to save.
     path : str
         Path of the saved array.
-
-    Returns
-    -------
 
     """
     # check array and path
@@ -375,26 +372,21 @@ def save_array(array, path):
     # save array
     np.save(path, array)
 
-    return
-
 
 def save_data_to_csv(data, path, delimiter=";"):
-    """Save a numpy array or a pandas object into a csv file.
+    """Save a numpy array or a pandas object into a ``csv`` file.
 
-    The input should be a pandas object (Series or DataFrame) or a numpy array
-    with 2 dimensions and (unsigned) integer or float.
+    The input should be a pandas object (`Series` or `DataFrame`) or a
+    numpy array with 2 dimensions and (unsigned) integer or float.
 
     Parameters
     ----------
     data : np.ndarray, pd.Series or pd.DataFrame
         Data to save.
     path : str
-        Path of the saved csv file.
+        Path of the saved ``csv`` file.
     delimiter : str
-        Delimiter used in the csv file to separate columns.
-
-    Returns
-    -------
+        Delimiter used to separate columns.
 
     """
     # check parameters
@@ -433,27 +425,24 @@ def save_data_to_csv(data, path, delimiter=";"):
         data.to_csv(path, sep=delimiter, header=True, index=False,
                     encoding="utf-8")
 
-    return
-
 
 def save_cell_extracted(cell_results, path):
-    """Save cell-level results from bigfish.stack.extract_cell in a NpzFile
-    object with .npz extension.
+    """Save cell-level results from :func:`bigfish.stack.extract_cell` in a
+    NpzFile object with ``npz`` extension.
 
     Parameters
     ----------
     cell_results : Dict
         Dictionary including information about the cell (image, masks,
         coordinates arrays). Minimal information are:
-        - cell_id -> Unique id of the cell.
-        - bbox -> bounding box coordinates (min_y, min_x, max_y, max_x).
-        - cell_coord -> boundary coordinates of the cell.
-        - cell_mask -> mask of the cell.
+
+        * `cell_id`: Unique id of the cell.
+        * `bbox`: bounding box coordinates with the order (`min_y`, `min_x`,
+          `max_y`, `max_x`).
+        * `cell_coord`: boundary coordinates of the cell.
+        * `cell_mask`: mask of the cell.
     path : str
         Path of the saved array.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -466,5 +455,3 @@ def save_cell_extracted(cell_results, path):
 
     # save compressed file
     np.savez(path, **cell_results)
-
-    return

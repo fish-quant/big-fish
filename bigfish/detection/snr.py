@@ -17,9 +17,12 @@ from .spot_modeling import _get_spot_surface
 
 def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
                       psf_z=None, psf_yx=200):
-    """Compute Signal-to-Noise ratio based on detected spot.
+    """Compute signal-to-noise ratio (SNR) based on spot coordinates.
 
-        SNR = (max_spot_signal - mean_background) / std_background
+    .. math::
+
+        \\mbox{SNR} = \\frac{\\mbox{max(spot signal)} -
+        \\mbox{mean(background)}}{\\mbox{std(background)}}
 
     Background is a region twice larger surrounding the spot region. Only the
     y and x dimensions are taking into account to compute the SNR.
@@ -29,23 +32,24 @@ def compute_snr_spots(image, spots, voxel_size_z=None, voxel_size_yx=100,
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64 or np.float64
-        Coordinate of the spots detected, with shape (nb_spots, 3) or
-        (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
+        Coordinate of the spots, with shape (nb_spots, 3) or (nb_spots, 2).
+        One coordinate per dimension (zyx or yx coordinates).
     voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we
-        consider a 2-d spot.
+        Height of a voxel, along the z axis, in nanometer. If None, we consider
+        a 2-d spot.
     voxel_size_yx : int or float
         Size of a voxel on the yx plan, in nanometer.
     psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, we consider a 2-d spot.
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, we consider a 2-d spot.
     psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
+
     Returns
     -------
     snr : float
-        Median Signal-to-Noise ratio computed for every spots.
+        Median signal-to-noise ratio computed for every spots.
 
     """
     # check parameters
