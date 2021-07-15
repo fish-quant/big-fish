@@ -24,7 +24,8 @@ with open('bigfish/__init__.py', encoding='utf-8') as f:
 with open("requirements.txt", encoding='utf-8') as f:
     REQUIREMENTS = [l.strip() for l in f.readlines() if l]
 DEEPLEARNING_REQUIREMENTS = [
-    'tensorflow == 2.2.0']
+    'tensorflow == 2.3.0',
+    'tensorflow-addons == 0.12.1']
 
 # long description of the package
 with open("README.md", "r") as f:
@@ -33,7 +34,7 @@ with open("README.md", "r") as f:
 # A list of classifiers to categorize the project (only used for searching and
 # browsing projects on PyPI)
 CLASSIFIERS = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
     'Topic :: Software Development',

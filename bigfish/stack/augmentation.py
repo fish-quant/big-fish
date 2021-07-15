@@ -17,7 +17,7 @@ def augment_2d(image):
     Parameters
     ----------
     image : np.ndarray
-        Image to augment with shape (y, x, channels).
+        Image to augment with shape (y, x, channels) or (y, x, channels).
 
     Returns
     -------
@@ -40,6 +40,102 @@ def augment_2d(image):
     image_augmented = random_operation(image)
 
     return image_augmented
+
+
+def augment_2d_function(identity=False):
+    """Choose a random operation to augment a 2-d image.
+
+    Parameters
+    ----------
+    identity : bool
+        Return identity function instead of a random transformation.
+
+    Returns
+    -------
+    random_operation : callable
+        Function to transform a 2-d image.
+
+    """
+    # no random transformation
+    if identity:
+        return _identity
+
+    # randomly choose an operator
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_90, _rotation_180, _rotation_270]
+    random_operation = np.random.choice(operations)
+
+    return random_operation
+
+
+def augment_8_times(image):
+    """Apply every transformation to a 2-d image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to augment with shape (y, x, channels).
+
+    Returns
+    -------
+    images_augmented : List[np.ndarray]
+        List of images augmented with shape (y, x, channels).
+
+    """
+    # check input image
+    check_parameter(image=np.ndarray)
+    check_array(image, ndim=[2, 3])
+
+    # initialization
+    images_augmented = []
+
+    # apply all operators
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_90, _rotation_180, _rotation_270]
+    for operation in operations:
+        augmented_image = operation(image)
+        images_augmented.append(augmented_image)
+
+    return images_augmented
+
+
+def augment_8_times_reversed(images_augmented):
+    """Apply every transformation back to return the original 2-d image.
+
+    Parameters
+    ----------
+    images_augmented : List[np.ndarray]
+        List of images augmented with shape (y, x, channels).
+
+    Returns
+    -------
+    images_original : List[np.ndarray]
+        List of original images with shape (y, x, channels).
+
+    """
+    # check input image
+    check_parameter(images_augmented=list)
+    for image_augmented in images_augmented:
+        check_array(image_augmented, ndim=[2, 3])
+
+    # initialization
+    images_original = []
+
+    # apply all operators
+    operations = [_identity,
+                  _flip_h, _flip_v,
+                  _transpose, _transpose_inverse,
+                  _rotation_270, _rotation_180, _rotation_90]
+    for i, image_augmented in enumerate(images_augmented):
+        operation = operations[i]
+        image_original = operation(image_augmented)
+        images_original.append(image_original)
+
+    return images_original
 
 
 def _identity(image):

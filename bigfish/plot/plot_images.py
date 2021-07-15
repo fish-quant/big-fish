@@ -10,7 +10,7 @@ import warnings
 
 import bigfish.stack as stack
 
-from .utils import save_plot, get_minmax_values
+from .utils import save_plot, get_minmax_values, create_colormap
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,7 +45,7 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
     title : str
         Title of the image.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool
         Remove axes and frame.
     path_output : str
@@ -55,9 +55,6 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -73,7 +70,8 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
                           framesize=tuple,
                           remove_frame=bool,
                           path_output=(str, type(None)),
-                          ext=(str, list))
+                          ext=(str, list),
+                          show=bool)
 
     # get the 2-d image
     if image.ndim == 2:
@@ -112,11 +110,9 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
     else:
         plt.close()
 
-    return
-
 
 def plot_images(images, rescale=False, contrast=False, titles=None,
-                framesize=(15, 5), remove_frame=True, path_output=None,
+                framesize=(15, 10), remove_frame=True, path_output=None,
                 ext="png", show=True):
     """Plot or subplot of 2-d images.
 
@@ -131,7 +127,7 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
     titles : List[str]
         Titles of the subplots.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool
         Remove axes and frame.
     path_output : str
@@ -142,8 +138,6 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
     show : bool
         Show the figure or not.
 
-    Returns
-    -------
 
     """
     # enlist image if necessary
@@ -244,13 +238,11 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
     else:
         plt.close()
 
-    return
-
 
 # ### Segmentation plot ###
 
 def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
-                      framesize=(15, 5), remove_frame=True,
+                      framesize=(15, 10), remove_frame=True,
                       path_output=None, ext="png", show=True):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
@@ -267,7 +259,7 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
     title : str
         Title of the image.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool
         Remove axes and frame.
     path_output : str
@@ -277,9 +269,6 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -349,8 +338,6 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
     else:
         plt.close()
 
-    return
-
 
 def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
                                rescale=False, contrast=False, title=None,
@@ -373,7 +360,7 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
     title : str
         Title of the image.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool
         Remove axes and frame.
     path_output : str
@@ -383,9 +370,6 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -454,7 +438,109 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
     else:
         plt.close()
 
-    return
+
+def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
+                           contrast=False, title=None, framesize=(15, 10),
+                           remove_frame=True, path_output=None, ext="png",
+                           show=True):
+    """Plot segmentation results along with ground truth to compare.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.uint, np.int, np.float or bool
+        Image with shape (y, x).
+    mask_pred : np.ndarray, np.uint, np.int or np.float
+        Image with shape (y, x).
+    mask_gt : np.ndarray, np.uint, np.int or np.float
+        Image with shape (y, x).
+    rescale : bool
+        Rescale pixel values of the image (made by default in matplotlib).
+    contrast : bool
+        Contrast image.
+    title : str or None
+        Title of the plot.
+    framesize : tuple
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
+    remove_frame : bool
+        Remove axes and frame.
+    path_output : str or None
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+    show : bool
+        Show the figure or not.
+
+    """
+    # check parameters
+    stack.check_parameter(rescale=bool,
+                          contrast=bool,
+                          title=(str, type(None)),
+                          framesize=tuple,
+                          remove_frame=bool,
+                          path_output=(str, type(None)),
+                          ext=(str, list),
+                          show=bool)
+    stack.check_array(image,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64,
+                             np.float32, np.float64,
+                             bool])
+    stack.check_array(mask_pred,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int32, np.int64,
+                             np.float32, np.float64,
+                             bool])
+    stack.check_array(mask_gt,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int32, np.int64,
+                             np.float32, np.float64,
+                             bool])
+
+    # plot multiple images
+    fig, ax = plt.subplots(1, 3, figsize=framesize)
+
+    # image
+    if remove_frame:
+        ax[0].axis("off")
+    if not rescale and not contrast:
+        vmin, vmax = get_minmax_values(image)
+        ax[0].imshow(image, vmin=vmin, vmax=vmax)
+    elif rescale and not contrast:
+        ax[0].imshow(image)
+    else:
+        if image.dtype not in [np.int64, bool]:
+            image = stack.rescale(image, channel_to_stretch=0)
+        ax[0].imshow(image)
+    if title is None:
+        ax[0].set_title("", fontweight="bold", fontsize=10)
+    else:
+        ax[0].set_title(title, fontweight="bold", fontsize=10)
+
+    # build colormap
+    cmap = create_colormap()
+
+    # prediction
+    im_mask_pred = np.ma.masked_where(mask_pred == 0, mask_pred)
+    if remove_frame:
+        ax[1].axis("off")
+    ax[1].imshow(im_mask_pred, cmap=cmap)
+    ax[1].set_title("Prediction", fontweight="bold", fontsize=10)
+
+    # ground truth
+    im_mask_gt = np.ma.masked_where(mask_gt == 0, mask_gt)
+    if remove_frame:
+        ax[2].axis("off")
+    ax[2].imshow(im_mask_gt, cmap=cmap)
+    ax[2].set_title("Ground truth", fontweight="bold", fontsize=10)
+
+    plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
 # ### Detection plot ###
@@ -476,21 +562,21 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
         list of arrays.
     shape : List[str] or str
         List of symbols used to localized the detected spots in the image,
-        among 'circle', 'square' or 'polygon'. One symbol per array in 'spots'.
-        If 'shape' is a string, the same symbol is used for every elements of
+        among `circle`, `square` or `polygon`. One symbol per array in `spots`.
+        If `shape` is a string, the same symbol is used for every elements of
         'spots'.
     radius : List[int or float] or int or float
         List of yx radii of the detected spots. One radius per array in
-        'spots'. If 'radius' is a scalar, the same value is applied for every
-        elements of 'spots'.
+        `spots`. If `radius` is a scalar, the same value is applied for every
+        elements of `spots`.
     color : List[str] or str
-        List of colors of the detected spots. One color per array in 'spots'.
-        If 'color' is a string, the same color is applied for every elements
-        of 'spots'.
+        List of colors of the detected spots. One color per array in `spots`.
+        If `color` is a string, the same color is applied for every elements
+        of `spots`.
     linewidth : List[int] or int
         List of widths or width of the border symbol. One integer per array
-        in 'spots'. If 'linewidth' is an integer, the same width is applied
-        for every elements of 'spots'.
+        in `spots`. If `linewidth` is an integer, the same width is applied
+        for every elements of `spots`.
     fill : List[bool] or bool
         List of boolean to fill the symbol the detected spots.
     rescale : bool
@@ -500,7 +586,7 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
     title : str
         Title of the image.
     framesize : tuple
-        Size of the frame used to plot (plt.figure(figsize=framesize).
+        Size of the frame used to plot with ``plt.figure(figsize=framesize``.
     remove_frame : bool
         Remove axes and frame.
     path_output : str
@@ -510,9 +596,6 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -536,9 +619,9 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
                           show=bool)
     if isinstance(spots, list):
         for spots_ in spots:
-            stack.check_array(spots_, ndim=2, dtype=np.int64)
+            stack.check_array(spots_, ndim=2, dtype=[np.int64, np.float64])
     else:
-        stack.check_array(spots, ndim=2, dtype=np.int64)
+        stack.check_array(spots, ndim=2, dtype=[np.int64, np.float64])
 
     # enlist and format parameters
     if not isinstance(spots, list):
@@ -626,8 +709,6 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
     else:
         plt.close()
 
-    return
-
 
 def _define_patch(x, y, shape, radius, color, linewidth, fill):
     """Define a matplotlib.patches to plot.
@@ -639,7 +720,7 @@ def _define_patch(x, y, shape, radius, color, linewidth, fill):
     y : int or float
         Coordinate y for the patch center.
     shape : str
-        Shape of the patch to define (among 'circle', 'square' or 'polygon')
+        Shape of the patch to define (among `circle`, `square` or `polygon`)
     radius : int or float
         Radius of the patch.
     color : str
@@ -696,7 +777,7 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
     title : str
         Title of the image.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool
         Remove axes and frame.
     path_output : str
@@ -706,9 +787,6 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     # check parameters
@@ -755,8 +833,6 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
         plt.show()
     else:
         plt.close()
-
-    return
 
 
 # ### Individual cell plot ###
@@ -807,7 +883,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
     contrast : bool
         Contrast image.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     path_output : str or None
         Path to save the image (without extension).
     ext : str or List[str]
@@ -815,9 +891,6 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         will be saved several times.
     show : bool
         Show the figure or not.
-
-    Returns
-    -------
 
     """
     if cell_coord is None and image is None:
@@ -925,6 +998,14 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
                             fontweight="bold", fontsize=10)
         plt.tight_layout()
 
+        # output
+        if path_output is not None:
+            save_plot(path_output, ext)
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
     # plot coordinate representation only
     elif cell_coord is not None and image is None:
         if remove_frame:
@@ -974,6 +1055,14 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         if not remove_frame:
             plt.tight_layout()
 
+        # output
+        if path_output is not None:
+            save_plot(path_output, ext)
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
     # plot original image only
     elif cell_coord is None and image is not None:
         plot_segmentation_boundary(
@@ -981,13 +1070,3 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             rescale=rescale, contrast=contrast, title=title,
             framesize=framesize, remove_frame=remove_frame,
             path_output=path_output, ext=ext, show=show)
-
-    # output
-    if path_output is not None:
-        save_plot(path_output, ext)
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    return

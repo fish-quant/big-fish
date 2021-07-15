@@ -690,7 +690,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     between 0 and 1 for float tensor). We can improve the contrast by
     stretching a smaller range of pixel intensity: between the minimum value
     of a channel and percentile value of the channel (cf.
-    'stretching_percentile').
+    ``stretching_percentile``).
 
     To be consistent with skimage, 64-bit (unsigned) integer images are not
     supported.
@@ -815,16 +815,17 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
 def cast_img_uint8(tensor, catch_warning=False):
     """Cast the image in np.uint8 and scale values between 0 and 255.
 
-    Negative values are not allowed as the skimage method 'img_as_ubyte' would
-    clip them to 0. Positives values are scaled between 0 and 255, excepted
-    if they fit directly in 8 bit (in this case values are not modified).
+    Negative values are not allowed as the skimage method ``img_as_ubyte``
+    would clip them to 0. Positives values are scaled between 0 and 255,
+    excepted if they fit directly in 8 bit (in this case values are not
+    modified).
 
     Parameters
     ----------
     tensor : np.ndarray
         Image to cast.
     catch_warning : bool
-        Catch and ignore UserWarning about possible precision or sign loss.
+        Catch and ignore `UserWarning` about possible precision or sign loss.
 
     Returns
     -------
@@ -868,7 +869,7 @@ def cast_img_uint8(tensor, catch_warning=False):
 def cast_img_uint16(tensor, catch_warning=False):
     """Cast the data in np.uint16.
 
-    Negative values are not allowed as the skimage method 'img_as_uint' would
+    Negative values are not allowed as the skimage method ``img_as_uint`` would
     clip them to 0. Positives values are scaled between 0 and 65535, excepted
     if they fit directly in 16 bit (in this case values are not modified).
 
@@ -877,7 +878,7 @@ def cast_img_uint16(tensor, catch_warning=False):
     tensor : np.ndarray
         Image to cast.
     catch_warning : bool
-        Catch and ignore UserWarning about possible precision or sign loss.
+        Catch and ignore `UserWarning` about possible precision or sign loss.
     Returns
     -------
     tensor : np.ndarray, np.uint16
@@ -927,7 +928,7 @@ def cast_img_float32(tensor, catch_warning=False):
     tensor : np.ndarray
         Image to cast.
     catch_warning : bool
-        Catch and ignore UserWarning about possible precision or sign loss.
+        Catch and ignore `UserWarning` about possible precision or sign loss.
 
     Returns
     -------

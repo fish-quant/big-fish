@@ -21,9 +21,6 @@ def save_plot(path_output, ext):
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
 
-    Returns
-    -------
-
     """
     # add extension at the end of the filename
     extension = "." + ext
@@ -47,8 +44,6 @@ def save_plot(path_output, ext):
     else:
         Warning("Plot is not saved because the extension is not valid: "
                 "{0}.".format(ext))
-
-    return
 
 
 def get_minmax_values(tensor):
@@ -81,3 +76,22 @@ def get_minmax_values(tensor):
         vmin, vmax = 0, 1
 
     return vmin, vmax
+
+
+def create_colormap():
+    """Create a shuffled colormap to display segmentation masks.
+
+    Returns
+    -------
+    colormap : ListedColormap object
+        Colormap for matplotlib.
+
+    """
+    import matplotlib.pyplot as plt
+
+    values = np.linspace(0, 1, 256)
+    np.random.shuffle(values)
+    colormap = plt.cm.colors.ListedColormap(plt.cm.YlGnBu(values))
+    colormap.set_bad(color='black')
+
+    return colormap

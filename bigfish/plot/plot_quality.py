@@ -7,6 +7,7 @@ Function to plot quality control indicators.
 """
 
 import bigfish.stack as stack
+import bigfish.detection as detection
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,28 +15,33 @@ import numpy as np
 from .utils import save_plot
 
 
+# ### Focus - sharpness ###
+
 def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
                    size_title=20, size_axes=15, size_legend=15,
                    path_output=None, ext="png", show=True):
-    """
+    """Plot focus measures of a 3-d image, at the z-slice level.
+
+    A measure of focus for each z-slice can be computed by averaging the
+    pixel-wise focus measure returned from :func:`bigfish.stack.compute_focus`.
 
     Parameters
     ----------
     focus_measures : np.ndarray or List[np.ndarray]
-        A list of 1-d array with the sharpness measure for each z-slices.
-    labels : List[str]
+        A list of 1-d arrays with the sharpness measure for each z-slices.
+    labels : List[str] or None
         List of labels for the different measures to compare.
-    title : str
+    title : str or None
         Title of the plot.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     size_title : int
         Size of the title.
     size_axes : int
         Size of the axes label.
     size_legend : int
         Size of the legend.
-    path_output : str
+    path_output : str or None
         Path to save the image (without extension).
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
@@ -43,11 +49,8 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
     show : bool
         Show the figure or not.
 
-    Returns
-    -------
-
     """
-    # enlist image if necessary
+    # enlist values if necessary
     if isinstance(focus_measures, np.ndarray):
         focus_measures = [focus_measures]
 
@@ -94,54 +97,87 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
     else:
         plt.close()
 
-    return
 
+# ### Elbow plot ###
 
-def plot_illumination_surface(illumination_surface, r=0, framesize=(15, 15),
-                              titles=None, path_output=None, ext="png"):
-    """Subplot the yx plan of the dimensions of an illumination surface for
-    all channels.
+def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
+               framesize=(5, 5), size_title=20, size_axes=15, size_legend=15,
+               path_output=None, ext="png", show=True):
+    """Plot the elbow curve that allows a automated spot detection.
 
     Parameters
     ----------
-    illumination_surface : np.ndarray, np.float
-        A 4-d tensor with shape (r, c, y, x) approximating the average
-        differential of illumination in our stack of images, for each channel
-        and each round.
-    r : int
-        Index of the round to keep.
+    images : List[np.ndarray]
+        List of images with shape (z, y, x) or (y, x). The same threshold is
+        applied to every images.
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    psf_z : int or float or None
+        Theoretical size of the PSF emitted by a spot in the z plan, in
+        nanometer. If None, image is considered in 2-d.
+    psf_yx : int or float
+        Theoretical size of the PSF emitted by a spot in the yx plan, in
+        nanometer.
+    title : str or None
+        Title of the plot.
     framesize : tuple
-        Size of the frame used to plot with 'plt.figure(figsize=framesize)'.
-    titles : List[str]
-        Titles of the subplots (one per channel).
-    path_output : str
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
+    size_title : int
+        Size of the title.
+    size_axes : int
+        Size of the axes label.
+    size_legend : int
+        Size of the legend.
+    path_output : str or None
         Path to save the image (without extension).
     ext : str or List[str]
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-
-    Returns
-    -------
+    show : bool
+        Show the figure or not.
 
     """
-    # TODO add title in the plot and remove axes
-    # TODO add parameter for vmin and vmax
-    # check tensor
-    stack.check_array(illumination_surface,
-                      ndim=4,
-                      dtype=[np.float32, np.float64])
+    # check parameters
+    stack.check_parameter(title=(str, list, type(None)),
+                          framesize=tuple,
+                          size_title=int,
+                          size_axes=int,
+                          size_legend=int,
+                          path_output=(str, type(None)),
+                          ext=(str, list),
+                          show=bool)
 
-    # get the number of channels
-    nb_channels = illumination_surface.shape[1]
+    # get candidate thresholds and spots count to plot the elbow curve
+    thresholds, count_spots, threshold = detection.get_elbow_values(
+        images=images,
+        voxel_size_z=voxel_size_z,
+        voxel_size_yx=voxel_size_yx,
+        psf_z=psf_z,
+        psf_yx=psf_yx)
 
     # plot
-    fig, ax = plt.subplots(1, nb_channels, sharex='col', figsize=framesize)
-    for i in range(nb_channels):
-        ax[i].imshow(illumination_surface[r, i, :, :])
-        if titles is not None:
-            ax[i].set_title(titles[i], fontweight="bold", fontsize=15)
-    plt.tight_layout()
-    save_plot(path_output, ext)
-    plt.show()
+    plt.figure(figsize=framesize)
+    plt.plot(thresholds, count_spots, c="#2c7bb6", lw=2)
+    if threshold is not None:
+        i_threshold = np.argmax(thresholds == threshold)
+        plt.scatter(threshold, count_spots[i_threshold],
+                    marker="D", c="#d7191c", s=60, label="Selected threshold")
 
-    return
+    # axes
+    if title is not None:
+        plt.title(title, fontweight="bold", fontsize=size_title)
+    plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
+    plt.ylabel("Number of mRNAs detected (log scale)",
+               fontweight="bold", fontsize=size_axes)
+    if threshold is not None:
+        plt.legend(prop={'size': size_legend})
+    plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()

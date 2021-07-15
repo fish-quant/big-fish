@@ -281,7 +281,7 @@ def get_features_name(names_features_distance=False,
     if names_features_dispersion:
         features_name += ["index_polarization",
                           "index_dispersion",
-                          "index_peripheral_dispersion"]
+                          "index_peripheral_distribution"]
 
     if names_features_topography:
         features_name += ["index_rna_nuc_edge",
@@ -525,10 +525,10 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
 
 def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
                         centroid_cell, centroid_nuc, ndim, check_input=True):
-    """Compute RNA Distribution Index features (RDI) described in
+    """Compute RNA Distribution Index features (RDI) described in:
 
     RDI Calculator: An analysis Tool to assess RNA distributions in cells,
-    Stueland M., Wang T., Park H. Y.,  Mili, S., 201
+    Stueland M., Wang T., Park H. Y., Mili, S., 2019.
 
     Parameters
     ----------
@@ -556,8 +556,8 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
         Polarization index (PI).
     index_dispersion : float
         Dispersion index (DI).
-    index_peripheral_dispersion : float
-        Peripheral dispersion index (PDI).
+    index_peripheral_distribution : float
+        Peripheral distribution index (PDI).
 
     """
     # check parameters
@@ -616,14 +616,14 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
 
     features += (index_dispersion,)
 
-    # compute peripheral dispersion index
+    # compute peripheral distribution index
     r = np.linalg.norm(rna_coord_ - centroid_nuc, axis=1) ** 2
     a = np.sum((r * rna_value) / total_intensity_rna)
     r = np.linalg.norm(cell_coord - centroid_nuc, axis=1) ** 2
     b = np.sum((r * cell_value) / total_intensity_cell)
-    index_peripheral_dispersion = a / b
+    index_peripheral_distribution = a / b
 
-    features += (index_peripheral_dispersion,)
+    features += (index_peripheral_distribution,)
 
     return features
 
@@ -693,8 +693,8 @@ def features_topography(rna_coord, cell_mask, nuc_mask, cell_mask_out_nuc,
         Six regions are targeted (0-500nm, 500-1000nm, 1000-1500nm,
         1500-2000nm, 2000-2500nm and 2500-3000nm from the cell membrane).
     proportion_rna_cell_marge : float
-        Proportion of RNAs detected in a specific region around around cell
-        membrane. Six regions are targeted (0-500nm, 500-1000nm, 1000-1500nm,
+        Proportion of RNAs detected in a specific region around cell membrane.
+        Six regions are targeted (0-500nm, 500-1000nm, 1000-1500nm,
         1500-2000nm, 2000-2500nm and 2500-3000nm from the cell membrane).
 
     """
@@ -920,7 +920,7 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
         Proportion of RNAs within a 2000nm radius from a centrosome.
     index_centrosome_dispersion : float
         Centrosomal dispersion index. It quantify the dispersion of RNAs
-        around centrosmes. The lower, the closer the RNAs are.
+        around centrosomes. The lower, the closer the RNAs are.
 
     """
     # check parameters
