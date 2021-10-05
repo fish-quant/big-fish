@@ -128,7 +128,7 @@ def test_rotation_270():
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,np.uint64,
+    np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
     np.float16, np.float32, np.float64,
     bool])
@@ -140,3 +140,25 @@ def test_augment_2d_dtype(dtype):
                   [0, 0, 0, 0, 0]], dtype=dtype)
     y = stack.augment_2d(x)
     assert y.dtype == dtype
+
+
+@pytest.mark.parametrize("dtype", [
+    np.uint8, np.uint16, np.uint32, np.uint64,
+    np.int8, np.int16, np.int32, np.int64,
+    np.float16, np.float32, np.float64,
+    bool])
+def test_augment_8_times_dtype(dtype):
+    x = np.array([[1, 0, 0, 0, 0],
+                  [0, 1, 0, 0, 0],
+                  [0, 1, 0, 0, 0],
+                  [0, 1, 1, 1, 0],
+                  [0, 0, 0, 0, 0]], dtype=dtype)
+    yy = stack.augment_8_times(x)
+    for y in yy:
+        assert y.dtype == dtype
+
+
+def test_augment_2d_function_identity():
+    f = stack.augment_2d_function(identity=True)
+    y = f(x)
+    assert_array_equal(y, x)
