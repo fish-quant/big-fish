@@ -98,12 +98,12 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
         plt.close()
 
 
-# ### Elbow plot ###
+# ### Elbow plots ###
 
 def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
                framesize=(5, 5), size_title=20, size_axes=15, size_legend=15,
                path_output=None, ext="png", show=True):
-    """Plot the elbow curve that allows a automated spot detection.
+    """Plot the elbow curve that allows an automated spot detection.
 
     Parameters
     ----------
@@ -171,6 +171,94 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
         plt.title(title, fontweight="bold", fontsize=size_title)
     plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
     plt.ylabel("Number of mRNAs detected (log scale)",
+               fontweight="bold", fontsize=size_axes)
+    if threshold is not None:
+        plt.legend(prop={'size': size_legend})
+    plt.tight_layout()
+    if path_output is not None:
+        save_plot(path_output, ext)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+# TODO complete documentation
+def plot_elbow_colocalized(spots_1, spots_2, voxel_size_z, voxel_size_yx,
+                           title=None, framesize=(5, 5), size_title=20,
+                           size_axes=15, size_legend=15, path_output=None,
+                           ext="png", show=True):
+    """Plot the elbow curve that allows an automated colocalized spot
+    detection.
+
+    Parameters
+    ----------
+    spots_1
+    spots_2
+    voxel_size_z : int or float or None
+        Height of a voxel, along the z axis, in nanometer. If None, image is
+        considered in 2-d.
+    voxel_size_yx : int or float
+        Size of a voxel on the yx plan, in nanometer.
+    title : str or None
+        Title of the plot.
+    framesize : tuple
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
+    size_title : int
+        Size of the title.
+    size_axes : int
+        Size of the axes label.
+    size_legend : int
+        Size of the legend.
+    path_output : str or None
+        Path to save the image (without extension).
+    ext : str or List[str]
+        Extension used to save the plot. If it is a list of strings, the plot
+        will be saved several times.
+    show : bool
+        Show the figure or not.
+
+    """
+    # check parameters
+    stack.check_parameter(title=(str, list, type(None)),
+                          framesize=tuple,
+                          size_title=int,
+                          size_axes=int,
+                          size_legend=int,
+                          path_output=(str, type(None)),
+                          ext=(str, list),
+                          show=bool)
+
+    # get thresholds and colocalized spots count to plot the elbow curve
+    (thresholds, count_colocalized,
+     threshold) = detection.get_elbow_value_colocalized(
+        spots_1, spots_2,
+        voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx)
+
+    # plot
+    plt.figure(figsize=framesize)
+    plt.hlines(len(spots_1), thresholds[0], thresholds[-1],
+               colors="forestgreen", linestyles="--", label="Spots 1")
+    plt.hlines(len(spots_2), thresholds[0], thresholds[-1],
+               colors="steelblue", linestyles="--", label="Spots 2")
+    plt.plot(thresholds, count_colocalized, color="firebrick",
+             label="Colocalized spots")
+    if threshold is not None:
+        i_threshold = np.argmax(thresholds == threshold)
+        plt.scatter(threshold, count_colocalized[i_threshold],
+                    marker="D", c="#d7191c", s=60, label="Selected threshold")
+
+    #  define xlim
+    diff = min(len(spots_1), len(spots_2)) - count_colocalized
+    diff_rate = diff / min(len(spots_1), len(spots_2))
+    max_x = (diff_rate < 0.05).sum()
+    plt.xlim((0, max_x))
+
+    # axes
+    if title is not None:
+        plt.title(title, fontweight="bold", fontsize=size_title)
+    plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
+    plt.ylabel("Number of mRNAs detected",
                fontweight="bold", fontsize=size_axes)
     if threshold is not None:
         plt.legend(prop={'size': size_legend})
