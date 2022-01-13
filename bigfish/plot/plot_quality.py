@@ -8,6 +8,7 @@ Function to plot quality control indicators.
 
 import bigfish.stack as stack
 import bigfish.detection as detection
+import bigfish.multistack as multistack
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -231,7 +232,7 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size_z, voxel_size_yx,
 
     # get thresholds and colocalized spots count to plot the elbow curve
     (thresholds, count_colocalized,
-     threshold) = detection.get_elbow_value_colocalized(
+     threshold) = multistack.get_elbow_value_colocalized(
         spots_1, spots_2,
         voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx)
 

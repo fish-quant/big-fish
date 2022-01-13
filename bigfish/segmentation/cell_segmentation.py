@@ -7,6 +7,7 @@ Class and functions to segment cells.
 """
 
 import bigfish.stack as stack
+
 from .utils import thresholding
 from .utils import resize_image
 from .utils import get_marge_padding

@@ -14,7 +14,7 @@ from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 from scipy.signal import savgol_filter
 
-from .utils import convert_spot_coordinates
+from bigfish.detection.utils import convert_spot_coordinates
 
 # TODO complete documentation
 # TODO process multiple images together

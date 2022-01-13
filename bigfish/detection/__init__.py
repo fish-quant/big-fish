@@ -29,9 +29,6 @@ from .spot_modeling import gaussian_3d
 
 from .cluster_detection import detect_clusters
 
-from .colocalization import detect_spots_colocalization
-from .colocalization import get_elbow_value_colocalized
-
 from .snr import compute_snr_spots
 
 from .utils import convert_spot_coordinates
@@ -60,15 +57,10 @@ _model = [
 _clusters = [
     "detect_clusters"]
 
-_colocalization = [
-    "detect_spots_colocalization",
-    "get_elbow_value_colocalized"]
-
 _snr = [
     "compute_snr_spots"]
 
 _utils = [
     "convert_spot_coordinates"]
 
-__all__ = (_spots + _dense + _model + _clusters + _colocalization + _snr +
-           _utils)
+__all__ = (_spots + _dense + _model + _clusters + _snr + _utils)
