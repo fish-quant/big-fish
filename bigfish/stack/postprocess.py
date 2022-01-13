@@ -238,7 +238,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
                               "shape ({0}) than original image ({1})."
                               .format(image_.shape, image.shape),
                               UserWarning)
-    if rna_coord.shape[1] < ndim:
+    if rna_coord is not None and rna_coord.shape[1] < ndim:
         warnings.warn("'rna_coord' have less coordinates ({0}) than the "
                       "minimum number of spatial dimension we "
                       "consider ({1}).".format(rna_coord.shape[1], ndim),
@@ -847,6 +847,7 @@ def from_coord_to_frame(coord, external_coord=True):
     return frame_shape, min_y, min_x, marge
 
 
+# TODO replace 'cyt_coord' by 'cell_coord'
 def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
                           external_coord=True):
     """Convert 2-d coordinates to a binary matrix with the surface of the
