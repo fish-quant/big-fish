@@ -26,7 +26,7 @@ def label_instances(image_binary):
     Parameters
     ----------
     image_binary : np.ndarray, bool
-        Binary segmented image with shape (y, x).
+        Binary segmented image with shape (z, y, x) or (y, x).
 
     Returns
     -------
@@ -35,7 +35,7 @@ def label_instances(image_binary):
 
     """
     # check parameters
-    stack.check_array(image_binary, ndim=2, dtype=bool)
+    stack.check_array(image_binary, ndim=[2, 3], dtype=bool)
 
     # label instances
     image_label = label(image_binary)
@@ -51,19 +51,19 @@ def merge_labels(image_label_1, image_label_2):
     Parameters
     ----------
     image_label_1 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
     image_label_2 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
 
     Returns
     -------
     image_label : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
 
     """
     # check parameters
-    stack.check_array(image_label_1, ndim=2, dtype=np.int64)
-    stack.check_array(image_label_2, ndim=2, dtype=np.int64)
+    stack.check_array(image_label_1, ndim=[2, 3], dtype=np.int64)
+    stack.check_array(image_label_2, ndim=[2, 3], dtype=np.int64)
 
     # count number of instances
     nb_instances_1 = image_label_1.max()
@@ -83,7 +83,7 @@ def merge_labels(image_label_1, image_label_2):
 
 
 # ### Basic segmentation ###
-
+# TODO make it available for 3D images
 def clean_segmentation(image, small_object_size=None, fill_holes=False,
                        smoothness=None, delimit_instance=False):
     """Clean segmentation results (binary masks or integer labels).
@@ -265,19 +265,25 @@ def remove_disjoint(image):
 
     Parameters
     ----------
-    image : np.ndarray, np.int or np.uint
-        Labelled image with shape (y, x).
+    image : np.ndarray, np.int, np.uint or bool
+        Labelled image with shape (z, y, x) or (y, x).
 
     Returns
     -------
     image_cleaned : np.ndarray, np.int or np.uint
-        Cleaned image with shape (y, x).
+        Cleaned image with shape (z, y, x) or (y, x).
 
     """
     # check parameters
     stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # handle boolean array
+    cast_to_bool = False
+    if image.dtype == bool:
+        cast_to_bool = bool
+        image = image.astype(np.uint8)
 
     # initialize cleaned labels
     image_cleaned = np.zeros_like(image)
@@ -312,6 +318,9 @@ def remove_disjoint(image):
         # add instance in the final label
         image_cleaned[mask_instance] = i
 
+    if cast_to_bool:
+        image_cleaned = image_cleaned.astype(bool)
+
     return image_cleaned
 
 
@@ -323,9 +332,9 @@ def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
     Parameters
     ----------
     nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
+        Labelled image of nuclei with shape (z, y, x) or (y, x).
     cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
+        Labelled image of cells with shape (z, y, x) or (y, x).
     single_nuc : bool
         Authorized only one nucleus in a cell.
     cell_alone : bool
@@ -334,17 +343,17 @@ def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
     Returns
     -------
     new_nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
+        Labelled image of nuclei with shape (z, y, x) or (y, x).
     new_cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
+        Labelled image of cells with shape (z, y, x) or (y, x).
 
     """
     # check parameters
     stack.check_array(nuc_label,
-                      ndim=2,
+                      ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.int64])
     stack.check_array(cell_label,
-                      ndim=2,
+                      ndim=[2, 3],
                       dtype=[np.uint8, np.uint16, np.int64])
 
     # initialize new labelled images
