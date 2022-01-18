@@ -7,6 +7,8 @@ The bigfish.detection subpackage includes function to detect RNA spot in 2-d
 and 3-d.
 """
 
+# TODO adapt to float64 coordinates
+
 from .spot_detection import detect_spots
 from .spot_detection import local_maximum_detection
 from .spot_detection import spots_thresholding
@@ -29,6 +31,7 @@ from .cluster_detection import detect_clusters
 
 from .snr import compute_snr_spots
 
+from .utils import convert_spot_coordinates
 
 _spots = [
     "detect_spots",
@@ -57,4 +60,7 @@ _clusters = [
 _snr = [
     "compute_snr_spots"]
 
-__all__ = _spots + _dense + _model + _clusters + _snr
+_utils = [
+    "convert_spot_coordinates"]
+
+__all__ = (_spots + _dense + _model + _clusters + _snr + _utils)

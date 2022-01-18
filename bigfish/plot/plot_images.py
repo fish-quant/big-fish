@@ -9,6 +9,7 @@ Functions to plot 2-d pixel and coordinates images.
 import warnings
 
 import bigfish.stack as stack
+import bigfish.segmentation as segmentation
 
 from .utils import save_plot, get_minmax_values, create_colormap
 
@@ -821,7 +822,8 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
         plt.imshow(reference_spot)
     else:
         if reference_spot.dtype not in [np.int64, bool]:
-            reference_spot = stack.rescale(reference_spot, channel_to_stretch=0)
+            reference_spot = stack.rescale(reference_spot,
+                                           channel_to_stretch=0)
         plt.imshow(reference_spot)
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
@@ -943,12 +945,13 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
                 image = stack.rescale(image, channel_to_stretch=0)
             ax[0].imshow(image)
         if cell_mask is not None:
-            cell_boundaries = stack.from_surface_to_boundaries(cell_mask)
+            cell_boundaries = segmentation.from_surface_to_boundaries(
+                cell_mask)
             cell_boundaries = np.ma.masked_where(cell_boundaries == 0,
                                                  cell_boundaries)
             ax[0].imshow(cell_boundaries, cmap=ListedColormap(['red']))
         if nuc_mask is not None:
-            nuc_boundaries = stack.from_surface_to_boundaries(nuc_mask)
+            nuc_boundaries = segmentation.from_surface_to_boundaries(nuc_mask)
             nuc_boundaries = np.ma.masked_where(nuc_boundaries == 0,
                                                 nuc_boundaries)
             ax[0].imshow(nuc_boundaries, cmap=ListedColormap(['blue']))

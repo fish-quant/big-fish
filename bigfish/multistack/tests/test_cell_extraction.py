@@ -3,25 +3,19 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.stack.postprocess module.
+Unitary tests for bigfish.multistack.cell_extraction module.
 """
 
 import pytest
 
 import numpy as np
-import bigfish.stack as stack
+
+import bigfish.multistack as multistack
 
 from numpy.testing import assert_array_equal
 
 # TODO add test bigfish.stack.extract_cell
 # TODO add test bigfish.stack.extract_spots_from_frame
-# TODO add test bigfish.stack.center_mask_coord
-# TODO add test bigfish.stack.from_boundaries_to_surface
-# TODO add test bigfish.stack.from_surface_to_boundaries
-# TODO add test bigfish.stack.from_binary_to_coord
-# TODO add test bigfish.stack.complete_coord_boundaries
-# TODO add test bigfish.stack.from_coord_to_frame
-# TODO add test bigfish.stack.from_coord_to_surface
 
 
 @pytest.mark.parametrize("ndim", [2, 3])
@@ -43,7 +37,8 @@ def test_identify_objects_in_region(ndim, mask_dtype, spot_dtype):
     spots = np.concatenate((spots_in, spots_out))
 
     # test
-    spots_in_, spots_out_ = stack.identify_objects_in_region(mask, spots, ndim)
+    spots_in_, spots_out_ = multistack.identify_objects_in_region(
+        mask, spots, ndim)
     assert_array_equal(spots_in_, spots_in)
     assert_array_equal(spots_out_, spots_out)
     assert spots_in_.dtype == spots_in.dtype
@@ -95,7 +90,7 @@ def test_remove_transcription_site(ndim, mask_dtype, spot_dtype):
     all_clusters = np.concatenate((ts, foci))
 
     # test
-    spots_out_ts_, foci_, ts_ = stack.remove_transcription_site(
+    spots_out_ts_, foci_, ts_ = multistack.remove_transcription_site(
         spots, all_clusters, nuc_mask, ndim)
     assert_array_equal(spots_out_ts_, spots_out_ts)
     assert spots_out_ts_.dtype == spots_out_ts.dtype

@@ -11,8 +11,9 @@ import bigfish.stack as stack
 import numpy as np
 from scipy import ndimage as ndi
 
-from skimage.measure import label
+from skimage.measure import label, find_contours
 from skimage.morphology import remove_small_objects
+from skimage.draw import polygon_perimeter
 
 
 # TODO make functions compatible with different type of integers
@@ -26,7 +27,7 @@ def label_instances(image_binary):
     Parameters
     ----------
     image_binary : np.ndarray, bool
-        Binary segmented image with shape (y, x).
+        Binary segmented image with shape (z, y, x) or (y, x).
 
     Returns
     -------
@@ -35,7 +36,7 @@ def label_instances(image_binary):
 
     """
     # check parameters
-    stack.check_array(image_binary, ndim=2, dtype=bool)
+    stack.check_array(image_binary, ndim=[2, 3], dtype=bool)
 
     # label instances
     image_label = label(image_binary)
@@ -51,19 +52,19 @@ def merge_labels(image_label_1, image_label_2):
     Parameters
     ----------
     image_label_1 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
     image_label_2 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
 
     Returns
     -------
     image_label : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
 
     """
     # check parameters
-    stack.check_array(image_label_1, ndim=2, dtype=np.int64)
-    stack.check_array(image_label_2, ndim=2, dtype=np.int64)
+    stack.check_array(image_label_1, ndim=[2, 3], dtype=np.int64)
+    stack.check_array(image_label_2, ndim=[2, 3], dtype=np.int64)
 
     # count number of instances
     nb_instances_1 = image_label_1.max()
@@ -82,8 +83,8 @@ def merge_labels(image_label_1, image_label_2):
     return image_label
 
 
-# ### Basic segmentation ###
-
+# ### Clean segmentation ###
+# TODO make it available for 3D images
 def clean_segmentation(image, small_object_size=None, fill_holes=False,
                        smoothness=None, delimit_instance=False):
     """Clean segmentation results (binary masks or integer labels).
@@ -265,19 +266,25 @@ def remove_disjoint(image):
 
     Parameters
     ----------
-    image : np.ndarray, np.int or np.uint
-        Labelled image with shape (y, x).
+    image : np.ndarray, np.int, np.uint or bool
+        Labelled image with shape (z, y, x) or (y, x).
 
     Returns
     -------
     image_cleaned : np.ndarray, np.int or np.uint
-        Cleaned image with shape (y, x).
+        Cleaned image with shape (z, y, x) or (y, x).
 
     """
     # check parameters
     stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+                      ndim=[2, 3],
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # handle boolean array
+    cast_to_bool = False
+    if image.dtype == bool:
+        cast_to_bool = bool
+        image = image.astype(np.uint8)
 
     # initialize cleaned labels
     image_cleaned = np.zeros_like(image)
@@ -312,119 +319,385 @@ def remove_disjoint(image):
         # add instance in the final label
         image_cleaned[mask_instance] = i
 
+    if cast_to_bool:
+        image_cleaned = image_cleaned.astype(bool)
+
     return image_cleaned
 
 
-# ### Nuclei-cells matching
+# Postprocessing
 
-def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
-    """Match each nucleus instance with the most overlapping cell instance.
+def center_mask_coord(main, others=None):
+    """Center a 2-d binary mask (surface or boundaries) or a 2-d localization
+    coordinates array and pad it.
+
+    One mask or coordinates array should be at least provided (`main`). If
+    others masks or arrays are provided (`others`), they will be transformed
+    like `main`. All the provided masks should have the same shape.
 
     Parameters
     ----------
-    nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
-    cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
-    single_nuc : bool
-        Authorized only one nucleus in a cell.
-    cell_alone : bool
-        Authorized cell without nucleus.
+    main : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x) or array of coordinates with shape
+        (nb_points, 2).
+    others : List(np.ndarray)
+        List of binary image with shape (y, x), array of coordinates with
+        shape (nb_points, 2) or array of coordinates with shape (nb_points, 3).
 
     Returns
     -------
-    new_nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
-    new_cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
+    main_centered : np.ndarray, np.uint or np.int or bool
+        Centered binary image with shape (y, x).
+    others_centered : List(np.ndarray)
+        List of centered binary image with shape (y, x), centered array of
+        coordinates with shape (nb_points, 2) or centered array of coordinates
+        with shape (nb_points, 3).
+
+    """
+    # TODO allow the case when coordinates do not represent external boundaries
+    # check parameters
+    stack.check_array(main,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_parameter(others=(list, type(None)))
+    if others is not None and len(others) != 0:
+        for x in others:
+            if x is None:
+                continue
+            stack.check_array(x,
+                              ndim=2,
+                              dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # initialize parameter
+    marge = stack.get_margin_value()
+
+    # compute by how much we need to move the main object to center it
+    if main.shape[1] == 2:
+        # 'main' is already a 2-d coordinates array (probably locating the
+        # external boundaries of the main object)
+        main_coord = main.copy()
+    else:
+        # get external boundaries coordinates
+        main_coord = from_binary_to_coord(main)
+
+    # we get the minimum and maximum from external boundaries coordinates so
+    # we add 1 to the minimum and substract 1 to the maximum
+    min_y, max_y = main_coord[:, 0].min() + 1, main_coord[:, 0].max() - 1
+    min_x, max_x = main_coord[:, 1].min() + 1, main_coord[:, 1].max() - 1
+
+    # we compute the shape of the main object with a predefined marge
+    shape_y = max_y - min_y + 1
+    shape_x = max_x - min_x + 1
+    main_centered_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
+
+    # center the main object
+    if main.shape[1] == 2:
+        # 'main' is a 2-d coordinates array
+        main_centered = main.copy()
+        main_centered[:, 0] = main_centered[:, 0] - min_y + marge
+        main_centered[:, 1] = main_centered[:, 1] - min_x + marge
+    else:
+        # 'main' is a 2-d binary matrix
+        main_centered = np.zeros(main_centered_shape, dtype=main.dtype)
+        crop = main[min_y:max_y + 1, min_x:max_x + 1]
+        main_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
+
+    if others is None or len(others) == 0:
+        return main_centered, None
+
+    # center the others objects with the same transformation
+    others_centered = []
+    for other in others:
+        if other is None:
+            other_centered = None
+        elif other.shape[1] == 2:
+            # 'other' is a 2-d coordinates array
+            other_centered = other.copy()
+            other_centered[:, 0] = other_centered[:, 0] - min_y + marge
+            other_centered[:, 1] = other_centered[:, 1] - min_x + marge
+        elif other.shape[1] == 3 or other.shape[1] == 4:
+            # 'other' is a 3-d or 4-d coordinates
+            other_centered = other.copy()
+            other_centered[:, 1] = other_centered[:, 1] - min_y + marge
+            other_centered[:, 2] = other_centered[:, 2] - min_x + marge
+        else:
+            # 'other' is a 2-d binary matrix
+            other_centered = np.zeros(main_centered_shape, dtype=other.dtype)
+            crop = other[min_y:max_y + 1, min_x:max_x + 1]
+            other_centered[marge:shape_y + marge, marge:shape_x + marge] = crop
+        others_centered.append(other_centered)
+
+    return main_centered, others_centered
+
+
+def from_boundaries_to_surface(binary_boundaries):
+    """Fill in the binary matrix representing the boundaries of an object.
+
+    Parameters
+    ----------
+    binary_boundaries : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    binary_surface : np.ndarray, bool
+        Binary image with shape (y, x).
 
     """
     # check parameters
-    stack.check_array(nuc_label,
+    stack.check_array(binary_boundaries,
                       ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
-    stack.check_array(cell_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
 
-    # initialize new labelled images
-    new_nuc_label = np.zeros_like(nuc_label)
-    new_cell_label = np.zeros_like(cell_label)
-    remaining_cell_label = cell_label.copy()
+    # from binary boundaries to binary surface
+    binary_surface = ndi.binary_fill_holes(binary_boundaries)
 
-    # loop over nuclei
-    i_instance = 1
-    max_nuc_label = nuc_label.max()
-    for i_nuc in range(1, max_nuc_label + 1):
-
-        # get nuc mask
-        nuc_mask = nuc_label == i_nuc
-
-        # check if a nucleus is labelled with this value
-        if nuc_mask.sum() == 0:
-            continue
-
-        # check if a cell is labelled with this value
-        i_cell = _get_most_frequent_value(cell_label[nuc_mask])
-        if i_cell == 0:
-            continue
-
-        # get cell mask
-        cell_mask = cell_label == i_cell
-
-        # ensure nucleus is totally included in cell
-        cell_mask |= nuc_mask
-        cell_label[cell_mask] = i_cell
-        remaining_cell_label[cell_mask] = i_cell
-
-        # assign cell and nucleus
-        new_nuc_label[nuc_mask] = i_instance
-        new_cell_label[cell_mask] = i_instance
-        i_instance += 1
-
-        # remove pixel already assigned
-        remaining_cell_label[cell_mask] = 0
-
-        # if one nucleus per cell only, we remove the cell as candidate
-        if single_nuc:
-            cell_label[cell_mask] = 0
-
-    # if only cell with nucleus are authorized we stop here
-    if not cell_alone:
-        return new_nuc_label, new_cell_label
-
-    # loop over remaining cells
-    max_remaining_cell_label = remaining_cell_label.max()
-    for i_cell in range(1, max_remaining_cell_label + 1):
-
-        # get cell mask
-        cell_mask = remaining_cell_label == i_cell
-
-        # check if a cell is labelled with this value
-        if cell_mask.sum() == 0:
-            continue
-
-        # add cell in the result
-        new_cell_label[cell_mask] = i_instance
-        i_instance += 1
-
-    return new_nuc_label, new_cell_label
+    return binary_surface
 
 
-def _get_most_frequent_value(array):
-    """Count the most frequent value in a array.
+def from_surface_to_boundaries(binary_surface):
+    """Convert the binary surface to binary boundaries.
 
     Parameters
     ----------
-    array : np.ndarray, np.uint or np.int
-        Array-like object.
+    binary_surface : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
 
     Returns
     -------
-    value : int
-        Most frequent integer in the array.
+    binary_boundaries : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
 
     """
-    value = np.argmax(np.bincount(array))
+    # check parameters
+    stack.check_array(binary_surface,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    original_dtype = binary_surface.dtype
 
-    return value
+    # pad the binary surface in case object if on the edge
+    binary_surface_ = np.pad(binary_surface, [(1, 1)], mode="constant")
+
+    # compute distance map of the surface binary mask
+    distance_map = ndi.distance_transform_edt(binary_surface_)
+
+    # get binary boundaries
+    binary_boundaries_ = (distance_map < 2) & (distance_map > 0)
+    binary_boundaries_ = binary_boundaries_.astype(original_dtype)
+
+    # remove pad
+    binary_boundaries = binary_boundaries_[1:-1, 1:-1]
+
+    return binary_boundaries
+
+
+def from_binary_to_coord(binary):
+    """Extract coordinates from a 2-d binary matrix.
+
+    As the resulting coordinates represent the external boundaries of the
+    object, the coordinates values can be negative.
+
+    Parameters
+    ----------
+    binary : np.ndarray, np.uint or np.int or bool
+        Binary image with shape (y, x).
+
+    Returns
+    -------
+    coord : np.ndarray, np.int64
+        Array of boundaries coordinates with shape (nb_points, 2).
+
+    """
+    # check parameters
+    stack.check_array(binary,
+                      ndim=2,
+                      dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # we enlarge the binary mask with one pixel to be sure the external
+    # boundaries of the object still fit within the frame
+    binary_ = np.pad(binary, [(1, 1)], mode="constant")
+
+    # get external boundaries coordinates
+    coord = find_contours(binary_, level=0)[0].astype(np.int64)
+
+    # remove the pad
+    coord -= 1
+
+    return coord
+
+
+def complete_coord_boundaries(coord):
+    """Complete a 2-d coordinates array, by generating/interpolating missing
+    points.
+
+    Parameters
+    ----------
+    coord : np.ndarray, np.int64
+        Array of coordinates to complete, with shape (nb_points, 2).
+
+    Returns
+    -------
+    coord_completed : np.ndarray, np.int64
+        Completed coordinates arrays, with shape (nb_points, 2).
+
+    """
+    # check parameters
+    stack.check_array(coord,
+                      ndim=2,
+                      dtype=[np.int64])
+
+    # for each array in the list, complete its coordinates using the scikit
+    # image method 'polygon_perimeter'
+    coord_y, coord_x = polygon_perimeter(coord[:, 0], coord[:, 1])
+    coord_y = coord_y[:, np.newaxis]
+    coord_x = coord_x[:, np.newaxis]
+    coord_completed = np.concatenate((coord_y, coord_x), axis=-1)
+
+    return coord_completed
+
+
+def from_coord_to_frame(coord, external_coord=True):
+    """Initialize a frame shape to represent coordinates values in 2-d matrix.
+
+    If coordinates represent the external boundaries of an object, we add 1 to
+    the minimum coordinate and substract 1 to the maximum coordinate in order
+    to build the frame. The frame centers the coordinates by default.
+
+    Parameters
+    ----------
+    coord : np.ndarray, np.int64
+        Array of cell boundaries coordinates with shape (nb_points, 2) or
+        (nb_points, 3).
+    external_coord : bool
+        Coordinates represent external boundaries of object.
+
+    Returns
+    -------
+    frame_shape : tuple
+        Shape of the 2-d matrix.
+    min_y : int
+        Value tu substract from the y coordinate axis.
+    min_x : int
+        Value tu substract from the x coordinate axis.
+    marge : int
+        Value to add to the coordinates.
+
+    """
+    # check parameter
+    stack.check_parameter(external_coord=bool)
+
+    # initialize marge
+    marge = stack.get_margin_value()
+
+    # from 2D coordinates boundaries to binary boundaries
+    if external_coord:
+        min_y, max_y = coord[:, 0].min() + 1, coord[:, 0].max() - 1
+        min_x, max_x = coord[:, 1].min() + 1, coord[:, 1].max() - 1
+    else:
+        min_y, max_y = coord[:, 0].min(), coord[:, 0].max()
+        min_x, max_x = coord[:, 1].min(), coord[:, 1].max()
+    shape_y = max_y - min_y + 1
+    shape_x = max_x - min_x + 1
+    frame_shape = (shape_y + 2 * marge, shape_x + 2 * marge)
+
+    return frame_shape, min_y, min_x, marge
+
+
+# TODO replace 'cyt_coord' by 'cell_coord'
+def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
+                          external_coord=True):
+    """Convert 2-d coordinates to a binary matrix with the surface of the
+    object.
+
+    If we manipulate the coordinates of the external boundaries, the relative
+    binary matrix has two extra pixels in each dimension. We compensate by
+    keeping only the inside pixels of the object surface.
+
+    If others coordinates are provided (nucleus and mRNAs), the relative
+    binary matrix is built with the same shape as the main coordinates (cell).
+
+    Parameters
+    ----------
+    cyt_coord : np.ndarray, np.int64
+        Array of cytoplasm boundaries coordinates with shape (nb_points, 2).
+    nuc_coord : np.ndarray, np.int64
+        Array of nucleus boundaries coordinates with shape (nb_points, 2).
+    rna_coord : np.ndarray, np.int64
+        Array of mRNAs coordinates with shape (nb_points, 2) or
+        (nb_points, 3).
+    external_coord : bool
+        Coordinates represent external boundaries of object.
+
+    Returns
+    -------
+    cyt_surface : np.ndarray, bool
+        Binary image of cytoplasm surface with shape (y, x).
+    nuc_surface : np.ndarray, bool
+        Binary image of nucleus surface with shape (y, x).
+    rna_binary : np.ndarray, bool
+        Binary image of mRNAs localizations with shape (y, x).
+    new_rna_coord : np.ndarray, np.int64
+        Array of mRNAs coordinates with shape (nb_points, 2) or (nb_points, 3).
+
+    """
+    # check parameters
+    stack.check_array(cyt_coord,
+                      ndim=2,
+                      dtype=[np.int64])
+    if nuc_coord is not None:
+        stack.check_array(nuc_coord,
+                          ndim=2,
+                          dtype=[np.int64])
+    if rna_coord is not None:
+        stack.check_array(rna_coord,
+                          ndim=2,
+                          dtype=[np.int64])
+    stack.check_parameter(external_coord=bool)
+
+    # center coordinates
+    cyt_coord_, [nuc_coord_, rna_coord_] = center_mask_coord(
+        main=cyt_coord,
+        others=[nuc_coord, rna_coord])
+
+    # get the binary frame
+    frame_shape, min_y, min_x, marge = from_coord_to_frame(
+        coord=cyt_coord_,
+        external_coord=external_coord)
+
+    # from coordinates to binary external boundaries
+    cyt_boundaries_ext = np.zeros(frame_shape, dtype=bool)
+    cyt_boundaries_ext[cyt_coord_[:, 0], cyt_coord_[:, 1]] = True
+    if nuc_coord_ is not None:
+        nuc_boundaries_ext = np.zeros(frame_shape, dtype=bool)
+        nuc_boundaries_ext[nuc_coord_[:, 0], nuc_coord_[:, 1]] = True
+    else:
+        nuc_boundaries_ext = None
+
+    # from binary external boundaries to binary external surface
+    cyt_surface_ext = from_boundaries_to_surface(cyt_boundaries_ext)
+    if nuc_boundaries_ext is not None:
+        nuc_surface_ext = from_boundaries_to_surface(nuc_boundaries_ext)
+    else:
+        nuc_surface_ext = None
+
+    # from binary external surface to binary surface
+    cyt_surface = cyt_surface_ext & (~cyt_boundaries_ext)
+    if nuc_surface_ext is not None:
+        nuc_surface = nuc_surface_ext & (~nuc_boundaries_ext)
+    else:
+        nuc_surface = None
+
+    # center mRNAs coordinates
+    if rna_coord_ is not None:
+        rna_binary = np.zeros(frame_shape, dtype=bool)
+        if rna_coord_.shape[1] == 2:
+            rna_binary[rna_coord_[:, 0], rna_coord_[:, 1]] = True
+        else:
+            rna_binary[rna_coord_[:, 1], rna_coord_[:, 2]] = True
+        new_rna_coord = rna_coord_.copy()
+
+    else:
+        rna_binary = None
+        new_rna_coord = None
+
+    return cyt_surface, nuc_surface, rna_binary, new_rna_coord
