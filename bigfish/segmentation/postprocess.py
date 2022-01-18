@@ -603,8 +603,7 @@ def from_coord_to_frame(coord, external_coord=True):
     return frame_shape, min_y, min_x, marge
 
 
-# TODO replace 'cyt_coord' by 'cell_coord'
-def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
+def from_coord_to_surface(cell_coord, nuc_coord=None, rna_coord=None,
                           external_coord=True):
     """Convert 2-d coordinates to a binary matrix with the surface of the
     object.
@@ -618,8 +617,8 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
 
     Parameters
     ----------
-    cyt_coord : np.ndarray, np.int64
-        Array of cytoplasm boundaries coordinates with shape (nb_points, 2).
+    cell_coord : np.ndarray, np.int64
+        Array of cell boundaries coordinates with shape (nb_points, 2).
     nuc_coord : np.ndarray, np.int64
         Array of nucleus boundaries coordinates with shape (nb_points, 2).
     rna_coord : np.ndarray, np.int64
@@ -630,8 +629,8 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
 
     Returns
     -------
-    cyt_surface : np.ndarray, bool
-        Binary image of cytoplasm surface with shape (y, x).
+    cell_surface : np.ndarray, bool
+        Binary image of cell surface with shape (y, x).
     nuc_surface : np.ndarray, bool
         Binary image of nucleus surface with shape (y, x).
     rna_binary : np.ndarray, bool
@@ -641,7 +640,7 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
 
     """
     # check parameters
-    stack.check_array(cyt_coord,
+    stack.check_array(cell_coord,
                       ndim=2,
                       dtype=[np.int64])
     if nuc_coord is not None:
@@ -655,18 +654,18 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
     stack.check_parameter(external_coord=bool)
 
     # center coordinates
-    cyt_coord_, [nuc_coord_, rna_coord_] = center_mask_coord(
-        main=cyt_coord,
+    cell_coord_, [nuc_coord_, rna_coord_] = center_mask_coord(
+        main=cell_coord,
         others=[nuc_coord, rna_coord])
 
     # get the binary frame
     frame_shape, min_y, min_x, marge = from_coord_to_frame(
-        coord=cyt_coord_,
+        coord=cell_coord_,
         external_coord=external_coord)
 
     # from coordinates to binary external boundaries
-    cyt_boundaries_ext = np.zeros(frame_shape, dtype=bool)
-    cyt_boundaries_ext[cyt_coord_[:, 0], cyt_coord_[:, 1]] = True
+    cell_boundaries_ext = np.zeros(frame_shape, dtype=bool)
+    cell_boundaries_ext[cell_coord_[:, 0], cell_coord_[:, 1]] = True
     if nuc_coord_ is not None:
         nuc_boundaries_ext = np.zeros(frame_shape, dtype=bool)
         nuc_boundaries_ext[nuc_coord_[:, 0], nuc_coord_[:, 1]] = True
@@ -674,14 +673,14 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
         nuc_boundaries_ext = None
 
     # from binary external boundaries to binary external surface
-    cyt_surface_ext = from_boundaries_to_surface(cyt_boundaries_ext)
+    cell_surface_ext = from_boundaries_to_surface(cell_boundaries_ext)
     if nuc_boundaries_ext is not None:
         nuc_surface_ext = from_boundaries_to_surface(nuc_boundaries_ext)
     else:
         nuc_surface_ext = None
 
     # from binary external surface to binary surface
-    cyt_surface = cyt_surface_ext & (~cyt_boundaries_ext)
+    cell_surface = cell_surface_ext & (~cell_boundaries_ext)
     if nuc_surface_ext is not None:
         nuc_surface = nuc_surface_ext & (~nuc_boundaries_ext)
     else:
@@ -700,4 +699,4 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
         rna_binary = None
         new_rna_coord = None
 
-    return cyt_surface, nuc_surface, rna_binary, new_rna_coord
+    return cell_surface, nuc_surface, rna_binary, new_rna_coord
