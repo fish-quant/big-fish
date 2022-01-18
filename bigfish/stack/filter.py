@@ -237,9 +237,9 @@ def log_filter(image, sigma):
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. Can be computed
-        with :func:`bigfish.stack.get_sigma`.
+        Standard deviation used for the gaussian kernel (one for each
+        dimension). If it's a scalar, the same standard deviation is applied
+        to every dimensions.
 
     Returns
     -------
@@ -293,9 +293,9 @@ def gaussian_filter(image, sigma, allow_negative=False):
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. Can be computed
-        with :func:`bigfish.stack.get_sigma`.
+        Standard deviation used for the gaussian kernel (one for each
+        dimension). If it's a scalar, the same standard deviation is applied
+        to every dimensions.
     allow_negative : bool
         Allow negative values after the filtering or clip them to 0. Not
         compatible with unsigned integer images.
@@ -387,9 +387,9 @@ def remove_background_gaussian(image, sigma):
     image : np.ndarray
         Image to process with shape (z, y, x) or (y, x).
     sigma : float, int, Tuple(float, int) or List(float, int)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. Can be computed
-        with :func:`bigfish.stack.get_sigma`.
+        Standard deviation used for the gaussian kernel (one for each
+        dimension). If it's a scalar, the same standard deviation is applied
+        to every dimensions.
 
     Returns
     -------

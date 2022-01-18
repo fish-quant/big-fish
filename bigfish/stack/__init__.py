@@ -20,7 +20,6 @@ from .utils import check_input_data
 from .utils import moving_average
 from .utils import centered_moving_average
 from .utils import get_sigma
-from .utils import get_radius
 
 from .io import read_image
 from .io import read_dv
@@ -58,9 +57,6 @@ from .projection import focus_projection
 from .projection import in_focus_selection
 from .projection import get_in_focus_indices
 
-from .illumination import compute_illumination_surface
-from .illumination import correct_illumination_surface
-
 from .augmentation import augment_2d
 from .augmentation import augment_2d_function
 from .augmentation import augment_8_times
@@ -82,8 +78,7 @@ _utils = [
     "check_input_data",
     "moving_average",
     "centered_moving_average",
-    "get_sigma",
-    "get_radius"]
+    "get_sigma"]
 
 _io = [
     "read_image",
@@ -125,10 +120,6 @@ _projection = [
     "get_in_focus_indices",
     "focus_projection"]
 
-_illumination = [
-    "compute_illumination_surface",
-    "correct_illumination_surface"]
-
 _augmentation = [
     "augment_2d",
     "augment_2d_function",
@@ -139,5 +130,5 @@ _quality = [
     "compute_focus"]
 
 
-__all__ = (_utils + _io + _preprocess + _filter + _projection + _illumination
-           + _augmentation + _quality)
+__all__ = (_utils + _io + _preprocess + _filter + _projection + _augmentation
+           + _quality)

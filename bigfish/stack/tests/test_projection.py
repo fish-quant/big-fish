@@ -16,6 +16,10 @@ from bigfish.stack.projection import _one_hot_3d
 from numpy.testing import assert_array_equal
 
 
+# TODO test bigfish.stack.focus_projection
+# TODO test bigfish.stack.in_focus_selection
+# TODO test bigfish.stack.get_in_focus_indices
+
 # toy images
 x = np.array(
     [[[1, 0, 0, 0, 0],
@@ -180,7 +184,3 @@ def test_one_hot_3d(dtype):
     assert_array_equal(one_hot, expected_one_hot)
     assert one_hot.dtype == bool
 
-# TODO remove test bigfish.stack.test_one_hot_3d
-# TODO test bigfish.stack.focus_projection
-# TODO test bigfish.stack.in_focus_selection
-# TODO test bigfish.stack.get_in_focus_indices
