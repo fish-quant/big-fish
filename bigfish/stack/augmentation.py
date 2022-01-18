@@ -30,11 +30,7 @@ def augment_2d(image):
     check_array(image, ndim=[2, 3])
 
     # randomly choose an operator
-    operations = [_identity,
-                  _flip_h, _flip_v,
-                  _transpose, _transpose_inverse,
-                  _rotation_90, _rotation_180, _rotation_270]
-    random_operation = np.random.choice(operations)
+    random_operation = augment_2d_function()
 
     # augment the image
     image_augmented = random_operation(image)
