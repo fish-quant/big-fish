@@ -15,6 +15,7 @@ from skimage.transform import resize
 
 
 # TODO make functions compatible with different type of integers
+# TODO move format functions in bigfish.stack.preprocess
 
 # ### Thresholding method ###
 
