@@ -20,7 +20,6 @@ import pandas as pd
 # TODO add test for bigfish.stack.check_input_data
 # TODO add test for bigfish.stack.moving_average
 # TODO add test for bigfish.stack.centered_moving_average
-# TODO add test for bigfish.stack.get_sigma
 
 # ### Test sanity check functions ###
 

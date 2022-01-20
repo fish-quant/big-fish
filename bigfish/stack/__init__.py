@@ -19,7 +19,6 @@ from .utils import compute_hash
 from .utils import check_input_data
 from .utils import moving_average
 from .utils import centered_moving_average
-from .utils import get_sigma
 
 from .io import read_image
 from .io import read_dv
@@ -77,8 +76,7 @@ _utils = [
     "compute_hash",
     "check_input_data",
     "moving_average",
-    "centered_moving_average",
-    "get_sigma"]
+    "centered_moving_average"]
 
 _io = [
     "read_image",

@@ -183,4 +183,3 @@ def test_one_hot_3d(dtype):
     expected_one_hot = expected_one_hot.astype(bool)
     assert_array_equal(one_hot, expected_one_hot)
     assert one_hot.dtype == bool
-

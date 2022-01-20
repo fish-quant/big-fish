@@ -32,6 +32,9 @@ from .cluster_detection import detect_clusters
 from .snr import compute_snr_spots
 
 from .utils import convert_spot_coordinates
+from .utils import get_object_radius_pixel
+from .utils import get_object_radius_nm
+
 
 _spots = [
     "detect_spots",
@@ -61,6 +64,8 @@ _snr = [
     "compute_snr_spots"]
 
 _utils = [
-    "convert_spot_coordinates"]
+    "convert_spot_coordinates",
+    "get_object_radius_pixel",
+    "get_object_radius_nm"]
 
 __all__ = (_spots + _dense + _model + _clusters + _snr + _utils)

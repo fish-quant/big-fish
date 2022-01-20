@@ -264,8 +264,8 @@ def log_filter(image, sigma):
     # check sigma
     if isinstance(sigma, (tuple, list)):
         if len(sigma) != image.ndim:
-            raise ValueError("'sigma' must be a scalar or a sequence with the "
-                             "same length as 'image.ndim'.")
+            raise ValueError("'sigma' must be a scalar or a sequence with {0} "
+                             "elements.".format(image.ndim))
 
     # we apply LoG filter
     image_filtered = gaussian_laplace(image_float, sigma=sigma)
@@ -313,9 +313,15 @@ def gaussian_filter(image, sigma, allow_negative=False):
     check_parameter(sigma=(float, int, tuple, list),
                     allow_negative=bool)
 
+    # check parameters consistency
     if image.dtype in [np.uint8, np.uint16] and allow_negative:
         raise ValueError("Negative values are impossible with unsigned "
                          "integer image.")
+    # check sigma
+    if isinstance(sigma, (tuple, list)):
+        if len(sigma) != image.ndim:
+            raise ValueError("'sigma' must be a scalar or a sequence with {0} "
+                             "elements.".format(image.ndim))
 
     # we cast the data in np.float to allow negative values
     if image.dtype == np.uint8:
