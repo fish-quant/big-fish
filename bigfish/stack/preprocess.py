@@ -22,6 +22,8 @@ from skimage.exposure import rescale_intensity
 from skimage.transform import resize
 
 
+# TODO replace 'tensor' by 'image'
+
 # ### Image normalization ###
 
 def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
