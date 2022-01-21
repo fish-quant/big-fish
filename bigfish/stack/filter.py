@@ -236,7 +236,7 @@ def log_filter(image, sigma):
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    sigma : float, int, Tuple(float, int) or List(float, int)
+    sigma : int, float, Tuple(float, int) or List(float, int)
         Standard deviation used for the gaussian kernel (one for each
         dimension). If it's a scalar, the same standard deviation is applied
         to every dimensions.
@@ -292,7 +292,7 @@ def gaussian_filter(image, sigma, allow_negative=False):
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    sigma : float, int, Tuple(float, int) or List(float, int)
+    sigma : int, float, Tuple(float, int) or List(float, int)
         Standard deviation used for the gaussian kernel (one for each
         dimension). If it's a scalar, the same standard deviation is applied
         to every dimensions.
@@ -392,7 +392,7 @@ def remove_background_gaussian(image, sigma):
     ----------
     image : np.ndarray
         Image to process with shape (z, y, x) or (y, x).
-    sigma : float, int, Tuple(float, int) or List(float, int)
+    sigma : int, float, Tuple(float, int) or List(float, int)
         Standard deviation used for the gaussian kernel (one for each
         dimension). If it's a scalar, the same standard deviation is applied
         to every dimensions.
