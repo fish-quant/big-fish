@@ -17,6 +17,8 @@ import bigfish.stack as stack
 from .input_preparation import prepare_extracted_data
 
 
+# TODO allow RNA coordinates in float64 and int64
+
 # ### Main functions ###
 
 def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
@@ -359,10 +361,14 @@ def features_distance(rna_coord, distance_cell, distance_nuc, cell_mask, ndim,
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-        stack.check_array(distance_cell, ndim=2,
-                          dtype=[np.float16, np.float32, np.float64])
-        stack.check_array(distance_nuc, ndim=2,
-                          dtype=[np.float16, np.float32, np.float64])
+        stack.check_array(
+            distance_cell,
+            ndim=2,
+            dtype=[np.float16, np.float32, np.float64])
+        stack.check_array(
+            distance_nuc,
+            ndim=2,
+            dtype=[np.float16, np.float32, np.float64])
         stack.check_array(cell_mask, ndim=2, dtype=bool)
 
     # case where no mRNAs are detected
@@ -371,8 +377,9 @@ def features_distance(rna_coord, distance_cell, distance_nuc, cell_mask, ndim,
         return features
 
     # compute mean and median distance to cell membrane
-    rna_distance_cell = distance_cell[rna_coord[:, ndim - 2],
-                                      rna_coord[:, ndim - 1]]
+    rna_distance_cell = distance_cell[
+        rna_coord[:, ndim - 2],
+        rna_coord[:, ndim - 1]]
     expected_distance = np.mean(distance_cell[cell_mask])
     index_mean_dist_cell = np.mean(rna_distance_cell) / expected_distance
     expected_distance = np.median(distance_cell[cell_mask])
@@ -381,8 +388,9 @@ def features_distance(rna_coord, distance_cell, distance_nuc, cell_mask, ndim,
     features = (index_mean_dist_cell, index_median_dist_cell)
 
     # compute mean and median distance to nucleus
-    rna_distance_nuc = distance_nuc[rna_coord[:, ndim - 2],
-                                    rna_coord[:, ndim - 1]]
+    rna_distance_nuc = distance_nuc[
+        rna_coord[:, ndim - 2],
+        rna_coord[:, ndim - 1]]
     expected_distance = np.mean(distance_nuc[cell_mask])
     index_mean_dist_nuc = np.mean(rna_distance_nuc) / expected_distance
     expected_distance = np.median(distance_nuc[cell_mask])
@@ -481,8 +489,9 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_parameter(ndim=int,
-                              voxel_size_yx=(int, float))
+        stack.check_parameter(
+            ndim=int,
+            voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(rna_coord, ndim=2, dtype=np.int64)
@@ -507,16 +516,18 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
 
     if protrusion_area > 0:
         expected_rna_protrusion = nb_rna * protrusion_area / cell_area
-        mask_rna = mask_cell_opened[rna_coord[:, ndim - 2],
-                                    rna_coord[:, ndim - 1]]
+        mask_rna = mask_cell_opened[
+            rna_coord[:, ndim - 2],
+            rna_coord[:, ndim - 1]]
         rna_after_opening = rna_coord[mask_rna]
         nb_rna_protrusion = nb_rna - len(rna_after_opening)
         index_rna_protrusion = nb_rna_protrusion / expected_rna_protrusion
         proportion_rna_protrusion = nb_rna_protrusion / nb_rna
 
-        features = (index_rna_protrusion,
-                    proportion_rna_protrusion,
-                    protrusion_area)
+        features = (
+            index_rna_protrusion,
+            proportion_rna_protrusion,
+            protrusion_area)
     else:
         features = (1., 0., 0.)
 
@@ -701,8 +712,9 @@ def features_topography(rna_coord, cell_mask, nuc_mask, cell_mask_out_nuc,
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_parameter(ndim=int,
-                              voxel_size_yx=(int, float))
+        stack.check_parameter(
+            ndim=int,
+            voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(rna_coord, ndim=2, dtype=np.int64)
@@ -926,14 +938,17 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_parameter(ndim=int,
-                              voxel_size_yx=(int, float))
+        stack.check_parameter(
+            ndim=int,
+            voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(smfish, ndim=2, dtype=[np.uint8, np.uint16])
         stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-        stack.check_array(distance_centrosome, ndim=2,
-                          dtype=[np.float16, np.float32, np.float64])
+        stack.check_array(
+            distance_centrosome,
+            ndim=2,
+            dtype=[np.float16, np.float32, np.float64])
         stack.check_array(cell_mask, ndim=2, dtype=bool)
 
     # case where no mRNAs are detected
@@ -946,8 +961,9 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
     cell_area = cell_mask.sum()
 
     # compute mean and median distances from the centrosomes
-    rna_distance_cent = distance_centrosome[rna_coord[:, ndim - 2],
-                                            rna_coord[:, ndim - 1]]
+    rna_distance_cent = distance_centrosome[
+        rna_coord[:, ndim - 2],
+        rna_coord[:, ndim - 1]]
     expected_distance = np.mean(distance_centrosome[cell_mask])
     index_mean_dist_cent = np.mean(rna_distance_cent) / expected_distance
     expected_distance = np.median(distance_centrosome[cell_mask])
@@ -969,8 +985,9 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
         mask_centrosome[~cell_mask] = False
         centrosome_area = max(mask_centrosome.sum(), 1)
         expected_nb_rna = nb_rna * centrosome_area / cell_area
-        mask_rna = mask_centrosome[rna_coord[:, ndim - 2],
-                                   rna_coord[:, ndim - 1]]
+        mask_rna = mask_centrosome[
+            rna_coord[:, ndim - 2],
+            rna_coord[:, ndim - 1]]
         nb_rna_centrosome = len(rna_coord[mask_rna])
         index_rna_centrosome = nb_rna_centrosome / expected_nb_rna
         proportion_rna_centrosome = nb_rna_centrosome / len(rna_coord)
@@ -988,8 +1005,9 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
     total_intensity_cell = cell_value.sum()
 
     # compute attraction index
-    r = distance_centrosome[rna_coord[:, ndim - 2],
-                            rna_coord[:, ndim - 1]] ** 2
+    r = distance_centrosome[
+            rna_coord[:, ndim - 2],
+            rna_coord[:, ndim - 1]] ** 2
     a = np.sum((r * rna_value) / total_intensity_rna)
     r = distance_centrosome[cell_coord[:, 0], cell_coord[:, 1]] ** 2
     b = np.sum((r * cell_value) / total_intensity_cell)
