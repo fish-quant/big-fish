@@ -8,19 +8,20 @@ Segmentation models.
 
 import os
 import warnings
+
 from zipfile import ZipFile
+
+import tensorflow as tf
 
 import bigfish.stack as stack
 
-import tensorflow as tf
+from .utils_models import EncoderDecoder
+from .utils_models import SameConv
 
 from tensorflow.python.keras.layers import Input
 from tensorflow.python.keras.layers import Softmax
 from tensorflow.python.keras.layers import Concatenate
 from tensorflow.python.keras.engine.training import Model
-
-from .utils_models import EncoderDecoder
-from .utils_models import SameConv
 
 
 # ### Pre-trained models ###
@@ -44,8 +45,9 @@ def load_pretrained_model(channel, model_name):
     # TODO fix warning partial restoration with distance model
 
     # check parameters
-    stack.check_parameter(channel=str,
-                          model_name=str)
+    stack.check_parameter(
+        channel=str,
+        model_name=str)
 
     # unet 3-classes for nucleus segmentation
     if model_name == "3_classes" and channel == "nuc":
@@ -87,8 +89,9 @@ def check_pretrained_weights(channel, model_name):
 
     """
     # check parameters
-    stack.check_parameter(channel=str,
-                          model_name=str)
+    stack.check_parameter(
+        channel=str,
+        model_name=str)
 
     # get path checkpoint
     path_weights_directory = _get_weights_directory()
@@ -182,18 +185,18 @@ def check_pretrained_weights(channel, model_name):
         # unzip
         path_zipfile = os.path.join(
             path_weights_directory, "{0}.zip".format(pretrained_directory))
-        with ZipFile(path_zipfile, 'r') as zip:
-            zip.extract(
+        with ZipFile(path_zipfile, 'r') as z:
+            z.extract(
                 member="{0}/checkpoint".format(pretrained_directory),
                 path=path_weights_directory)
-            zip.extract(
-                member="{0}/checkpoint.data-00000-of-00001"
-                    .format(pretrained_directory),
+            z.extract(
+                member="{0}/checkpoint.data-00000-of-00001".format(
+                    pretrained_directory),
                 path=path_weights_directory)
-            zip.extract(
+            z.extract(
                 member="{0}/checkpoint.index".format(pretrained_directory),
                 path=path_weights_directory)
-            zip.extract(
+            z.extract(
                 member="{0}/log".format(pretrained_directory),
                 path=path_weights_directory)
 
@@ -244,7 +247,9 @@ def build_compile_3_classes_model():
     """
     # define inputs
     inputs_image = Input(
-        shape=(None, None, 1), dtype="float32", name="image")
+        shape=(None, None, 1),
+        dtype="float32",
+        name="image")
 
     # define model
     outputs = _get_3_classes_model(inputs_image)
@@ -313,7 +318,9 @@ def build_compile_distance_model():
     """
     # define inputs
     inputs_image = Input(
-        shape=(None, None, 1), dtype="float32", name="image")
+        shape=(None, None, 1),
+        dtype="float32",
+        name="image")
 
     # define model
     output_surface, output_distance = _get_distance_model(inputs_image)
@@ -396,9 +403,13 @@ def build_compile_double_distance_model():
     """
     # define inputs
     inputs_nuc = Input(
-        shape=(None, None, 1), dtype="float32", name="nuc")
+        shape=(None, None, 1),
+        dtype="float32",
+        name="nuc")
     inputs_cell = Input(
-        shape=(None, None, 1), dtype="float32", name="cell")
+        shape=(None, None, 1),
+        dtype="float32",
+        name="cell")
     inputs = [inputs_nuc, inputs_cell]
 
     # define model
