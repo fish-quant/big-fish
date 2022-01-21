@@ -56,21 +56,23 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
         focus_measures = [focus_measures]
 
     # check parameters
-    stack.check_parameter(focus_measures=list,
-                          labels=(list, type(None)),
-                          title=(str, list, type(None)),
-                          framesize=tuple,
-                          size_title=int,
-                          size_axes=int,
-                          size_legend=int,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_parameter(
+        focus_measures=list,
+        labels=(list, type(None)),
+        title=(str, list, type(None)),
+        framesize=tuple,
+        size_title=int,
+        size_axes=int,
+        size_legend=int,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
     length = 0
     for focus_measure in focus_measures:
-        stack.check_array(focus_measure,
-                          ndim=1,
-                          dtype=[np.float32, np.float64])
+        stack.check_array(
+            focus_measure,
+            ndim=1,
+            dtype=[np.float32, np.float64])
         length = max(length, focus_measure.size)
 
     # plot
@@ -101,9 +103,10 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
 
 # ### Elbow plots ###
 
-def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
-               framesize=(5, 5), size_title=20, size_axes=15, size_legend=15,
-               path_output=None, ext="png", show=True):
+def plot_elbow(images, voxel_size=None, spot_radius=None, log_kernel_size=None,
+               minimum_distance=None, title=None, framesize=(5, 5),
+               size_title=20, size_axes=15, size_legend=15, path_output=None,
+               ext="png", show=True):
     """Plot the elbow curve that allows an automated spot detection.
 
     Parameters
@@ -111,17 +114,28 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
     images : List[np.ndarray]
         List of images with shape (z, y, x) or (y, x). The same threshold is
         applied to every images.
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, image is
-        considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan, in
-        nanometer. If None, image is considered in 2-d.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan, in
-        nanometer.
+    voxel_size : int, float, Tuple(int, float), List(int, float) or None
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions. Not used if 'log_kernel_size' and 'minimum_distance' are
+        provided.
+    spot_radius : int, float, Tuple(int, float), List(int, float) or None
+        Radius of the spot, in nanometer. One value per spatial dimension (zyx
+        or yx dimensions). If it's a scalar, the same radius is applied to
+        every dimensions. Not used if 'log_kernel_size' and 'minimum_distance'
+        are provided.
+    log_kernel_size : int, float, Tuple(int, float), List(int, float) or None
+        Size of the LoG kernel. It equals the standard deviation (in pixels)
+        used for the gaussian kernel (one for each dimension). One value per
+        spatial dimension (zyx or yx dimensions). If it's a scalar, the same
+        standard deviation is applied to every dimensions. If None, we estimate
+        it with the voxel size and spot radius.
+    minimum_distance : int, float, Tuple(int, float), List(int, float) or None
+        Minimum distance (in pixels) between two spots we want to be able to
+        detect separately. One value per spatial dimension (zyx or yx
+        dimensions). If it's a scalar, the same distance is applied to every
+        dimensions. If None, we estimate it with the voxel size and spot
+        radius.
     title : str or None
         Title of the plot.
     framesize : tuple
@@ -142,37 +156,45 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
 
     """
     # check parameters
-    stack.check_parameter(title=(str, list, type(None)),
-                          framesize=tuple,
-                          size_title=int,
-                          size_axes=int,
-                          size_legend=int,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_parameter(
+        title=(str, list, type(None)),
+        framesize=tuple,
+        size_title=int,
+        size_axes=int,
+        size_legend=int,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
 
     # get candidate thresholds and spots count to plot the elbow curve
     thresholds, count_spots, threshold = detection.get_elbow_values(
-        images=images,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx,
-        psf_z=psf_z,
-        psf_yx=psf_yx)
+        images,
+        voxel_size=voxel_size,
+        spot_radius=spot_radius,
+        log_kernel_size=log_kernel_size,
+        minimum_distance=minimum_distance)
 
     # plot
     plt.figure(figsize=framesize)
     plt.plot(thresholds, count_spots, c="#2c7bb6", lw=2)
     if threshold is not None:
         i_threshold = np.argmax(thresholds == threshold)
-        plt.scatter(threshold, count_spots[i_threshold],
-                    marker="D", c="#d7191c", s=60, label="Selected threshold")
+        plt.scatter(
+            threshold,
+            count_spots[i_threshold],
+            marker="D",
+            c="#d7191c",
+            s=60,
+            label="Selected threshold")
 
     # axes
     if title is not None:
         plt.title(title, fontweight="bold", fontsize=size_title)
     plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
-    plt.ylabel("Number of mRNAs detected (log scale)",
-               fontweight="bold", fontsize=size_axes)
+    plt.ylabel(
+        "Number of mRNAs detected (log scale)",
+        fontweight="bold",
+        fontsize=size_axes)
     if threshold is not None:
         plt.legend(prop={'size': size_legend})
     plt.tight_layout()
@@ -184,23 +206,23 @@ def plot_elbow(images, voxel_size_z, voxel_size_yx, psf_z, psf_yx, title=None,
         plt.close()
 
 
-# TODO complete documentation
-def plot_elbow_colocalized(spots_1, spots_2, voxel_size_z, voxel_size_yx,
-                           title=None, framesize=(5, 5), size_title=20,
-                           size_axes=15, size_legend=15, path_output=None,
-                           ext="png", show=True):
+def plot_elbow_colocalized(spots_1, spots_2, voxel_size, title=None,
+                           framesize=(5, 5), size_title=20, size_axes=15,
+                           size_legend=15, path_output=None, ext="png",
+                           show=True):
     """Plot the elbow curve that allows an automated colocalized spot
     detection.
 
     Parameters
     ----------
-    spots_1
-    spots_2
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, image is
-        considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+    spots_1 : np.ndarray
+        Coordinates of the spots with shape (nb_spots, 3) or (nb_spots, 2).
+    spots_2 : np.ndarray
+        Coordinates of the spots with shape (nb_spots, 3) or (nb_spots, 2).
+    voxel_size : int, float, Tuple(int, float), or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
     title : str or None
         Title of the plot.
     framesize : tuple
@@ -221,33 +243,53 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size_z, voxel_size_yx,
 
     """
     # check parameters
-    stack.check_parameter(title=(str, list, type(None)),
-                          framesize=tuple,
-                          size_title=int,
-                          size_axes=int,
-                          size_legend=int,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_parameter(
+        title=(str, list, type(None)),
+        framesize=tuple,
+        size_title=int,
+        size_axes=int,
+        size_legend=int,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
 
     # get thresholds and colocalized spots count to plot the elbow curve
     (thresholds, count_colocalized,
      threshold) = multistack.get_elbow_value_colocalized(
-        spots_1, spots_2,
-        voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx)
+        spots_1=spots_1,
+        spots_2=spots_2,
+        voxel_size=voxel_size)
 
     # plot
     plt.figure(figsize=framesize)
-    plt.hlines(len(spots_1), thresholds[0], thresholds[-1],
-               colors="forestgreen", linestyles="--", label="Spots 1")
-    plt.hlines(len(spots_2), thresholds[0], thresholds[-1],
-               colors="steelblue", linestyles="--", label="Spots 2")
-    plt.plot(thresholds, count_colocalized, color="firebrick",
-             label="Colocalized spots")
+    plt.hlines(
+        len(spots_1),
+        thresholds[0],
+        thresholds[-1],
+        colors="forestgreen",
+        linestyles="--",
+        label="Spots 1")
+    plt.hlines(
+        len(spots_2),
+        thresholds[0],
+        thresholds[-1],
+        colors="steelblue",
+        linestyles="--",
+        label="Spots 2")
+    plt.plot(
+        thresholds,
+        count_colocalized,
+        color="firebrick",
+        label="Colocalized spots")
     if threshold is not None:
         i_threshold = np.argmax(thresholds == threshold)
-        plt.scatter(threshold, count_colocalized[i_threshold],
-                    marker="D", c="#d7191c", s=60, label="Selected threshold")
+        plt.scatter(
+            threshold,
+            count_colocalized[i_threshold],
+            marker="D",
+            c="#d7191c",
+            s=60,
+            label="Selected threshold")
 
     #  define xlim
     diff = min(len(spots_1), len(spots_2)) - count_colocalized
@@ -259,8 +301,10 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size_z, voxel_size_yx,
     if title is not None:
         plt.title(title, fontweight="bold", fontsize=size_title)
     plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
-    plt.ylabel("Number of mRNAs detected",
-               fontweight="bold", fontsize=size_axes)
+    plt.ylabel(
+        "Number of mRNAs detected",
+        fontweight="bold",
+        fontsize=size_axes)
     if threshold is not None:
         plt.legend(prop={'size': size_legend})
     plt.tight_layout()
