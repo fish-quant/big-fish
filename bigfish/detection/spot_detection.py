@@ -581,7 +581,7 @@ def _get_spot_counts(thresholds, value_spots):
 def get_elbow_values(images, voxel_size=None, spot_radius=None,
                      log_kernel_size=None, minimum_distance=None):
     """Get values to plot the elbow curve used to automatically set the
-    threshold.
+    threshold to detect spots.
 
     Parameters
     ----------
@@ -616,7 +616,7 @@ def get_elbow_values(images, voxel_size=None, spot_radius=None,
     thresholds : np.ndarray, np.float64
         Candidate threshold values.
     count_spots : np.ndarray, np.float64
-        Spots count function.
+        Spots count.
     threshold : float or None
         Threshold automatically set.
 

@@ -5,3 +5,6 @@
 """
 Unitary tests for bigfish.multistack.colocalization module.
 """
+
+# TODO add test bigfish.multistack.detect_spots_colocalization
+# TODO add test bigfish.multistack.get_elbow_value_colocalized

@@ -9,57 +9,81 @@ Functions to detect colocalized spots in 2-d and 3-d.
 import numpy as np
 
 import bigfish.stack as stack
+import bigfish.detection as detection
 
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 from scipy.signal import savgol_filter
 
-from bigfish.detection.utils import convert_spot_coordinates
 
-# TODO complete documentation
 # TODO process multiple images together
 
 # ### Main function ###
 
-
-def detect_spots_colocalization(spots_1, spots_2, voxel_size_z=None,
-                                voxel_size_yx=100, threshold=None,
+def detect_spots_colocalization(spots_1, spots_2, voxel_size, threshold=None,
                                 return_indices=False, return_threshold=False):
-    """
+    """Detect colocalized spots between two arrays of spot coordinates
+    'spots_1' and 'spots_2'. Pairs of spots below a specific threshold are
+    defined as colocalized.
 
     Parameters
     ----------
-    spots_1
-    spots_2
-    voxel_size_z
-    voxel_size_yx
-    threshold
-    return_indices
-    return_threshold
+    spots_1 : np.ndarray
+        Coordinates of the spots 1 with shape (nb_spots_1, 3) or
+        (nb_spots_1, 2).
+    spots_2 : np.ndarray
+        Coordinates of the spots 2 with shape (nb_spots_2, 3) or
+        (nb_spots_2, 2).
+    voxel_size : int, float, Tuple(int, float), or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    threshold : int, float or None
+        A threshold to discriminate colocalized spots from distant ones. If
+        None, an optimal threshold is selected automatically.
+    return_indices : bool
+        Return the indices of the colocalized spots within 'spots_1' and
+        'spots_2'.
+    return_threshold : bool
+        Return the threshold used to detect colocalized spots.
 
     Returns
     -------
+    spots_1_colocalized : np.ndarray
+        Coordinates of the colocalized spots from 'spots_1'.
+    spots_2_colocalized : np.ndarray
+        Coordinates of the colocalized spots from 'spots_2'.
+    distances : np.ndarray, np.float64
+        Distance matrix between spots with shape (nb_spots_1, nb_spots_2). The
+        value ``distances[i, j]`` is the euclidean distance between
+        ``spots_1[i]`` and ``spots_2[j]``.
+    indices_1 : np.ndarray, np.int64
+        Indices of the colocalized spots in 'spots_1'. Optional.
+    indices_2 : np.ndarray, np.int64
+        Indices of the colocalized spots in 'spots_2'. Optional.
+    threshold : int or float
+        Threshold used to discriminate colocalized spots from distant ones.
+        Optional.
 
     """
     # check parameters
-    stack.check_parameter(threshold=(float, int, type(None)),
-                          return_threshold=bool,
-                          voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float))
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        threshold=(float, int, type(None)),
+        return_indices=bool,
+        return_threshold=bool)
 
     # check spots coordinates
     stack.check_array(spots_1, ndim=2, dtype=[np.float64, np.int64])
     stack.check_array(spots_2, ndim=2, dtype=[np.float64, np.int64])
 
     # convert spots coordinates in nanometer
-    spots_1_nanometer = convert_spot_coordinates(
+    spots_1_nanometer = detection.convert_spot_coordinates(
         spots=spots_1,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx)
-    spots_2_nanometer = convert_spot_coordinates(
+        voxel_size=voxel_size)
+    spots_2_nanometer = detection.convert_spot_coordinates(
         spots=spots_2,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx)
+        voxel_size=voxel_size)
 
     # compute distance matrix between spots
     distance_matrix = cdist(spots_1_nanometer, spots_2_nanometer)
@@ -98,14 +122,20 @@ def detect_spots_colocalization(spots_1, spots_2, voxel_size_z=None,
 
 
 def _automated_threshold_setting_colocalization(distances):
-    """
+    """Automatically set the optimal threshold to detect colocalized spots
+    between two arrays of spot coordinates 'spots_1' and 'spots_2'.
 
     Parameters
     ----------
-    distances
+    distances : np.ndarray, np.float64
+        Distance matrix between spots with shape (nb_spots_1, nb_spots_2). The
+        value ``distances[i, j]`` is the euclidean distance between
+        ``spots_1[i]`` and ``spots_2[j]``.
 
     Returns
     -------
+    optimal_threshold : int
+        Optimal threshold to discriminate distant spots and colocalized ones.
 
     """
     # get threshold values we want to test
@@ -126,85 +156,69 @@ def _automated_threshold_setting_colocalization(distances):
     x = thresholds.copy()
     y = -nb_colocalized.copy() + nb_colocalized.max()
     y_smooth = savgol_filter(y, 501, 3)
-    optimal_threshold, _, _ = _get_breaking_point(x, y_smooth)
+    if y_smooth.size > 0:
+        optimal_threshold, _, _ = detection.get_breaking_point(x, y_smooth)
 
-    # TODO manage failures
+    # case where no spots were detected
+    else:
+        optimal_threshold = None
 
     return optimal_threshold
 
 
-def _get_breaking_point(x, y):
-    """Select the x-axis value where a L-curve has a kink.
-
-    Assuming a L-curve from A to B, the 'breaking_point' is the more distant
-    point to the segment [A, B].
+def get_elbow_value_colocalized(spots_1, spots_2, voxel_size):
+    """Get values to plot the elbow curve used to automatically set the
+    threshold to detect colocalized spots.
 
     Parameters
     ----------
-    x : np.array, np.float64
-        X-axis values.
-    y : np.array, np.float64
-        Y-axis values.
+    spots_1 : np.ndarray
+        Coordinates of the spots with shape (nb_spots, 3) or (nb_spots, 2).
+    spots_2 : np.ndarray
+        Coordinates of the spots with shape (nb_spots, 3) or (nb_spots, 2).
+    voxel_size : int, float, Tuple(int, float), or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
 
     Returns
     -------
-    breaking_point : float
-        X-axis value at the kink location.
-    x : np.array, np.float64
-        X-axis values.
-    y : np.array, np.float64
-        Y-axis values.
-
-    """
-    # select threshold where curve break
-    slope = (y[-1] - y[0]) / len(y)
-    y_grad = np.gradient(y)
-    m = list(y_grad >= slope)
-    j = m.index(False)
-    m = m[j:]
-    x = x[j:]
-    y = y[j:]
-    if True in m:
-        i = m.index(True)
-    else:
-        i = -1
-    breaking_point = float(x[i])
-
-    return breaking_point, x, y
-
-
-def get_elbow_value_colocalized(spots_1, spots_2, voxel_size_z=None,
-                                voxel_size_yx=100):
-    """
-
-    Parameters
-    ----------
-    spots_1
-    spots_2
-    voxel_size_z
-    voxel_size_yx
-
-    Returns
-    -------
+    thresholds : np.ndarray, np.float64
+        Candidate threshold values.
+    nb_colocalized : np.ndarray, np.float64
+        Colocalized spots count.
+    optimal_threshold : float or None
+        Threshold automatically set.
 
     """
     # check parameters
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float))
-
-    # check spots coordinates
+    stack.check_parameter(voxel_size=(int, float, tuple, list))
     stack.check_array(spots_1, ndim=2, dtype=[np.float64, np.int64])
     stack.check_array(spots_2, ndim=2, dtype=[np.float64, np.int64])
 
+    # check consistency between parameters
+    ndim = spots_1.shape[1]
+    if ndim not in [2, 3]:
+        raise ValueError("Spot coordinates should be in 2 or 3 dimensions, "
+                         "not {0}.".format(ndim))
+    if spots_2.shape[1] != ndim:
+        raise ValueError("Spot coordinates should have the same number of "
+                         "dimensions.")
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+
     # convert spots coordinates in nanometer
-    spots_1_nanometer = convert_spot_coordinates(
+    spots_1_nanometer = detection.convert_spot_coordinates(
         spots=spots_1,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx)
-    spots_2_nanometer = convert_spot_coordinates(
+        voxel_size=voxel_size)
+    spots_2_nanometer = detection.convert_spot_coordinates(
         spots=spots_2,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx)
+        voxel_size=voxel_size)
 
     # compute distance matrix between spots
     distance_matrix = cdist(spots_1_nanometer, spots_2_nanometer)
@@ -233,6 +247,6 @@ def get_elbow_value_colocalized(spots_1, spots_2, voxel_size_z=None,
     x = thresholds.copy()
     y = -nb_colocalized.copy() + nb_colocalized.max()
     y_smooth = savgol_filter(y, 501, 3)
-    optimal_threshold, _, _ = _get_breaking_point(x, y_smooth)
+    optimal_threshold, _, _ = detection.get_breaking_point(x, y_smooth)
 
     return thresholds, nb_colocalized, optimal_threshold
