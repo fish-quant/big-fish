@@ -66,8 +66,9 @@ def apply_unet_3_classes(model, image, target_size=None,
 
     """
     # check parameters
-    stack.check_parameter(target_size=(int, type(None)),
-                          test_time_augmentation=bool)
+    stack.check_parameter(
+        target_size=(int, type(None)),
+        test_time_augmentation=bool)
     stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get original shape
@@ -249,9 +250,10 @@ def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
 
     # build the binary mask for the missing nuclei
     missing_mask = image_filtered > 0
-    missing_mask = clean_segmentation(missing_mask,
-                                      small_object_size=size_nuclei,
-                                      fill_holes=True)
+    missing_mask = clean_segmentation(
+        missing_mask,
+        small_object_size=size_nuclei,
+        fill_holes=True)
     missing_mask = stack.dilation_filter(missing_mask, "disk", 20)
 
     # TODO improve the thresholds

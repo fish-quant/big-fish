@@ -65,9 +65,10 @@ def compute_mean_diameter(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -103,9 +104,10 @@ def compute_mean_convexity_ratio(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -140,9 +142,10 @@ def compute_surface_ratio(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # compute surface ratio
     surface_instances = image_label > 0
@@ -167,9 +170,10 @@ def count_instances(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     indices = set(image_label.ravel())
     if 0 in indices:

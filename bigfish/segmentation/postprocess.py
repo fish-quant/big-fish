@@ -112,10 +112,11 @@ def clean_segmentation(image, small_object_size=None, fill_holes=False,
     """
     # check parameters
     stack.check_array(image, ndim=2, dtype=[np.int64, bool])
-    stack.check_parameter(small_object_size=(int, type(None)),
-                          fill_holes=bool,
-                          smoothness=(int, type(None)),
-                          delimit_instance=bool)
+    stack.check_parameter(
+        small_object_size=(int, type(None)),
+        fill_holes=bool,
+        smoothness=(int, type(None)),
+        delimit_instance=bool)
 
     # initialize cleaned image
     image_cleaned = image.copy()
@@ -276,9 +277,10 @@ def remove_disjoint(image):
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # handle boolean array
     cast_to_bool = False
@@ -356,17 +358,19 @@ def center_mask_coord(main, others=None):
     """
     # TODO allow the case when coordinates do not represent external boundaries
     # check parameters
-    stack.check_array(main,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        main,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(others=(list, type(None)))
     if others is not None and len(others) != 0:
         for x in others:
             if x is None:
                 continue
-            stack.check_array(x,
-                              ndim=2,
-                              dtype=[np.uint8, np.uint16, np.int64, bool])
+            stack.check_array(
+                x,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # initialize parameter
     marge = stack.get_margin_value()
@@ -445,9 +449,10 @@ def from_boundaries_to_surface(binary_boundaries):
 
     """
     # check parameters
-    stack.check_array(binary_boundaries,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        binary_boundaries,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # from binary boundaries to binary surface
     binary_surface = ndi.binary_fill_holes(binary_boundaries)
@@ -470,9 +475,10 @@ def from_surface_to_boundaries(binary_surface):
 
     """
     # check parameters
-    stack.check_array(binary_surface,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        binary_surface,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
     original_dtype = binary_surface.dtype
 
     # pad the binary surface in case object if on the edge
@@ -509,9 +515,10 @@ def from_binary_to_coord(binary):
 
     """
     # check parameters
-    stack.check_array(binary,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        binary,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # we enlarge the binary mask with one pixel to be sure the external
     # boundaries of the object still fit within the frame
@@ -542,9 +549,7 @@ def complete_coord_boundaries(coord):
 
     """
     # check parameters
-    stack.check_array(coord,
-                      ndim=2,
-                      dtype=[np.int64])
+    stack.check_array(coord, ndim=2, dtype=[np.int64])
 
     # for each array in the list, complete its coordinates using the scikit
     # image method 'polygon_perimeter'
@@ -640,17 +645,11 @@ def from_coord_to_surface(cell_coord, nuc_coord=None, rna_coord=None,
 
     """
     # check parameters
-    stack.check_array(cell_coord,
-                      ndim=2,
-                      dtype=[np.int64])
+    stack.check_array(cell_coord, ndim=2, dtype=[np.int64])
     if nuc_coord is not None:
-        stack.check_array(nuc_coord,
-                          ndim=2,
-                          dtype=[np.int64])
+        stack.check_array(nuc_coord, ndim=2, dtype=[np.int64])
     if rna_coord is not None:
-        stack.check_array(rna_coord,
-                          ndim=2,
-                          dtype=[np.int64])
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int64])
     stack.check_parameter(external_coord=bool)
 
     # center coordinates
