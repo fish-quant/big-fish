@@ -120,10 +120,11 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
 
     """
     # check parameters
-    stack.check_parameter(data_map=list,
-                          input_dimension=(int, type(None)),
-                          sanity_check=bool,
-                          return_origin=bool)
+    stack.check_parameter(
+        data_map=list,
+        input_dimension=(int, type(None)),
+        sanity_check=bool,
+        return_origin=bool)
     check_datamap(data_map)
 
     # load and generate tensors for each recipe-folder pair
@@ -132,10 +133,12 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
         # load and generate tensors for each fov stored in a recipe
         nb_fov = count_nb_fov(recipe)
         for i_fov in range(nb_fov):
-            tensor = build_stack(recipe, input_folder,
-                                 input_dimension=input_dimension,
-                                 sanity_check=sanity_check,
-                                 i_fov=i_fov)
+            tensor = build_stack(
+                recipe,
+                input_folder,
+                input_dimension=input_dimension,
+                sanity_check=sanity_check,
+                i_fov=i_fov)
             if return_origin:
                 yield tensor, input_folder, recipe, i_fov
             else:
@@ -222,23 +225,25 @@ def build_stack(recipe, input_folder, input_dimension=None, sanity_check=False,
     """
     # check parameters
     check_recipe(recipe)
-    stack.check_parameter(input_folder=str,
-                          input_dimension=(int, type(None)),
-                          i_fov=int,
-                          sanity_check=bool)
+    stack.check_parameter(
+        input_folder=str,
+        input_dimension=(int, type(None)),
+        i_fov=int,
+        sanity_check=bool)
 
     # build stack from recipe and tif files
     tensor = _load_stack(recipe, input_folder, input_dimension, i_fov)
 
     # check the validity of the loaded tensor
     if sanity_check:
-        stack.check_array(tensor,
-                          dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                                 np.int8, np.int16, np.int32, np.int64,
-                                 np.float16, np.float32, np.float64,
-                                 bool],
-                          ndim=5,
-                          allow_nan=False)
+        stack.check_array(
+            tensor,
+            dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                   np.int8, np.int16, np.int32, np.int64,
+                   np.float16, np.float32, np.float64,
+                   bool],
+            ndim=5,
+            allow_nan=False)
 
     return tensor
 
@@ -308,14 +313,26 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
 
     # we stack our files according to their initial dimension
     if input_dimension == 2:
-        stack_ = _build_stack_from_2d(recipe, input_folder, fov=i_fov,
-                                      nb_r=nb_r, nb_c=nb_c, nb_z=nb_z)
+        stack_ = _build_stack_from_2d(
+            recipe,
+            input_folder,
+            fov=i_fov,
+            nb_r=nb_r,
+            nb_c=nb_c,
+            nb_z=nb_z)
     elif input_dimension == 3:
-        stack_ = _build_stack_from_3d(recipe, input_folder, fov=i_fov,
-                                      nb_r=nb_r, nb_c=nb_c)
+        stack_ = _build_stack_from_3d(
+            recipe,
+            input_folder,
+            fov=i_fov,
+            nb_r=nb_r,
+            nb_c=nb_c)
     elif input_dimension == 4:
-        stack_ = _build_stack_from_4d(recipe, input_folder, fov=i_fov,
-                                      nb_r=nb_r)
+        stack_ = _build_stack_from_4d(
+            recipe,
+            input_folder,
+            fov=i_fov,
+            nb_r=nb_r)
     elif input_dimension == 5:
         stack_ = _build_stack_from_5d(recipe, input_folder, fov=i_fov)
     else:
@@ -364,8 +381,13 @@ def _build_stack_from_2d(recipe, input_folder, fov=0, nb_r=1, nb_c=1, nb_z=1):
             # load and stack z elements (2-d tensors)
             tensors_2d = []
             for z in range(nb_z):
-                path = get_path_from_recipe(recipe, input_folder, fov=fov,
-                                            r=r, c=c, z=z)
+                path = get_path_from_recipe(
+                    recipe,
+                    input_folder,
+                    fov=fov,
+                    r=r,
+                    c=c,
+                    z=z)
                 tensor_2d = stack.read_image(path)
                 tensors_2d.append(tensor_2d)
 
@@ -414,8 +436,12 @@ def _build_stack_from_3d(recipe, input_folder, fov=0, nb_r=1, nb_c=1):
         # load and stack channel elements (3-d tensors)
         tensors_3d = []
         for c in range(nb_c):
-            path = get_path_from_recipe(recipe, input_folder, fov=fov, r=r,
-                                        c=c)
+            path = get_path_from_recipe(
+                recipe,
+                input_folder,
+                fov=fov,
+                r=r,
+                c=c)
             tensor_3d = stack.read_image(path)
             tensors_3d.append(tensor_3d)
 
@@ -539,22 +565,24 @@ def build_stack_no_recipe(paths, input_dimension=None, sanity_check=False):
 
     """
     # check parameters
-    stack.check_parameter(paths=(str, list),
-                          input_dimension=(int, type(None)),
-                          sanity_check=bool)
+    stack.check_parameter(
+        paths=(str, list),
+        input_dimension=(int, type(None)),
+        sanity_check=bool)
 
     # build stack from tif files
     tensor = _load_stack_no_recipe(paths, input_dimension)
 
     # check the validity of the loaded tensor
     if sanity_check:
-        stack.check_array(tensor,
-                          dtype=[np.uint8, np.uint16, np.uint32,
-                                 np.int8, np.int16, np.int32,
-                                 np.float16, np.float32, np.float64,
-                                 bool],
-                          ndim=5,
-                          allow_nan=False)
+        stack.check_array(
+            tensor,
+            dtype=[np.uint8, np.uint16, np.uint32,
+                   np.int8, np.int16, np.int32,
+                   np.float16, np.float32, np.float64,
+                   bool],
+            ndim=5,
+            allow_nan=False)
 
     return tensor
 

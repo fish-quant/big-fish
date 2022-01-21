@@ -8,6 +8,10 @@ from different channels.
 """
 
 from .utils import check_recipe
+from .utils import fit_recipe
+from .utils import get_path_from_recipe
+from .utils import get_nb_element_per_dimension
+from .utils import count_nb_fov
 from .utils import check_datamap
 
 from .preprocess import build_stacks
@@ -17,15 +21,19 @@ from .preprocess import build_stack_no_recipe
 from .colocalization import detect_spots_colocalization
 from .colocalization import get_elbow_value_colocalized
 
-from .cell_extraction import identify_objects_in_region
-from .cell_extraction import remove_transcription_site
-from .cell_extraction import match_nuc_cell
-from .cell_extraction import extract_cell
-from .cell_extraction import extract_spots_from_frame
-from .cell_extraction import summarize_extraction_results
+from .postprocess import identify_objects_in_region
+from .postprocess import remove_transcription_site
+from .postprocess import match_nuc_cell
+from .postprocess import extract_cell
+from .postprocess import extract_spots_from_frame
+from .postprocess import summarize_extraction_results
 
 _utils = [
     "check_recipe",
+    "fit_recipe",
+    "get_path_from_recipe",
+    "get_nb_element_per_dimension",
+    "count_nb_fov",
     "check_datamap"]
 
 _preprocess = [

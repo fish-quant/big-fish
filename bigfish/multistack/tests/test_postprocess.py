@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Unitary tests for bigfish.multistack.cell_extraction module.
+Unitary tests for bigfish.multistack.postprocess module.
 """
 
 import pytest
@@ -14,9 +14,11 @@ import bigfish.multistack as multistack
 
 from numpy.testing import assert_array_equal
 
-# TODO add test bigfish.stack.extract_cell
-# TODO add test bigfish.stack.extract_spots_from_frame
 
+# TODO add test bigfish.multistack.match_nuc_cell
+# TODO add test bigfish.multistack.extract_cell
+# TODO add test bigfish.multistack.extract_spots_from_frame
+# TODO add test bigfish.multistack.summarize_extraction_results
 
 @pytest.mark.parametrize("ndim", [2, 3])
 @pytest.mark.parametrize("mask_dtype", [

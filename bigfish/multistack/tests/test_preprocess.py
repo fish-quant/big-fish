@@ -11,6 +11,7 @@ import pytest
 import tempfile
 
 import numpy as np
+
 import bigfish.stack as stack
 import bigfish.multistack as multistack
 
@@ -45,11 +46,11 @@ def test_build_stacks_from_recipe():
         stack.save_image(test_rna, path_rna)
 
         # define recipe to read tensors
-        recipe_1 ={"fov": ["1", "2"],
-                   "c": ["nuc", "cyt", "rna"],
-                   "opt": "test",
-                   "ext": "tif",
-                   "pattern": "opt_c_fov.ext"}
+        recipe_1 = {"fov": ["1", "2"],
+                    "c": ["nuc", "cyt", "rna"],
+                    "opt": "test",
+                    "ext": "tif",
+                    "pattern": "opt_c_fov.ext"}
 
         # build tensor without prior information
         tensor = multistack.build_stack(recipe_1, input_folder=tmp_dir)

@@ -38,8 +38,9 @@ def check_recipe(recipe, data_directory=None):
 
     """
     # check parameters
-    stack.check_parameter(recipe=dict,
-                          data_directory=(str, type(None)))
+    stack.check_parameter(
+        recipe=dict,
+        data_directory=(str, type(None)))
 
     # check the filename pattern
     if "pattern" not in recipe:
@@ -81,8 +82,13 @@ def check_recipe(recipe, data_directory=None):
             for r in range(nb_r):
                 for c in range(nb_c):
                     for z in range(nb_z):
-                        path = get_path_from_recipe(recipe, data_directory,
-                                                    fov=fov, r=r, c=c, z=z)
+                        path = get_path_from_recipe(
+                            recipe,
+                            data_directory,
+                            fov=fov,
+                            r=r,
+                            c=c,
+                            z=z)
                         if not os.path.isfile(path):
                             raise FileNotFoundError("File does not exist: {0}"
                                                     .format(path))
@@ -196,12 +202,13 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
 
     """
     # check parameters
-    stack.check_parameter(recipe=dict,
-                          input_folder=str,
-                          fov=int,
-                          r=int,
-                          c=int,
-                          z=int)
+    stack.check_parameter(
+        recipe=dict,
+        input_folder=str,
+        fov=int,
+        r=int,
+        c=int,
+        z=int)
 
     # check if the recipe is fitted
     if not _is_recipe_fitted(recipe):

@@ -12,11 +12,6 @@ import tempfile
 
 import bigfish.multistack as multistack
 
-from bigfish.multistack.utils import fit_recipe
-from bigfish.multistack.utils import get_path_from_recipe
-from bigfish.multistack.utils import get_nb_element_per_dimension
-from bigfish.multistack.utils import count_nb_fov
-
 
 # ### Test recipes ###
 
@@ -99,7 +94,7 @@ def test_fit_recipe():
                    "pattern": "opt_c_fov.ext"}
 
     # fit recipe
-    new_recipe = fit_recipe(good_recipe)
+    new_recipe = multistack.fit_recipe(good_recipe)
 
     # all keys should be initialized in the new recipe, with a list or a string
     for key in ['fov', 'r', 'c', 'z']:
@@ -112,7 +107,7 @@ def test_fit_recipe():
     assert isinstance(new_recipe['pattern'], str)
 
     # test that fitting an already fitted recipe does not change anything
-    new_recip_bis = fit_recipe(new_recipe)
+    new_recip_bis = multistack.fit_recipe(new_recipe)
     assert new_recip_bis == new_recipe
 
 
@@ -131,7 +126,7 @@ def test_path_from_recipe():
                        "pattern": "opt_c_fov.ext"}
 
         # test the path
-        path_dapi = get_path_from_recipe(good_recipe, tmp_dir, c=0)
+        path_dapi = multistack.get_path_from_recipe(good_recipe, tmp_dir, c=0)
         assert os.path.isfile(path_dapi)
 
 
@@ -144,7 +139,7 @@ def test_element_per_dimension():
                    "pattern": "opt_c_fov.ext"}
 
     # test the number of elements to be stacked
-    nb_r, nb_c, nb_z = get_nb_element_per_dimension(good_recipe)
+    nb_r, nb_c, nb_z = multistack.get_nb_element_per_dimension(good_recipe)
     assert nb_r == 1
     assert nb_c == 2
     assert nb_z == 1
@@ -157,7 +152,7 @@ def test_nb_fov():
                      "opt": "experience_1",
                      "ext": "tif",
                      "pattern": "opt_c_fov.ext"}
-    nb_fov = count_nb_fov(good_recipe_1)
+    nb_fov = multistack.count_nb_fov(good_recipe_1)
     assert nb_fov == 1
 
     # case when 'fov' key is a list
@@ -166,7 +161,7 @@ def test_nb_fov():
                      "opt": "experience_1",
                      "ext": "tif",
                      "pattern": "opt_c_fov.ext"}
-    nb_fov = count_nb_fov(good_recipe_2)
+    nb_fov = multistack.count_nb_fov(good_recipe_2)
     assert nb_fov == 2
 
     # case when 'fov' key does not exist
@@ -174,7 +169,7 @@ def test_nb_fov():
                      "opt": "experience_1",
                      "ext": "tif",
                      "pattern": "opt_c_fov.ext"}
-    nb_fov = count_nb_fov(good_recipe_3)
+    nb_fov = multistack.count_nb_fov(good_recipe_3)
     assert nb_fov == 1
 
     # case when the 'fov' key is not a string or a list
@@ -184,7 +179,7 @@ def test_nb_fov():
                       "opt": "experience_1",
                       "ext": "tif",
                       "pattern": "opt_c_fov.ext"}
-        count_nb_fov(bad_recipe)
+        multistack.count_nb_fov(bad_recipe)
 
 
 def test_check_datamap():

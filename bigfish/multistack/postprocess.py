@@ -43,13 +43,11 @@ def identify_objects_in_region(mask, coord, ndim):
     """
     # check parameters
     stack.check_parameter(ndim=int)
-    stack.check_array(mask,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             bool])
-    stack.check_array(coord,
-                      ndim=2,
-                      dtype=[np.int64, np.float64])
+    stack.check_array(
+        mask,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(coord, ndim=2, dtype=[np.int64, np.float64])
 
     # check number of dimensions
     if ndim not in [2, 3]:
@@ -119,9 +117,7 @@ def remove_transcription_site(rna, clusters, nuc_mask, ndim):
 
     """
     # check parameters
-    stack.check_array(rna,
-                      ndim=2,
-                      dtype=[np.int64, np.float64])
+    stack.check_array(rna, ndim=2, dtype=[np.int64, np.float64])
 
     # discriminate foci from transcription sites
     ts, foci = identify_objects_in_region(
@@ -160,12 +156,14 @@ def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
 
     """
     # check parameters
-    stack.check_array(nuc_label,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.int64])
-    stack.check_array(cell_label,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        nuc_label,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        cell_label,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # initialize new labelled images
     new_nuc_label = np.zeros_like(nuc_label)
@@ -306,26 +304,25 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
 
     """
     # check parameters
-    stack.check_parameter(ndim=int,
-                          others_coord=(dict, type(None)),
-                          others_image=(dict, type(None)),
-                          remove_cropped_cell=bool,
-                          check_nuc_in_cell=bool)
-    stack.check_array(cell_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_parameter(
+        ndim=int,
+        others_coord=(dict, type(None)),
+        others_image=(dict, type(None)),
+        remove_cropped_cell=bool,
+        check_nuc_in_cell=bool)
+    stack.check_array(
+        cell_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
     if nuc_label is not None:
-        stack.check_array(nuc_label,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64])
+        stack.check_array(
+            nuc_label,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64])
     if rna_coord is not None:
-        stack.check_array(rna_coord,
-                          ndim=2,
-                          dtype=[np.int64, np.float64])
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int64, np.float64])
     if image is not None:
-        stack.check_array(image,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16])
+        stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
     actual_keys = ["cell_id", "bbox", "cell_coord", "cell_mask", "nuc_coord",
                    "nuc_mask", "rna_coord", "image"]
     if others_coord is not None:
@@ -432,7 +429,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
         # get coordinates of the spots detected in the cell
         if rna_coord is not None:
             rna_in_cell, _ = identify_objects_in_region(
-                cell_mask, rna_coord, ndim)
+                cell_mask,
+                rna_coord,
+                ndim)
             rna_in_cell[:, ndim - 2] -= min_y
             rna_in_cell[:, ndim - 1] -= min_x
             cell_results["rna_coord"] = rna_in_cell
@@ -442,7 +441,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
             for key in others_coord:
                 array = others_coord[key]
                 element_in_cell, _ = identify_objects_in_region(
-                    cell_mask, array, ndim)
+                    cell_mask,
+                    array,
+                    ndim)
                 element_in_cell[:, ndim - 2] -= min_y
                 element_in_cell[:, ndim - 1] -= min_x
                 cell_results[key] = element_in_cell
@@ -540,12 +541,11 @@ def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
 
     """
     # check parameters
-    stack.check_array(spots,
-                      ndim=2,
-                      dtype=[np.int64, np.float64])
-    stack.check_parameter(z_lim=(tuple, type(None)),
-                          y_lim=(tuple, type(None)),
-                          x_lim=(tuple, type(None)))
+    stack.check_array(spots, ndim=2, dtype=[np.int64, np.float64])
+    stack.check_parameter(
+        z_lim=(tuple, type(None)),
+        y_lim=(tuple, type(None)),
+        x_lim=(tuple, type(None)))
 
     # extract spots
     extracted_spots = spots.copy()
@@ -601,9 +601,10 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     """
     # check parameters
-    stack.check_parameter(fov_results=list,
-                          ndim=int,
-                          path_output=(str, type(None)))
+    stack.check_parameter(
+        fov_results=list,
+        ndim=int,
+        path_output=(str, type(None)))
 
     # case if no cell were detected
     # TODO make it consistent with the case where there are cells
@@ -644,7 +645,9 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
             if "nuc_mask" in cell_results:
                 nuc_mask = cell_results["nuc_mask"]
                 rna_in_nuc, rna_out_nuc = identify_objects_in_region(
-                    nuc_mask, rna_coord, ndim)
+                    nuc_mask,
+                    rna_coord,
+                    ndim)
                 _nb_rna_in_nuc.append(len(rna_in_nuc))
                 _nb_rna_out_nuc.append(len(rna_out_nuc))
 
