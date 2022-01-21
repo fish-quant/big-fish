@@ -37,9 +37,10 @@ def check_df(df, features=None, features_without_nan=None):
 
     """
     # check parameters
-    check_parameter(df=(pd.DataFrame, pd.Series),
-                    features=(list, type(None)),
-                    features_without_nan=(list, type(None)))
+    check_parameter(
+        df=(pd.DataFrame, pd.Series),
+        features=(list, type(None)),
+        features_without_nan=(list, type(None)))
 
     # check features
     if features is not None:
@@ -123,10 +124,11 @@ def check_array(array, ndim=None, dtype=None, allow_nan=True):
 
     """
     # check parameters
-    check_parameter(array=np.ndarray,
-                    ndim=(int, list, type(None)),
-                    dtype=(type, list, type(None)),
-                    allow_nan=bool)
+    check_parameter(
+        array=np.ndarray,
+        ndim=(int, list, type(None)),
+        dtype=(type, list, type(None)),
+        allow_nan=bool)
 
     # check the dtype
     if dtype is not None:
@@ -325,9 +327,10 @@ def load_and_save_url(remote_url, directory, filename=None):
 
     """
     # check parameters
-    check_parameter(remote_url=str,
-                    directory=str,
-                    filename=(str, type(None)))
+    check_parameter(
+        remote_url=str,
+        directory=str,
+        filename=(str, type(None)))
 
     # get output path
     if filename is None:
@@ -357,8 +360,9 @@ def check_hash(path, expected_hash):
 
     """
     # check parameter
-    check_parameter(path=str,
-                    expected_hash=str)
+    check_parameter(
+        path=str,
+        expected_hash=str)
 
     # compute hash value
     hash_value = compute_hash(path)

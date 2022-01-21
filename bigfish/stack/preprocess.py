@@ -58,14 +58,16 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
 
     """
     # check parameters
-    check_parameter(tensor=np.ndarray,
-                    channel_to_stretch=(int, list, tuple, type(None)),
-                    stretching_percentile=(int, float))
-    check_array(tensor,
-                ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32,
-                       np.int8, np.int16, np.int32,
-                       np.float16, np.float32, np.float64])
+    check_parameter(
+        tensor=np.ndarray,
+        channel_to_stretch=(int, list, tuple, type(None)),
+        stretching_percentile=(int, float))
+    check_array(
+        tensor,
+        ndim=[2, 3, 4, 5],
+        dtype=[np.uint8, np.uint16, np.uint32,
+               np.int8, np.int16, np.int32,
+               np.float16, np.float32, np.float64])
     check_range_value(tensor, min_=0)
 
     # enlist 'channel_to_stretch' if necessary
@@ -78,9 +80,10 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     tensor_5d, original_ndim = _wrap_5d(tensor)
 
     # rescale
-    tensor_5d = _rescale_5d(tensor_5d,
-                            channel_to_stretch=channel_to_stretch,
-                            stretching_percentile=stretching_percentile)
+    tensor_5d = _rescale_5d(
+        tensor_5d,
+        channel_to_stretch=channel_to_stretch,
+        stretching_percentile=stretching_percentile)
 
     # rebuild the original tensor shape
     tensor = _unwrap_5d(tensor_5d, original_ndim)
@@ -197,12 +200,14 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
             # rescale channel
             if c in channel_to_stretch:
                 pa, pb = np.percentile(channel, (0, stretching_percentile))
-                channel_rescaled = rescale_intensity(channel,
-                                                     in_range=(pa, pb),
-                                                     out_range=target_range)
+                channel_rescaled = rescale_intensity(
+                    channel,
+                    in_range=(pa, pb),
+                    out_range=target_range)
             else:
-                channel_rescaled = rescale_intensity(channel,
-                                                     out_range=target_range)
+                channel_rescaled = rescale_intensity(
+                    channel,
+                    out_range=target_range)
             channels.append(channel_rescaled)
 
         # stack channels
@@ -237,11 +242,12 @@ def cast_img_uint8(tensor, catch_warning=False):
 
     """
     # check tensor dtype
-    check_array(tensor,
-                ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                       np.int8, np.int16, np.int32, np.int64,
-                       np.float16, np.float32, np.float64])
+    check_array(
+        tensor,
+        ndim=[2, 3, 4, 5],
+        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+               np.int8, np.int16, np.int32, np.int64,
+               np.float16, np.float32, np.float64])
     if tensor.dtype in [np.float16, np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
     elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
@@ -289,11 +295,12 @@ def cast_img_uint16(tensor, catch_warning=False):
 
     """
     # check tensor dtype
-    check_array(tensor,
-                ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                       np.int8, np.int16, np.int32, np.int64,
-                       np.float16, np.float32, np.float64])
+    check_array(
+        tensor,
+        ndim=[2, 3, 4, 5],
+        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+               np.int8, np.int16, np.int32, np.int64,
+               np.float16, np.float32, np.float64])
     if tensor.dtype in [np.float16, np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
     elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
@@ -340,11 +347,12 @@ def cast_img_float32(tensor, catch_warning=False):
 
     """
     # check tensor dtype
-    check_array(tensor,
-                ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                       np.int8, np.int16, np.int32, np.int64,
-                       np.float16, np.float32, np.float64])
+    check_array(
+        tensor,
+        ndim=[2, 3, 4, 5],
+        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+               np.int8, np.int16, np.int32, np.int64,
+               np.float16, np.float32, np.float64])
 
     # cast tensor
     if catch_warning:
@@ -375,11 +383,12 @@ def cast_img_float64(tensor):
 
     """
     # check tensor dtype
-    check_array(tensor,
-                ndim=[2, 3, 4, 5],
-                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                       np.int8, np.int16, np.int32, np.int64,
-                       np.float16, np.float32, np.float64])
+    check_array(
+        tensor,
+        ndim=[2, 3, 4, 5],
+        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+               np.int8, np.int16, np.int32, np.int64,
+               np.float16, np.float32, np.float64])
 
     # cast tensor
     tensor = img_as_float64(tensor)
