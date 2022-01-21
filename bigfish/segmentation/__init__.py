@@ -36,9 +36,7 @@ from .utils import compute_mean_diameter
 from .utils import compute_mean_convexity_ratio
 from .utils import compute_surface_ratio
 from .utils import count_instances
-from .utils import resize_image
-from .utils import get_marge_padding
-from .utils import compute_image_standardization
+
 
 _cell = [
     "unet_distance_edge_double",
@@ -72,9 +70,6 @@ _utils = [
     "compute_mean_diameter",
     "compute_mean_convexity_ratio",
     "compute_surface_ratio",
-    "count_instances",
-    "resize_image",
-    "get_marge_padding",
-    "compute_image_standardization"]
+    "count_instances"]
 
 __all__ = _cell + _nuc + _postprocess + _utils

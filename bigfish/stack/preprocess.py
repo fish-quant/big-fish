@@ -19,6 +19,7 @@ from skimage import img_as_float32
 from skimage import img_as_float64
 from skimage import img_as_uint
 from skimage.exposure import rescale_intensity
+from skimage.transform import resize
 
 
 # ### Image normalization ###
@@ -394,3 +395,122 @@ def cast_img_float64(tensor):
     tensor = img_as_float64(tensor)
 
     return tensor
+
+
+# ### Format and crop images ###
+
+def resize_image(image, output_shape, method="bilinear"):
+    """Resize an image with bilinear interpolation or nearest neighbor method.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to resize.
+    output_shape : Tuple[int]
+        Shape of the resized image.
+    method : str
+        Interpolation method to use.
+
+    Returns
+    -------
+    image_resized : np.ndarray
+        Resized image.
+
+    """
+    # check parameters
+    check_parameter(output_shape=tuple, method=str)
+    check_array(image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32])
+
+    # resize image
+    if method == "bilinear":
+        image_resized = resize(
+            image,
+            output_shape,
+            mode="reflect",
+            preserve_range=True,
+            order=1,
+            anti_aliasing=True)
+    elif method == "nearest":
+        image_resized = resize(
+            image,
+            output_shape,
+            mode="reflect",
+            preserve_range=True,
+            order=0,
+            anti_aliasing=False)
+    else:
+        raise ValueError("Method {0} is not available. Choose between "
+                         "'bilinear' or 'nearest' instead.".format(method))
+
+    # cast output dtype
+    image_resized = image_resized.astype(image.dtype)
+
+    return image_resized
+
+
+def get_marge_padding(height, width, x):
+    """Pad image to make its shape a multiple of `x`.
+
+    Parameters
+    ----------
+    height : int
+        Original height of the image.
+    width : int
+        Original width of the image.
+    x : int
+        Padded image have a `height` and `width` multiple of `x`.
+
+    Returns
+    -------
+    marge_padding : List[List]
+        List of lists with the format
+        [[`marge_height_t`, `marge_height_b`], [`marge_width_l`,
+        `marge_width_r`]].
+
+    """
+    # check parameters
+    check_parameter(height=int, width=int, x=int)
+
+    # pad height and width to make it multiple of x
+    marge_sup_height = x - (height % x)
+    marge_sup_height_l = int(marge_sup_height / 2)
+    marge_sup_height_r = marge_sup_height - marge_sup_height_l
+    marge_sup_width = x - (width % x)
+    marge_sup_width_l = int(marge_sup_width / 2)
+    marge_sup_width_r = marge_sup_width - marge_sup_width_l
+    marge_padding = [[marge_sup_height_l, marge_sup_height_r],
+                     [marge_sup_width_l, marge_sup_width_r]]
+
+    return marge_padding
+
+
+def compute_image_standardization(image):
+    """Normalize image by computing its z score.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to normalize with shape (y, x).
+
+    Returns
+    -------
+    normalized_image : np.ndarray
+        Normalized image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16, np.float32])
+
+    # check image is in 2D
+    if len(image.shape) != 2:
+        raise ValueError("'image' should be a 2-d array. Not {0}-d array"
+                         .format(len(image.shape)))
+
+    # compute mean and standard deviation
+    m = np.mean(image)
+    adjusted_stddev = max(np.std(image), 1.0 / np.sqrt(image.size))
+
+    # normalize image
+    normalized_image = (image - m) / adjusted_stddev
+
+    return normalized_image

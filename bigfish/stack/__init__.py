@@ -37,6 +37,9 @@ from .preprocess import cast_img_uint8
 from .preprocess import cast_img_uint16
 from .preprocess import cast_img_float32
 from .preprocess import cast_img_float64
+from .preprocess import resize_image
+from .preprocess import get_marge_padding
+from .preprocess import compute_image_standardization
 
 from .filter import mean_filter
 from .filter import median_filter
@@ -96,7 +99,10 @@ _preprocess = [
     "cast_img_uint8",
     "cast_img_uint16",
     "cast_img_float32",
-    "cast_img_float64"]
+    "cast_img_float64",
+    "resize_image",
+    "get_marge_padding",
+    "compute_image_standardization"]
 
 _filter = [
     "log_filter",

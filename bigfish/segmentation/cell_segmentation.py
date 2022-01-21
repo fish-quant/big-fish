@@ -9,9 +9,6 @@ Class and functions to segment cells.
 import bigfish.stack as stack
 
 from .utils import thresholding
-from .utils import resize_image
-from .utils import get_marge_padding
-from .utils import compute_image_standardization
 from .postprocess import label_instances
 from .postprocess import clean_segmentation
 
@@ -102,21 +99,21 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
         new_height = int(np.round(height * ratio))
         new_width = int(np.round(width * ratio))
         new_shape = (new_height, new_width)
-        nuc_to_process = resize_image(nuc, new_shape, "bilinear")
-        cell_to_process = resize_image(cell, new_shape, "bilinear")
+        nuc_to_process = stack.resize_image(nuc, new_shape, "bilinear")
+        cell_to_process = stack.resize_image(cell, new_shape, "bilinear")
         nuc_label_to_process = nuc_label.copy()
 
     # get padding marge to make it multiple of 16
-    marge_padding = get_marge_padding(new_height, new_width, x=16)
+    marge_padding = stack.get_marge_padding(new_height, new_width, x=16)
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
     nuc_to_process = pad(nuc_to_process, marge_padding, mode='symmetric')
     cell_to_process = pad(cell_to_process, marge_padding, mode='symmetric')
 
     # standardize and cast cell image
-    nuc_to_process = compute_image_standardization(nuc_to_process)
+    nuc_to_process = stack.compute_image_standardization(nuc_to_process)
     nuc_to_process = nuc_to_process.astype(np.float32)
-    cell_to_process = compute_image_standardization(cell_to_process)
+    cell_to_process = stack.compute_image_standardization(cell_to_process)
     cell_to_process = cell_to_process.astype(np.float32)
 
     # augment images
@@ -155,14 +152,14 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
         # from the image augmentation
         if target_size is not None:
             if i in [0, 1, 2, 6]:
-                prediction_cell = resize_image(
+                prediction_cell = stack.resize_image(
                     prediction_cell, (height, width), "bilinear")
-                prediction_distance = resize_image(
+                prediction_distance = stack.resize_image(
                     prediction_distance, (height, width), "bilinear")
             else:
-                prediction_cell = resize_image(
+                prediction_cell = stack.resize_image(
                     prediction_cell, (width, height), "bilinear")
-                prediction_distance = resize_image(
+                prediction_distance = stack.resize_image(
                     prediction_distance, (width, height), "bilinear")
 
         # store predictions
