@@ -50,17 +50,19 @@ def detect_spots_colocalization(spots_1, spots_2, voxel_size, threshold=None,
     Returns
     -------
     spots_1_colocalized : np.ndarray
-        Coordinates of the colocalized spots from 'spots_1'.
+        Coordinates of the colocalized spots from 'spots_1' with shape
+        (nb_colocalized_spots,).
     spots_2_colocalized : np.ndarray
-        Coordinates of the colocalized spots from 'spots_2'.
+        Coordinates of the colocalized spots from 'spots_2'with shape
+        (nb_colocalized_spots,).
     distances : np.ndarray, np.float64
-        Distance matrix between spots with shape (nb_spots_1, nb_spots_2). The
-        value ``distances[i, j]`` is the euclidean distance between
-        ``spots_1[i]`` and ``spots_2[j]``.
+        Distance matrix between spots with shape (nb_colocalized_spots,).
     indices_1 : np.ndarray, np.int64
-        Indices of the colocalized spots in 'spots_1'. Optional.
+        Indices of the colocalized spots in 'spots_1' with shape
+        (nb_colocalized_spots,). Optional.
     indices_2 : np.ndarray, np.int64
-        Indices of the colocalized spots in 'spots_2'. Optional.
+        Indices of the colocalized spots in 'spots_2' with shape
+        (nb_colocalized_spots,). Optional.
     threshold : int or float
         Threshold used to discriminate colocalized spots from distant ones.
         Optional.
@@ -128,9 +130,8 @@ def _automated_threshold_setting_colocalization(distances):
     Parameters
     ----------
     distances : np.ndarray, np.float64
-        Distance matrix between spots with shape (nb_spots_1, nb_spots_2). The
-        value ``distances[i, j]`` is the euclidean distance between
-        ``spots_1[i]`` and ``spots_2[j]``.
+        Distance matrix between spots with shape
+        (min(nb_spots_1, nb_spots_2),).
 
     Returns
     -------
@@ -140,7 +141,7 @@ def _automated_threshold_setting_colocalization(distances):
     """
     # get threshold values we want to test
     min_threshold = distances.min()
-    max_threshold = distances.max()
+    max_threshold = distances.max() + 10
     n_candidates = min(int(max_threshold - min_threshold), 10000)
     thresholds = np.linspace(min_threshold, max_threshold, num=n_candidates)
 
@@ -155,7 +156,7 @@ def _automated_threshold_setting_colocalization(distances):
     # select threshold where the break of the distribution is located
     x = thresholds.copy()
     y = -nb_colocalized.copy() + nb_colocalized.max()
-    y_smooth = savgol_filter(y, 501, 3)
+    y_smooth = savgol_filter(y, 501, 3, mode="nearest")
     if y_smooth.size > 0:
         optimal_threshold, _, _ = detection.get_breaking_point(x, y_smooth)
 
@@ -231,7 +232,7 @@ def get_elbow_value_colocalized(spots_1, spots_2, voxel_size):
 
     # get candidate thresholds
     min_threshold = distances.min()
-    max_threshold = distances.max()
+    max_threshold = distances.max() + 10
     n_candidates = min(int(max_threshold - min_threshold), 10000)
     thresholds = np.linspace(min_threshold, max_threshold, num=n_candidates)
 
@@ -246,7 +247,7 @@ def get_elbow_value_colocalized(spots_1, spots_2, voxel_size):
     # select threshold where the break of the distribution is located
     x = thresholds.copy()
     y = -nb_colocalized.copy() + nb_colocalized.max()
-    y_smooth = savgol_filter(y, 501, 3)
+    y_smooth = savgol_filter(y, 501, 3, mode="nearest")
     optimal_threshold, _, _ = detection.get_breaking_point(x, y_smooth)
 
     return thresholds, nb_colocalized, optimal_threshold

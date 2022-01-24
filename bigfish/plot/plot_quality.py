@@ -206,10 +206,10 @@ def plot_elbow(images, voxel_size=None, spot_radius=None, log_kernel_size=None,
         plt.close()
 
 
-def plot_elbow_colocalized(spots_1, spots_2, voxel_size, title=None,
-                           framesize=(5, 5), size_title=20, size_axes=15,
-                           size_legend=15, path_output=None, ext="png",
-                           show=True):
+def plot_elbow_colocalized(spots_1, spots_2, voxel_size, threshold_max=None,
+                           title=None, framesize=(5, 5), size_title=20,
+                           size_axes=15, size_legend=15, path_output=None,
+                           ext="png", show=True):
     """Plot the elbow curve that allows an automated colocalized spot
     detection.
 
@@ -223,6 +223,8 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size, title=None,
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
         dimensions.
+    threshold_max : int, float or None
+        Maximum threshold value to consider.
     title : str or None
         Title of the plot.
     framesize : tuple
@@ -244,6 +246,7 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size, title=None,
     """
     # check parameters
     stack.check_parameter(
+        threshold_max=(int, float, type(None)),
         title=(str, list, type(None)),
         framesize=tuple,
         size_title=int,
@@ -292,10 +295,8 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size, title=None,
             label="Selected threshold")
 
     #  define xlim
-    diff = min(len(spots_1), len(spots_2)) - count_colocalized
-    diff_rate = diff / min(len(spots_1), len(spots_2))
-    max_x = (diff_rate < 0.05).sum()
-    plt.xlim((0, max_x))
+    if threshold_max is not None:
+        plt.xlim((0, threshold_max))
 
     # axes
     if title is not None:
