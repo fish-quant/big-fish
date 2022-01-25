@@ -26,6 +26,38 @@ from skimage.transform import resize
 
 # ### Image normalization ###
 
+def compute_image_standardization(image):
+    """Normalize image by computing its z score.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to normalize with shape (y, x).
+
+    Returns
+    -------
+    normalized_image : np.ndarray
+        Normalized image with shape (y, x).
+
+    """
+    # check parameters
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16, np.float32])
+
+    # check image is in 2D
+    if len(image.shape) != 2:
+        raise ValueError("'image' should be a 2-d array. Not {0}-d array"
+                         .format(len(image.shape)))
+
+    # compute mean and standard deviation
+    m = np.mean(image)
+    adjusted_stddev = max(np.std(image), 1.0 / np.sqrt(image.size))
+
+    # normalize image
+    normalized_image = (image - m) / adjusted_stddev
+
+    return normalized_image
+
+
 def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     """Rescale tensor values up to its dtype range (unsigned/signed integers)
     or between 0 and 1 (float).
@@ -484,35 +516,3 @@ def get_marge_padding(height, width, x):
                      [marge_sup_width_l, marge_sup_width_r]]
 
     return marge_padding
-
-
-def compute_image_standardization(image):
-    """Normalize image by computing its z score.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image to normalize with shape (y, x).
-
-    Returns
-    -------
-    normalized_image : np.ndarray
-        Normalized image with shape (y, x).
-
-    """
-    # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8, np.uint16, np.float32])
-
-    # check image is in 2D
-    if len(image.shape) != 2:
-        raise ValueError("'image' should be a 2-d array. Not {0}-d array"
-                         .format(len(image.shape)))
-
-    # compute mean and standard deviation
-    m = np.mean(image)
-    adjusted_stddev = max(np.std(image), 1.0 / np.sqrt(image.size))
-
-    # normalize image
-    normalized_image = (image - m) / adjusted_stddev
-
-    return normalized_image
