@@ -24,8 +24,8 @@ Match nuclei and cells:
 
 * :func:`bigfish.segmentation.match_nuc_cell`
 
-See an example of application `here <https://github.com/fish-quant/big-fish-ex
-amples/blob/master/notebooks/4%20-%20Segment%20nuclei%20and%20cells.ipynb/>`_.
+See an example of application `here <https://github.com/fish-quant/big-fish-
+examples/blob/master/notebooks/4%20-%20Segment%20nuclei%20and%20cells.ipynb>`_.
 
 .. autofunction:: label_instances
 .. autofunction:: merge_labels

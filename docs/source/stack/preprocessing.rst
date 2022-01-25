@@ -5,14 +5,31 @@ Image preparation
 
 .. currentmodule:: bigfish.stack
 
-Functions used to normalize, cast, project or filter images.
+Functions used to normalize, format, cast, project or filter images.
 
 Normalize images
 ================
 
 Rescale or contrast pixel intensity:
 
+* :func:`bigfish.stack.rescale`
+* :func:`bigfish.stack.compute_image_standardization`
+
 .. autofunction:: rescale
+.. autofunction:: compute_image_standardization
+
+------------
+
+Format images
+=============
+
+Resize and pad images:
+
+* :func:`bigfish.stack.resize_image`
+* :func:`bigfish.stack.get_marge_padding`
+
+.. autofunction:: resize_image
+.. autofunction:: get_marge_padding
 
 ------------
 
@@ -101,7 +118,7 @@ Build a 2D projection by removing the out-of-focus z-slices/pixels:
 
 * :func:`bigfish.stack.focus_projection`
 
-.. autofunction:: bigfish.stack.compute_focus
+.. autofunction:: compute_focus
 .. autofunction:: in_focus_selection
 .. autofunction:: get_in_focus_indices
 .. autofunction:: focus_projection
