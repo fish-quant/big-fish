@@ -14,7 +14,6 @@ import pandas as pd
 from scipy import ndimage as ndi
 
 import bigfish.stack as stack
-import bigfish.segmentation as segmentation
 
 from skimage.measure import regionprops
 from skimage.measure import find_contours
@@ -398,8 +397,8 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
             continue
 
         # get boundaries coordinates for cell
-        cell_coord = segmentation.from_binary_to_coord(cell_mask)
-        cell_coord = segmentation.complete_coord_boundaries(cell_coord)
+        cell_coord = from_binary_to_coord(cell_mask)
+        cell_coord = complete_coord_boundaries(cell_coord)
         cell_coord[:, 0] -= min_y
         cell_coord[:, 1] -= min_x
         cell_results["cell_coord"] = cell_coord
@@ -419,8 +418,8 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
                 continue
 
             # get boundaries coordinates for nucleus
-            nuc_coord = segmentation.from_binary_to_coord(nuc_mask)
-            nuc_coord = segmentation.complete_coord_boundaries(nuc_coord)
+            nuc_coord = from_binary_to_coord(nuc_mask)
+            nuc_coord = complete_coord_boundaries(nuc_coord)
             nuc_coord[:, 0] -= min_y
             nuc_coord[:, 1] -= min_x
             cell_results["nuc_coord"] = nuc_coord
