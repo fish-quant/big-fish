@@ -5,6 +5,19 @@ Features engineering
 
 .. currentmodule:: bigfish.classification
 
+Prepare input coordinates
+=========================
+
+Format input coordinates and compute intermediary results to prepare features
+computation:
+
+.. autofunction:: prepare_extracted_data
+
+------------
+
+Compute features
+================
+
 Functions to compute features about cell morphology and RNAs localization.
 There are two main functions to compute spatial and morphological features are:
 
@@ -22,8 +35,8 @@ Group of features can be computed separately:
 * :func:`bigfish.classification.features_area`
 * :func:`bigfish.classification.features_centrosome`
 
-See an example of application `here <http://localhost:8888/notebooks/big-fish-
-examples/notebooks/7%20-%20Analyze%20coordinates.ipynb/>`_.
+See an example of application `here <https://github.com/fish-quant/big-fish-
+examples/blob/master/notebooks/7%20-%20Analyze%20coordinates.ipynb>`_.
 
 .. autofunction:: compute_features
 .. autofunction:: get_features_name

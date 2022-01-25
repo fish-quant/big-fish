@@ -11,7 +11,6 @@ import bigfish.stack as stack
 import numpy as np
 
 from skimage.measure import regionprops
-from skimage.transform import resize
 
 
 # TODO make functions compatible with different type of integers
@@ -66,9 +65,10 @@ def compute_mean_diameter(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -104,9 +104,10 @@ def compute_mean_convexity_ratio(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -141,9 +142,10 @@ def compute_surface_ratio(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     # compute surface ratio
     surface_instances = image_label > 0
@@ -168,9 +170,10 @@ def count_instances(image_label):
 
     """
     # check parameters
-    stack.check_array(image_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
 
     indices = set(image_label.ravel())
     if 0 in indices:
@@ -179,116 +182,3 @@ def count_instances(image_label):
         nb_instances = len(indices)
 
     return nb_instances
-
-
-# ### Format and crop images ###
-
-def resize_image(image, output_shape, method="bilinear"):
-    """Resize an image with bilinear interpolation or nearest neighbor method.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image to resize.
-    output_shape : Tuple[int]
-        Shape of the resized image.
-    method : str
-        Interpolation method to use.
-
-    Returns
-    -------
-    image_resized : np.ndarray
-        Resized image.
-
-    """
-    # check parameters
-    stack.check_parameter(output_shape=tuple, method=str)
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32])
-
-    # resize image
-    if method == "bilinear":
-        image_resized = resize(image, output_shape,
-                               mode="reflect", preserve_range=True,
-                               order=1, anti_aliasing=True)
-    elif method == "nearest":
-        image_resized = resize(image, output_shape,
-                               mode="reflect", preserve_range=True,
-                               order=0, anti_aliasing=False)
-    else:
-        raise ValueError("Method {0} is not available. Choose between "
-                         "'bilinear' or 'nearest' instead.".format(method))
-
-    # cast output dtype
-    image_resized = image_resized.astype(image.dtype)
-
-    return image_resized
-
-
-def get_marge_padding(height, width, x):
-    """Pad image to make its shape a multiple of `x`.
-
-    Parameters
-    ----------
-    height : int
-        Original height of the image.
-    width : int
-        Original width of the image.
-    x : int
-        Padded image have a `height` and `width` multiple of `x`.
-
-    Returns
-    -------
-    marge_padding : List[List]
-        List of lists with the format
-        [[`marge_height_t`, `marge_height_b`], [`marge_width_l`,
-        `marge_width_r`]].
-
-    """
-    # check parameters
-    stack.check_parameter(height=int, width=int, x=int)
-
-    # pad height and width to make it multiple of x
-    marge_sup_height = x - (height % x)
-    marge_sup_height_l = int(marge_sup_height / 2)
-    marge_sup_height_r = marge_sup_height - marge_sup_height_l
-    marge_sup_width = x - (width % x)
-    marge_sup_width_l = int(marge_sup_width / 2)
-    marge_sup_width_r = marge_sup_width - marge_sup_width_l
-    marge_padding = [[marge_sup_height_l, marge_sup_height_r],
-                     [marge_sup_width_l, marge_sup_width_r]]
-
-    return marge_padding
-
-
-def compute_image_standardization(image):
-    """Normalize image by computing its z score.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image to normalize with shape (y, x).
-
-    Returns
-    -------
-    normalized_image : np.ndarray
-        Normalized image with shape (y, x).
-
-    """
-    # check parameters
-    stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16, np.float32])
-
-    # check image is in 2D
-    if len(image.shape) != 2:
-        raise ValueError("'image' should be a 2-d array. Not {0}-d array"
-                         .format(len(image.shape)))
-
-    # compute mean and standard deviation
-    m = np.mean(image)
-    adjusted_stddev = max(np.std(image), 1.0 / np.sqrt(image.size))
-
-    # normalize image
-    normalized_image = (image - m) / adjusted_stddev
-
-    return normalized_image

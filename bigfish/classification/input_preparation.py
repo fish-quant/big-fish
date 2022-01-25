@@ -81,18 +81,23 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
         Distance map from the centrosome with shape (y, x), in pixels.
 
     """
+    # TODO allow RNA coordinates in float64 and int64
     # check parameters
     stack.check_parameter(ndim=(int, type(None)))
     if rna_coord is not None and ndim is None:
         raise ValueError("'ndim' should be specified (2 or 3).")
 
     # check arrays and make masks binary
-    stack.check_array(cell_mask, ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        cell_mask,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
     cell_mask = cell_mask.astype(bool)
     if nuc_mask is not None:
-        stack.check_array(nuc_mask, ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
+        stack.check_array(
+            nuc_mask,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64, bool])
         nuc_mask = nuc_mask.astype(bool)
     if rna_coord is not None:
         stack.check_array(rna_coord, ndim=2, dtype=np.int64)
@@ -106,8 +111,9 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
     # get cell centroid and a distance map from its localisation
     centroid_cell = _get_centroid_surface(cell_mask)
-    distance_centroid_cell = _get_centroid_distance_map(centroid_cell,
-                                                        cell_mask)
+    distance_centroid_cell = _get_centroid_distance_map(
+        centroid_cell,
+        cell_mask)
 
     # prepare arrays relative to the nucleus
     if nuc_mask is not None:
@@ -124,8 +130,9 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
         # get nucleus centroid and a distance map from its localisation
         centroid_nuc = _get_centroid_surface(nuc_mask)
-        distance_centroid_nuc = _get_centroid_distance_map(centroid_nuc,
-                                                           cell_mask)
+        distance_centroid_nuc = _get_centroid_distance_map(
+            centroid_nuc,
+            cell_mask)
 
     else:
         cell_mask_out_nuc = None
@@ -159,12 +166,14 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
             if len(rna_coord_out_nuc) == 0:
                 centroid_rna_out_nuc = np.array([0] * ndim, dtype=np.int64)
             else:
-                centroid_rna_out_nuc = _get_centroid_rna(rna_coord_out_nuc,
-                                                         ndim)
+                centroid_rna_out_nuc = _get_centroid_rna(
+                    rna_coord_out_nuc,
+                    ndim)
 
             # build rna distance map (outside nucleus)
             distance_centroid_rna_out_nuc = _get_centroid_distance_map(
-                centroid_rna_out_nuc, cell_mask)
+                centroid_rna_out_nuc,
+                cell_mask)
 
         else:
             rna_coord_out_nuc = None
@@ -186,22 +195,31 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
             distance_centrosome = distance_cell.copy()
         else:
             distance_centrosome = _get_centrosome_distance_map(
-                centrosome_coord, cell_mask)
+                centrosome_coord,
+                cell_mask)
 
     else:
         distance_centrosome = None
 
     # gather cell, nucleus, rna and centrosome data
-    prepared_inputs = (cell_mask,
-                       distance_cell, distance_cell_normalized,
-                       centroid_cell, distance_centroid_cell,
-                       nuc_mask, cell_mask_out_nuc,
-                       distance_nuc, distance_nuc_normalized,
-                       centroid_nuc, distance_centroid_nuc,
-                       rna_coord_out_nuc,
-                       centroid_rna, distance_centroid_rna,
-                       centroid_rna_out_nuc, distance_centroid_rna_out_nuc,
-                       distance_centrosome)
+    prepared_inputs = (
+        cell_mask,
+        distance_cell,
+        distance_cell_normalized,
+        centroid_cell,
+        distance_centroid_cell,
+        nuc_mask,
+        cell_mask_out_nuc,
+        distance_nuc,
+        distance_nuc_normalized,
+        centroid_nuc,
+        distance_centroid_nuc,
+        rna_coord_out_nuc,
+        centroid_rna,
+        distance_centroid_rna,
+        centroid_rna_out_nuc,
+        distance_centroid_rna_out_nuc,
+        distance_centrosome)
 
     return prepared_inputs
 

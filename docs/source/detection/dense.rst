@@ -21,7 +21,7 @@ It is also possible to perform the main steps of this decomposition separately:
 * :func:`bigfish.detection.simulate_gaussian_mixture`
 
 See an example of application `here <https://github.com/fish-quant/big-fish-
-examples/blob/master/notebooks/5%20-%20Detect%20spots.ipynb/>`_.
+examples/blob/master/notebooks/5%20-%20Detect%20spots.ipynb>`_.
 
 .. autofunction:: decompose_dense
 .. autofunction:: get_dense_region

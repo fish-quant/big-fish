@@ -10,9 +10,9 @@ Getting started
 ===============
 
 To avoid dependency conflicts, we recommend the the use of a dedicated
-`virtual <https://docs.python.org/3.6/library/venv.html/>`_ or `conda
+`virtual <https://docs.python.org/3.6/library/venv.html>`_ or `conda
 <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-
-environments.html/>`_ environment.  In a terminal run the command:
+environments.html>`_ environment.  In a terminal run the command:
 
 .. code-block:: bash
 
@@ -24,7 +24,7 @@ We recommend two options to then install Big-FISH in your virtual environment.
 Download the package from PyPi
 ------------------------------
 
-Use the package manager `pip <https://pip.pypa.io/en/stable/>`_ to install
+Use the package manager `pip <https://pip.pypa.io/en/stable>`_ to install
 Big-FISH. In a terminal run the command:
 
 .. code-block:: bash
@@ -35,7 +35,7 @@ Clone package from Github
 -------------------------
 
 Clone the project's `Github repository <https://github.com/fish-quant/big-
-fish/>`_ and install it manually with the following commands:
+fish>`_ and install it manually with the following commands:
 
 .. code-block:: bash
 
@@ -49,7 +49,7 @@ Examples
 ========
 
 Several examples are available as `Jupyter notebooks <https://github.com/fish-
-quant/big-fish-examples/tree/master/notebooks/>`_:
+quant/big-fish-examples/tree/master/notebooks>`_:
 
 #. Read and write images.
 #. Normalize and filter images.
@@ -62,7 +62,7 @@ quant/big-fish-examples/tree/master/notebooks/>`_:
 You can also run these example online with `mybinder <https://mybinder.org/v2/
 gh/fish-quant/fq-imjoy/binder?urlpath=git-pull%3Frepo%3Dhttps%253A%252F%252F
 github.com%252Ffish-quant%252Fbig-fish-examples%26urlpath%3Dtree%252Fbig-fish-
-examples%252Fnotebooks%26branch%3Dmaster/>`_. The remote server can take a bit
+examples%252Fnotebooks%26branch%3Dmaster>`_. The remote server can take a bit
 of time to start.
 
 ------------
@@ -86,14 +86,13 @@ API reference
    detection/dense
    detection/subpixel
    detection/cluster
+   detection/colocalization
 
 ------------
 
 .. toctree::
    :caption: Segmentation
 
-   segmentation/thresholding
-   segmentation/input
    segmentation/nucleus
    segmentation/cell
    segmentation/postprocessing
@@ -104,9 +103,7 @@ API reference
    :caption: Analysis
 
    classification/extraction
-   classification/input
    classification/features
-
 
 ------------
 
@@ -118,11 +115,12 @@ API reference
    plot/plot_segmentation
    plot/plot_coordinate
 
-
 ------------
 
-* :ref:`Utility functions<utils overview>`: Sanity checks, get constant values,
-  compute hash, save plots, etc...
+.. toctree::
+   :caption: Utils
+
+   utils/utils
 
 ------------
 
@@ -130,4 +128,4 @@ Support
 =======
 
 If you have any question relative to the package, please open an `issue
-<https://github.com/fish-quant/big-fish/issues/>`_ on Github.
+<https://github.com/fish-quant/big-fish/issues>`_ on Github.

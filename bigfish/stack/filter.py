@@ -91,16 +91,19 @@ def mean_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.float32, np.float64, np.uint8, np.uint16])
-    check_parameter(kernel_shape=str,
-                    kernel_size=(int, tuple, list))
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.uint8, np.uint16])
+    check_parameter(
+        kernel_shape=str,
+        kernel_size=(int, tuple, list))
 
     # build kernel
-    kernel = _define_kernel(shape=kernel_shape,
-                            size=kernel_size,
-                            dtype=np.float64)
+    kernel = _define_kernel(
+        shape=kernel_shape,
+        size=kernel_size,
+        dtype=np.float64)
     n = kernel.sum()
     kernel /= n
 
@@ -131,16 +134,19 @@ def median_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8, np.uint16])
-    check_parameter(kernel_shape=str,
-                    kernel_size=(int, tuple, list))
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16])
+    check_parameter(
+        kernel_shape=str,
+        kernel_size=(int, tuple, list))
 
     # get kernel
-    kernel = _define_kernel(shape=kernel_shape,
-                            size=kernel_size,
-                            dtype=image.dtype)
+    kernel = _define_kernel(
+        shape=kernel_shape,
+        size=kernel_size,
+        dtype=image.dtype)
 
     # apply filter
     image_filtered = rank.median(image, kernel)
@@ -169,16 +175,19 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8, np.uint16])
-    check_parameter(kernel_shape=str,
-                    kernel_size=(int, tuple, list))
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16])
+    check_parameter(
+        kernel_shape=str,
+        kernel_size=(int, tuple, list))
 
     # get kernel
-    kernel = _define_kernel(shape=kernel_shape,
-                            size=kernel_size,
-                            dtype=image.dtype)
+    kernel = _define_kernel(
+        shape=kernel_shape,
+        size=kernel_size,
+        dtype=image.dtype)
 
     # apply filter
     image_filtered = rank.maximum(image, kernel)
@@ -207,16 +216,19 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8, np.uint16])
-    check_parameter(kernel_shape=str,
-                    kernel_size=(int, tuple, list))
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16])
+    check_parameter(
+        kernel_shape=str,
+        kernel_size=(int, tuple, list))
 
     # get kernel
-    kernel = _define_kernel(shape=kernel_shape,
-                            size=kernel_size,
-                            dtype=image.dtype)
+    kernel = _define_kernel(
+        shape=kernel_shape,
+        size=kernel_size,
+        dtype=image.dtype)
 
     # apply filter
     image_filtered = rank.minimum(image, kernel)
@@ -236,10 +248,10 @@ def log_filter(image, sigma):
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    sigma : float, int, Tuple(float, int) or List(float, int)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. Can be computed
-        with :func:`bigfish.stack.get_sigma`.
+    sigma : int, float, Tuple(float, int) or List(float, int)
+        Standard deviation used for the gaussian kernel (one for each
+        dimension). If it's a scalar, the same standard deviation is applied
+        to every dimensions.
 
     Returns
     -------
@@ -248,9 +260,10 @@ def log_filter(image, sigma):
 
     """
     # check parameters
-    check_array(image,
-                ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(sigma=(float, int, tuple, list))
 
     # we cast the data in np.float to allow negative values
@@ -264,8 +277,8 @@ def log_filter(image, sigma):
     # check sigma
     if isinstance(sigma, (tuple, list)):
         if len(sigma) != image.ndim:
-            raise ValueError("'sigma' must be a scalar or a sequence with the "
-                             "same length as 'image.ndim'.")
+            raise ValueError("'sigma' must be a scalar or a sequence with {0} "
+                             "elements.".format(image.ndim))
 
     # we apply LoG filter
     image_filtered = gaussian_laplace(image_float, sigma=sigma)
@@ -292,10 +305,10 @@ def gaussian_filter(image, sigma, allow_negative=False):
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    sigma : float, int, Tuple(float, int) or List(float, int)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. Can be computed
-        with :func:`bigfish.stack.get_sigma`.
+    sigma : int, float, Tuple(float, int) or List(float, int)
+        Standard deviation used for the gaussian kernel (one for each
+        dimension). If it's a scalar, the same standard deviation is applied
+        to every dimensions.
     allow_negative : bool
         Allow negative values after the filtering or clip them to 0. Not
         compatible with unsigned integer images.
@@ -307,15 +320,23 @@ def gaussian_filter(image, sigma, allow_negative=False):
 
     """
     # check parameters
-    check_array(image,
-                ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    check_parameter(sigma=(float, int, tuple, list),
-                    allow_negative=bool)
+    check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    check_parameter(
+        sigma=(float, int, tuple, list),
+        allow_negative=bool)
 
+    # check parameters consistency
     if image.dtype in [np.uint8, np.uint16] and allow_negative:
         raise ValueError("Negative values are impossible with unsigned "
                          "integer image.")
+    # check sigma
+    if isinstance(sigma, (tuple, list)):
+        if len(sigma) != image.ndim:
+            raise ValueError("'sigma' must be a scalar or a sequence with {0} "
+                             "elements.".format(image.ndim))
 
     # we cast the data in np.float to allow negative values
     if image.dtype == np.uint8:
@@ -364,16 +385,18 @@ def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
 
     """
     # compute background noise with a large mean filter
-    background = mean_filter(image,
-                             kernel_shape=kernel_shape,
-                             kernel_size=kernel_size)
+    background = mean_filter(
+        image,
+        kernel_shape=kernel_shape,
+        kernel_size=kernel_size)
 
     # subtract the background from the original image, clipping negative
     # values to 0
     mask = image > background
-    image_without_back = np.subtract(image, background,
-                                     out=np.zeros_like(image),
-                                     where=mask)
+    image_without_back = np.subtract(
+        image, background,
+        out=np.zeros_like(image),
+        where=mask)
 
     return image_without_back
 
@@ -386,10 +409,10 @@ def remove_background_gaussian(image, sigma):
     ----------
     image : np.ndarray
         Image to process with shape (z, y, x) or (y, x).
-    sigma : float, int, Tuple(float, int) or List(float, int)
-        Sigma used for the gaussian filter (one for each dimension). If it's a
-        scalar, the same sigma is applied to every dimensions. Can be computed
-        with :func:`bigfish.stack.get_sigma`.
+    sigma : int, float, Tuple(float, int) or List(float, int)
+        Standard deviation used for the gaussian kernel (one for each
+        dimension). If it's a scalar, the same standard deviation is applied
+        to every dimensions.
 
     Returns
     -------
@@ -398,15 +421,15 @@ def remove_background_gaussian(image, sigma):
 
     """
     # apply a gaussian filter
-    image_filtered = gaussian_filter(image, sigma,
-                                     allow_negative=False)
+    image_filtered = gaussian_filter(image, sigma, allow_negative=False)
 
     # subtract the gaussian filter
     out = np.zeros_like(image)
-    image_no_background = np.subtract(image, image_filtered,
-                                      out=out,
-                                      where=(image > image_filtered),
-                                      dtype=image.dtype)
+    image_no_background = np.subtract(
+        image, image_filtered,
+        out=out,
+        where=(image > image_filtered),
+        dtype=image.dtype)
 
     return image_no_background
 
@@ -434,19 +457,22 @@ def dilation_filter(image, kernel_shape=None, kernel_size=None):
 
     """
     # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
-    check_parameter(kernel_shape=(str, type(None)),
-                    kernel_size=(int, tuple, list, type(None)))
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
+    check_parameter(
+        kernel_shape=(str, type(None)),
+        kernel_size=(int, tuple, list, type(None)))
 
     # get kernel
     if kernel_shape is None or kernel_size is None:
         kernel = None
     else:
-        kernel = _define_kernel(shape=kernel_shape,
-                                size=kernel_size,
-                                dtype=image.dtype)
+        kernel = _define_kernel(
+            shape=kernel_shape,
+            size=kernel_size,
+            dtype=image.dtype)
 
     # apply filter
     if image.dtype == bool:
@@ -480,19 +506,22 @@ def erosion_filter(image, kernel_shape=None, kernel_size=None):
 
     """
     # check parameters
-    check_array(image,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
-    check_parameter(kernel_shape=(str, type(None)),
-                    kernel_size=(int, tuple, list, type(None)))
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
+    check_parameter(
+        kernel_shape=(str, type(None)),
+        kernel_size=(int, tuple, list, type(None)))
 
     # get kernel
     if kernel_shape is None or kernel_size is None:
         kernel = None
     else:
-        kernel = _define_kernel(shape=kernel_shape,
-                                size=kernel_size,
-                                dtype=image.dtype)
+        kernel = _define_kernel(
+            shape=kernel_shape,
+            size=kernel_size,
+            dtype=image.dtype)
 
     # apply filter
     if image.dtype == bool:

@@ -7,6 +7,13 @@ Nucleus segmentation
 
 Functions used to segment nuclei.
 
+Apply thresholding
+==================
+
+Thresholding is the most standard and direct binary segmentation method:
+
+.. autofunction:: thresholding
+
 Apply a Unet-based model (3-classes)
 ====================================
 
@@ -19,8 +26,8 @@ Segment nuclei:
 * :func:`bigfish.segmentation.apply_unet_3_classes`
 * :func:`bigfish.segmentation.from_3_classes_to_instances`
 
-See an example of application `here <https://github.com/fish-quant/big-fish-ex
-amples/blob/master/notebooks/4%20-%20Segment%20nuclei%20and%20cells.ipynb/>`_.
+See an example of application `here <https://github.com/fish-quant/big-fish-
+examples/blob/master/notebooks/4%20-%20Segment%20nuclei%20and%20cells.ipynb>`_.
 
 .. autofunction:: unet_3_classes_nuc
 .. autofunction:: apply_unet_3_classes

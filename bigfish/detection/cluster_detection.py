@@ -8,14 +8,17 @@ structures.
 """
 
 import numpy as np
+
 import bigfish.stack as stack
+
+from .utils import convert_spot_coordinates
+
 from sklearn.cluster import DBSCAN
 
 
 # ### Detect clusters ###
 
-def detect_clusters(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
-                    nb_min_spots=4):
+def detect_clusters(spots, voxel_size, radius=350, nb_min_spots=4):
     """Cluster spots and detect relevant aggregated structures.
 
     #. If two spots are distant within a specific radius, we consider they are
@@ -24,14 +27,13 @@ def detect_clusters(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
 
     Parameters
     ----------
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinates of the detected spots with shape (nb_spots, 3) or
         (nb_spots, 2).
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, spots are
-        considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
     radius : int
         The maximum distance between two samples for one to be considered as
         in the neighborhood of the other. Radius expressed in nanometer.
@@ -42,44 +44,49 @@ def detect_clusters(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
 
     Returns
     -------
-    clustered_spots : np.ndarray, np.int64
+    clustered_spots : np.ndarray
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the cluster assigned to the spot. If no cluster was
         assigned, value is -1.
-    clusters : np.ndarray, np.int64
+    clusters : np.ndarray
         Array with shape (nb_clusters, 5) or (nb_clusters, 4). One coordinate
         per dimension for the clusters centroid (zyx or yx coordinates), the
         number of spots detected in the clusters and its index.
 
     """
+    # TODO check that the behavior is the same with float64 and int64
+    #  coordinates
     # check parameters
-    stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          radius=int,
-                          nb_min_spots=int)
+    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        radius=int,
+        nb_min_spots=int)
 
-    # check number of dimensions
+    # check consistency between parameters
+    dtype = spots.dtype
     ndim = spots.shape[1]
     if ndim not in [2, 3]:
         raise ValueError("Spot coordinates should be in 2 or 3 dimensions, "
                          "not {0}.".format(ndim))
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided spot coordinates has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing.".format(ndim))
-    if ndim == 2:
-        voxel_size_z = None
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
 
     # case where no spot were detected
     if spots.size == 0:
-        clustered_spots = np.array([], dtype=np.int64).reshape((0, ndim + 1))
-        clusters = np.array([], dtype=np.int64).reshape((0, ndim + 2))
+        clustered_spots = np.array([], dtype=dtype).reshape((0, ndim + 1))
+        clusters = np.array([], dtype=dtype).reshape((0, ndim + 2))
         return clustered_spots, clusters
 
     # cluster spots
     clustered_spots = _cluster_spots(
-        spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots)
+        spots, voxel_size, radius, nb_min_spots)
 
     # extract and shape clusters information
     clusters = _extract_information(clustered_spots)
@@ -87,50 +94,17 @@ def detect_clusters(spots, voxel_size_z=None, voxel_size_yx=100, radius=350,
     return clustered_spots, clusters
 
 
-def _convert_spot_coordinates(spots, voxel_size_z, voxel_size_yx):
-    """Convert spots coordinates from pixel to nanometer.
-
-    Parameters
-    ----------
-    spots : np.ndarray, np.int64
-        Coordinates of the detected spots with shape (nb_spots, 3) or
-        (nb_spots, 2).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-
-    Returns
-    -------
-    spots_nanometer : np.ndarray, np.int64
-        Coordinates of the detected spots with shape (nb_spots, 3) or
-        (nb_spots, 3), in nanometer.
-
-    """
-    # convert spots coordinates in nanometer
-    spots_nanometer = spots.copy()
-    if spots.shape[1] == 3:
-        spots_nanometer[:, 0] *= voxel_size_z
-        spots_nanometer[:, 1:] *= voxel_size_yx
-
-    else:
-        spots_nanometer *= voxel_size_yx
-
-    return spots_nanometer
-
-
-def _cluster_spots(spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots):
+def _cluster_spots(spots, voxel_size, radius, nb_min_spots):
     """Assign a cluster to each spot.
 
     Parameters
     ----------
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinates of the detected spots with shape (nb_spots, 3) or
         (nb_spots, 2).
-    voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+    voxel_size : Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions).
     radius : int
         The maximum distance between two samples for one to be considered as
         in the neighborhood of the other. Radius expressed in nanometer.
@@ -141,7 +115,7 @@ def _cluster_spots(spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots):
 
     Returns
     -------
-    clustered_spots : np.ndarray, np.int64
+    clustered_spots : np.ndarray
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the cluster assigned to the spot. If no cluster was
@@ -149,9 +123,8 @@ def _cluster_spots(spots, voxel_size_z, voxel_size_yx, radius, nb_min_spots):
 
     """
     # convert spots coordinates in nanometer
-    spots_nanometer = _convert_spot_coordinates(spots=spots,
-                                                voxel_size_z=voxel_size_z,
-                                                voxel_size_yx=voxel_size_yx)
+    spots_nanometer = convert_spot_coordinates(
+        spots=spots, voxel_size=voxel_size)
 
     # fit a DBSCAN clustering algorithm with a specific radius
     dbscan = DBSCAN(eps=radius, min_samples=nb_min_spots)
@@ -171,7 +144,7 @@ def _extract_information(clustered_spots):
 
     Parameters
     ----------
-    clustered_spots : np.ndarray, np.int64
+    clustered_spots : np.ndarray
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx coordinates)
         plus the index of the cluster assigned to the spot. If no cluster was
@@ -179,7 +152,7 @@ def _extract_information(clustered_spots):
 
     Returns
     -------
-    clusters : np.ndarray, np.int64
+    clusters : np.ndarray
         Array with shape (nb_clusters, 5) or (nb_clusters, 4). One coordinate
         per dimension for the cluster centroid (zyx or yx coordinates), the
         number of spots detected in the cluster and its index.

@@ -18,6 +18,7 @@ from .plot_images import plot_cell
 
 from .plot_quality import plot_sharpness
 from .plot_quality import plot_elbow
+from .plot_quality import plot_elbow_colocalized
 
 from .utils import save_plot
 from .utils import get_minmax_values
@@ -36,7 +37,8 @@ _images = [
 
 _quality = [
     "plot_sharpness",
-    "plot_elbow"]
+    "plot_elbow",
+    "plot_elbow_colocalized"]
 
 _utils = [
     "save_plot",

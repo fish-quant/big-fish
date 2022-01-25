@@ -3,8 +3,8 @@
 # License: BSD 3 clause
 
 """
-Functions used to format and clean any intermediate results loaded in or
-returned by a bigfish method.
+Functions used to format, merge and clean intermediate results from different
+channels processed with bigfish.
 """
 
 import warnings
@@ -13,10 +13,10 @@ import numpy as np
 import pandas as pd
 from scipy import ndimage as ndi
 
-from .utils import check_array, check_parameter, get_margin_value
-from .io import save_data_to_csv
+import bigfish.stack as stack
 
-from skimage.measure import regionprops, find_contours
+from skimage.measure import regionprops
+from skimage.measure import find_contours
 from skimage.draw import polygon_perimeter
 
 
@@ -44,14 +44,12 @@ def identify_objects_in_region(mask, coord, ndim):
 
     """
     # check parameters
-    check_parameter(ndim=int)
-    check_array(mask,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64,
-                       bool])
-    check_array(coord,
-                ndim=2,
-                dtype=[np.int64, np.float64])
+    stack.check_parameter(ndim=int)
+    stack.check_array(
+        mask,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(coord, ndim=2, dtype=[np.int64, np.float64])
 
     # check number of dimensions
     if ndim not in [2, 3]:
@@ -121,9 +119,7 @@ def remove_transcription_site(rna, clusters, nuc_mask, ndim):
 
     """
     # check parameters
-    check_array(rna,
-                ndim=2,
-                dtype=[np.int64, np.float64])
+    stack.check_array(rna, ndim=2, dtype=[np.int64, np.float64])
 
     # discriminate foci from transcription sites
     ts, foci = identify_objects_in_region(
@@ -135,6 +131,123 @@ def remove_transcription_site(rna, clusters, nuc_mask, ndim):
     rna_out_ts = rna[~mask_rna_in_ts]
 
     return rna_out_ts, foci, ts
+
+
+# ### Nuclei-cells matching
+
+def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
+    """Match each nucleus instance with the most overlapping cell instance.
+
+    Parameters
+    ----------
+    nuc_label : np.ndarray, np.int or np.uint
+        Labelled image of nuclei with shape (z, y, x) or (y, x).
+    cell_label : np.ndarray, np.int or np.uint
+        Labelled image of cells with shape (z, y, x) or (y, x).
+    single_nuc : bool
+        Authorized only one nucleus in a cell.
+    cell_alone : bool
+        Authorized cell without nucleus.
+
+    Returns
+    -------
+    new_nuc_label : np.ndarray, np.int or np.uint
+        Labelled image of nuclei with shape (z, y, x) or (y, x).
+    new_cell_label : np.ndarray, np.int or np.uint
+        Labelled image of cells with shape (z, y, x) or (y, x).
+
+    """
+    # check parameters
+    stack.check_array(
+        nuc_label,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        cell_label,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int64])
+
+    # initialize new labelled images
+    new_nuc_label = np.zeros_like(nuc_label)
+    new_cell_label = np.zeros_like(cell_label)
+    remaining_cell_label = cell_label.copy()
+
+    # loop over nuclei
+    i_instance = 1
+    max_nuc_label = nuc_label.max()
+    for i_nuc in range(1, max_nuc_label + 1):
+
+        # get nuc mask
+        nuc_mask = nuc_label == i_nuc
+
+        # check if a nucleus is labelled with this value
+        if nuc_mask.sum() == 0:
+            continue
+
+        # check if a cell is labelled with this value
+        i_cell = _get_most_frequent_value(cell_label[nuc_mask])
+        if i_cell == 0:
+            continue
+
+        # get cell mask
+        cell_mask = cell_label == i_cell
+
+        # ensure nucleus is totally included in cell
+        cell_mask |= nuc_mask
+        cell_label[cell_mask] = i_cell
+        remaining_cell_label[cell_mask] = i_cell
+
+        # assign cell and nucleus
+        new_nuc_label[nuc_mask] = i_instance
+        new_cell_label[cell_mask] = i_instance
+        i_instance += 1
+
+        # remove pixel already assigned
+        remaining_cell_label[cell_mask] = 0
+
+        # if one nucleus per cell only, we remove the cell as candidate
+        if single_nuc:
+            cell_label[cell_mask] = 0
+
+    # if only cell with nucleus are authorized we stop here
+    if not cell_alone:
+        return new_nuc_label, new_cell_label
+
+    # loop over remaining cells
+    max_remaining_cell_label = remaining_cell_label.max()
+    for i_cell in range(1, max_remaining_cell_label + 1):
+
+        # get cell mask
+        cell_mask = remaining_cell_label == i_cell
+
+        # check if a cell is labelled with this value
+        if cell_mask.sum() == 0:
+            continue
+
+        # add cell in the result
+        new_cell_label[cell_mask] = i_instance
+        i_instance += 1
+
+    return new_nuc_label, new_cell_label
+
+
+def _get_most_frequent_value(array):
+    """Count the most frequent value in a array.
+
+    Parameters
+    ----------
+    array : np.ndarray, np.uint or np.int
+        Array-like object.
+
+    Returns
+    -------
+    value : int
+        Most frequent integer in the array.
+
+    """
+    value = np.argmax(np.bincount(array))
+
+    return value
 
 
 # ### Cell extraction ###
@@ -193,18 +306,25 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
 
     """
     # check parameters
-    check_parameter(ndim=int,
-                    others_coord=(dict, type(None)),
-                    others_image=(dict, type(None)),
-                    remove_cropped_cell=bool,
-                    check_nuc_in_cell=bool)
-    check_array(cell_label, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_parameter(
+        ndim=int,
+        others_coord=(dict, type(None)),
+        others_image=(dict, type(None)),
+        remove_cropped_cell=bool,
+        check_nuc_in_cell=bool)
+    stack.check_array(
+        cell_label,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
     if nuc_label is not None:
-        check_array(nuc_label, ndim=2, dtype=[np.uint8, np.uint16, np.int64])
+        stack.check_array(
+            nuc_label,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64])
     if rna_coord is not None:
-        check_array(rna_coord, ndim=2, dtype=[np.int64, np.float64])
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int64, np.float64])
     if image is not None:
-        check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+        stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
     actual_keys = ["cell_id", "bbox", "cell_coord", "cell_mask", "nuc_coord",
                    "nuc_mask", "rna_coord", "image"]
     if others_coord is not None:
@@ -215,7 +335,7 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
             else:
                 actual_keys.append(key)
             array = others_coord[key]
-            check_array(array, ndim=2, dtype=[np.int64, np.float64])
+            stack.check_array(array, ndim=2, dtype=[np.int64, np.float64])
             if array.shape[1] < ndim:
                 warnings.warn("Array in 'others_coord' have less coordinates "
                               "({0}) than the minimum number of spatial "
@@ -232,13 +352,13 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
             else:
                 actual_keys.append(key)
             image_ = others_image[key]
-            check_array(image_, ndim=2, dtype=[np.uint8, np.uint16])
+            stack.check_array(image_, ndim=2, dtype=[np.uint8, np.uint16])
             if image_.shape != image.shape:
                 warnings.warn("Image in 'others_image' does not have the same "
                               "shape ({0}) than original image ({1})."
                               .format(image_.shape, image.shape),
                               UserWarning)
-    if rna_coord.shape[1] < ndim:
+    if rna_coord is not None and rna_coord.shape[1] < ndim:
         warnings.warn("'rna_coord' have less coordinates ({0}) than the "
                       "minimum number of spatial dimension we "
                       "consider ({1}).".format(rna_coord.shape[1], ndim),
@@ -311,7 +431,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
         # get coordinates of the spots detected in the cell
         if rna_coord is not None:
             rna_in_cell, _ = identify_objects_in_region(
-                cell_mask, rna_coord, ndim)
+                cell_mask,
+                rna_coord,
+                ndim)
             rna_in_cell[:, ndim - 2] -= min_y
             rna_in_cell[:, ndim - 1] -= min_x
             cell_results["rna_coord"] = rna_in_cell
@@ -321,7 +443,9 @@ def extract_cell(cell_label, ndim, nuc_label=None, rna_coord=None,
             for key in others_coord:
                 array = others_coord[key]
                 element_in_cell, _ = identify_objects_in_region(
-                    cell_mask, array, ndim)
+                    cell_mask,
+                    array,
+                    ndim)
                 element_in_cell[:, ndim - 2] -= min_y
                 element_in_cell[:, ndim - 1] -= min_x
                 cell_results[key] = element_in_cell
@@ -419,12 +543,11 @@ def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
 
     """
     # check parameters
-    check_array(spots,
-                ndim=2,
-                dtype=[np.int64, np.float64])
-    check_parameter(z_lim=(tuple, type(None)),
-                    y_lim=(tuple, type(None)),
-                    x_lim=(tuple, type(None)))
+    stack.check_array(spots, ndim=2, dtype=[np.int64, np.float64])
+    stack.check_parameter(
+        z_lim=(tuple, type(None)),
+        y_lim=(tuple, type(None)),
+        x_lim=(tuple, type(None)))
 
     # extract spots
     extracted_spots = spots.copy()
@@ -480,16 +603,17 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     """
     # check parameters
-    check_parameter(fov_results=list,
-                    ndim=int,
-                    path_output=(str, type(None)))
+    stack.check_parameter(
+        fov_results=list,
+        ndim=int,
+        path_output=(str, type(None)))
 
     # case if no cell were detected
     # TODO make it consistent with the case where there are cells
     if len(fov_results) == 0:
         df = pd.DataFrame({"cell_id": []})
         if path_output is not None:
-            save_data_to_csv(df, path_output)
+            stack.save_data_to_csv(df, path_output)
         return df
 
     # check extra coordinates to summarize
@@ -523,7 +647,9 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
             if "nuc_mask" in cell_results:
                 nuc_mask = cell_results["nuc_mask"]
                 rna_in_nuc, rna_out_nuc = identify_objects_in_region(
-                    nuc_mask, rna_coord, ndim)
+                    nuc_mask,
+                    rna_coord,
+                    ndim)
                 _nb_rna_in_nuc.append(len(rna_in_nuc))
                 _nb_rna_out_nuc.append(len(rna_out_nuc))
 
@@ -564,12 +690,12 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     # save dataframe
     if path_output is not None:
-        save_data_to_csv(df, path_output)
+        stack.save_data_to_csv(df, path_output)
 
     return df
 
 
-# ### Segmentation postprocessing ###
+# Postprocessing
 
 def center_mask_coord(main, others=None):
     """Center a 2-d binary mask (surface or boundaries) or a 2-d localization
@@ -600,20 +726,22 @@ def center_mask_coord(main, others=None):
     """
     # TODO allow the case when coordinates do not represent external boundaries
     # check parameters
-    check_array(main,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64, bool])
-    check_parameter(others=(list, type(None)))
+    stack.check_array(
+        main,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_parameter(others=(list, type(None)))
     if others is not None and len(others) != 0:
         for x in others:
             if x is None:
                 continue
-            check_array(x,
-                        ndim=2,
-                        dtype=[np.uint8, np.uint16, np.int64, bool])
+            stack.check_array(
+                x,
+                ndim=2,
+                dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # initialize parameter
-    marge = get_margin_value()
+    marge = stack.get_margin_value()
 
     # compute by how much we need to move the main object to center it
     if main.shape[1] == 2:
@@ -689,9 +817,10 @@ def from_boundaries_to_surface(binary_boundaries):
 
     """
     # check parameters
-    check_array(binary_boundaries,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        binary_boundaries,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # from binary boundaries to binary surface
     binary_surface = ndi.binary_fill_holes(binary_boundaries)
@@ -714,9 +843,10 @@ def from_surface_to_boundaries(binary_surface):
 
     """
     # check parameters
-    check_array(binary_surface,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        binary_surface,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
     original_dtype = binary_surface.dtype
 
     # pad the binary surface in case object if on the edge
@@ -753,9 +883,10 @@ def from_binary_to_coord(binary):
 
     """
     # check parameters
-    check_array(binary,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_array(
+        binary,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
 
     # we enlarge the binary mask with one pixel to be sure the external
     # boundaries of the object still fit within the frame
@@ -786,9 +917,7 @@ def complete_coord_boundaries(coord):
 
     """
     # check parameters
-    check_array(coord,
-                ndim=2,
-                dtype=[np.int64])
+    stack.check_array(coord, ndim=2, dtype=[np.int64])
 
     # for each array in the list, complete its coordinates using the scikit
     # image method 'polygon_perimeter'
@@ -828,10 +957,10 @@ def from_coord_to_frame(coord, external_coord=True):
 
     """
     # check parameter
-    check_parameter(external_coord=bool)
+    stack.check_parameter(external_coord=bool)
 
     # initialize marge
-    marge = get_margin_value()
+    marge = stack.get_margin_value()
 
     # from 2D coordinates boundaries to binary boundaries
     if external_coord:
@@ -847,7 +976,7 @@ def from_coord_to_frame(coord, external_coord=True):
     return frame_shape, min_y, min_x, marge
 
 
-def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
+def from_coord_to_surface(cell_coord, nuc_coord=None, rna_coord=None,
                           external_coord=True):
     """Convert 2-d coordinates to a binary matrix with the surface of the
     object.
@@ -861,8 +990,8 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
 
     Parameters
     ----------
-    cyt_coord : np.ndarray, np.int64
-        Array of cytoplasm boundaries coordinates with shape (nb_points, 2).
+    cell_coord : np.ndarray, np.int64
+        Array of cell boundaries coordinates with shape (nb_points, 2).
     nuc_coord : np.ndarray, np.int64
         Array of nucleus boundaries coordinates with shape (nb_points, 2).
     rna_coord : np.ndarray, np.int64
@@ -873,8 +1002,8 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
 
     Returns
     -------
-    cyt_surface : np.ndarray, bool
-        Binary image of cytoplasm surface with shape (y, x).
+    cell_surface : np.ndarray, bool
+        Binary image of cell surface with shape (y, x).
     nuc_surface : np.ndarray, bool
         Binary image of nucleus surface with shape (y, x).
     rna_binary : np.ndarray, bool
@@ -884,32 +1013,26 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
 
     """
     # check parameters
-    check_array(cyt_coord,
-                ndim=2,
-                dtype=[np.int64])
+    stack.check_array(cell_coord, ndim=2, dtype=[np.int64])
     if nuc_coord is not None:
-        check_array(nuc_coord,
-                    ndim=2,
-                    dtype=[np.int64])
+        stack.check_array(nuc_coord, ndim=2, dtype=[np.int64])
     if rna_coord is not None:
-        check_array(rna_coord,
-                    ndim=2,
-                    dtype=[np.int64])
-    check_parameter(external_coord=bool)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int64])
+    stack.check_parameter(external_coord=bool)
 
     # center coordinates
-    cyt_coord_, [nuc_coord_, rna_coord_] = center_mask_coord(
-        main=cyt_coord,
+    cell_coord_, [nuc_coord_, rna_coord_] = center_mask_coord(
+        main=cell_coord,
         others=[nuc_coord, rna_coord])
 
     # get the binary frame
     frame_shape, min_y, min_x, marge = from_coord_to_frame(
-        coord=cyt_coord_,
+        coord=cell_coord_,
         external_coord=external_coord)
 
     # from coordinates to binary external boundaries
-    cyt_boundaries_ext = np.zeros(frame_shape, dtype=bool)
-    cyt_boundaries_ext[cyt_coord_[:, 0], cyt_coord_[:, 1]] = True
+    cell_boundaries_ext = np.zeros(frame_shape, dtype=bool)
+    cell_boundaries_ext[cell_coord_[:, 0], cell_coord_[:, 1]] = True
     if nuc_coord_ is not None:
         nuc_boundaries_ext = np.zeros(frame_shape, dtype=bool)
         nuc_boundaries_ext[nuc_coord_[:, 0], nuc_coord_[:, 1]] = True
@@ -917,14 +1040,14 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
         nuc_boundaries_ext = None
 
     # from binary external boundaries to binary external surface
-    cyt_surface_ext = from_boundaries_to_surface(cyt_boundaries_ext)
+    cell_surface_ext = from_boundaries_to_surface(cell_boundaries_ext)
     if nuc_boundaries_ext is not None:
         nuc_surface_ext = from_boundaries_to_surface(nuc_boundaries_ext)
     else:
         nuc_surface_ext = None
 
     # from binary external surface to binary surface
-    cyt_surface = cyt_surface_ext & (~cyt_boundaries_ext)
+    cell_surface = cell_surface_ext & (~cell_boundaries_ext)
     if nuc_surface_ext is not None:
         nuc_surface = nuc_surface_ext & (~nuc_boundaries_ext)
     else:
@@ -943,4 +1066,4 @@ def from_coord_to_surface(cyt_coord, nuc_coord=None, rna_coord=None,
         rna_binary = None
         new_rna_coord = None
 
-    return cyt_surface, nuc_surface, rna_binary, new_rna_coord
+    return cell_surface, nuc_surface, rna_binary, new_rna_coord

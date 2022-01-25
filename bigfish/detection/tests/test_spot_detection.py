@@ -10,3 +10,4 @@ Unitary tests for bigfish.detection.spot_detection module.
 # TODO test bigfish.detection.local_maximum_detection
 # TODO test bigfish.detection.spots_thresholding
 # TODO test bigfish.detection.automated_threshold_setting
+# TODO test bigfish.detection.get_elbow_values

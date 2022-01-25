@@ -87,8 +87,6 @@ def create_colormap():
         Colormap for matplotlib.
 
     """
-    import matplotlib.pyplot as plt
-
     values = np.linspace(0, 1, 256)
     np.random.shuffle(values)
     colormap = plt.cm.colors.ListedColormap(plt.cm.YlGnBu(values))

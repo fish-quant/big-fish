@@ -1,7 +1,7 @@
 .. _plot_segmentation overview:
 
-Segmentation plots
-******************
+Segmentation plot
+*****************
 
 .. currentmodule:: bigfish.plot
 

@@ -9,9 +9,7 @@ Class and functions to segment nucleus.
 import numpy as np
 
 import bigfish.stack as stack
-from .utils import resize_image
-from .utils import get_marge_padding
-from .utils import compute_image_standardization
+
 from .postprocess import label_instances
 from .postprocess import clean_segmentation
 
@@ -68,8 +66,9 @@ def apply_unet_3_classes(model, image, target_size=None,
 
     """
     # check parameters
-    stack.check_parameter(target_size=(int, type(None)),
-                          test_time_augmentation=bool)
+    stack.check_parameter(
+        target_size=(int, type(None)),
+        test_time_augmentation=bool)
     stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get original shape
@@ -90,16 +89,16 @@ def apply_unet_3_classes(model, image, target_size=None,
         new_height = int(np.round(height * ratio))
         new_width = int(np.round(width * ratio))
         new_shape = (new_height, new_width)
-        image_to_process = resize_image(image, new_shape, "bilinear")
+        image_to_process = stack.resize_image(image, new_shape, "bilinear")
 
     # get padding marge to make it multiple of 16
-    marge_padding = get_marge_padding(new_height, new_width, x=16)
+    marge_padding = stack.get_marge_padding(new_height, new_width, x=16)
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
     image_to_process = pad(image_to_process, marge_padding, mode='symmetric')
 
     # standardize and cast image
-    image_to_process = compute_image_standardization(image_to_process)
+    image_to_process = stack.compute_image_standardization(image_to_process)
     image_to_process = image_to_process.astype(np.float32)
 
     # augment images
@@ -131,10 +130,10 @@ def apply_unet_3_classes(model, image, target_size=None,
         # from the image augmentation
         if target_size is not None:
             if i in [0, 1, 2, 6]:
-                prediction = resize_image(
+                prediction = stack.resize_image(
                     prediction, (height, width), "bilinear")
             else:
-                prediction = resize_image(
+                prediction = stack.resize_image(
                     prediction, (width, height), "bilinear")
 
         # store predictions
@@ -251,9 +250,10 @@ def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
 
     # build the binary mask for the missing nuclei
     missing_mask = image_filtered > 0
-    missing_mask = clean_segmentation(missing_mask,
-                                      small_object_size=size_nuclei,
-                                      fill_holes=True)
+    missing_mask = clean_segmentation(
+        missing_mask,
+        small_object_size=size_nuclei,
+        fill_holes=True)
     missing_mask = stack.dilation_filter(missing_mask, "disk", 20)
 
     # TODO improve the thresholds

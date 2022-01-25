@@ -6,7 +6,10 @@
 Unitary tests for bigfish.detection.spot_modeling module.
 """
 
-# TODO test bigfish.detection.fit_subpixel
-# TODO test bigfish.detection.build_reference_spot
+
 # TODO test bigfish.detection.modelize_spot
+# TODO test bigfish.detection.initialize_grid
+# TODO test bigfish.detection.gaussian_2d
+# TODO test bigfish.detection.gaussian_3d
 # TODO test bigfish.detection.precompute_erf
+# TODO test bigfish.detection.fit_subpixel

@@ -38,8 +38,8 @@ Segment cells:
 * :func:`bigfish.segmentation.apply_unet_distance_double`
 * :func:`bigfish.segmentation.from_distance_to_instances`
 
-See an example of application `here <https://github.com/fish-quant/big-fish-ex
-amples/blob/master/notebooks/4%20-%20Segment%20nuclei%20and%20cells.ipynb/>`_.
+See an example of application `here <https://github.com/fish-quant/big-fish-
+examples/blob/master/notebooks/4%20-%20Segment%20nuclei%20and%20cells.ipynb>`_.
 
 .. autofunction:: unet_distance_edge_double
 .. autofunction:: apply_unet_distance_double

@@ -26,7 +26,7 @@ def label_instances(image_binary):
     Parameters
     ----------
     image_binary : np.ndarray, bool
-        Binary segmented image with shape (y, x).
+        Binary segmented image with shape (z, y, x) or (y, x).
 
     Returns
     -------
@@ -35,7 +35,7 @@ def label_instances(image_binary):
 
     """
     # check parameters
-    stack.check_array(image_binary, ndim=2, dtype=bool)
+    stack.check_array(image_binary, ndim=[2, 3], dtype=bool)
 
     # label instances
     image_label = label(image_binary)
@@ -51,19 +51,19 @@ def merge_labels(image_label_1, image_label_2):
     Parameters
     ----------
     image_label_1 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
     image_label_2 : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
 
     Returns
     -------
     image_label : np.ndarray, np.int64
-        Labelled image with shape (y, x).
+        Labelled image with shape (z, y, x) or (y, x).
 
     """
     # check parameters
-    stack.check_array(image_label_1, ndim=2, dtype=np.int64)
-    stack.check_array(image_label_2, ndim=2, dtype=np.int64)
+    stack.check_array(image_label_1, ndim=[2, 3], dtype=np.int64)
+    stack.check_array(image_label_2, ndim=[2, 3], dtype=np.int64)
 
     # count number of instances
     nb_instances_1 = image_label_1.max()
@@ -82,8 +82,8 @@ def merge_labels(image_label_1, image_label_2):
     return image_label
 
 
-# ### Basic segmentation ###
-
+# ### Clean segmentation ###
+# TODO make it available for 3D images
 def clean_segmentation(image, small_object_size=None, fill_holes=False,
                        smoothness=None, delimit_instance=False):
     """Clean segmentation results (binary masks or integer labels).
@@ -111,10 +111,11 @@ def clean_segmentation(image, small_object_size=None, fill_holes=False,
     """
     # check parameters
     stack.check_array(image, ndim=2, dtype=[np.int64, bool])
-    stack.check_parameter(small_object_size=(int, type(None)),
-                          fill_holes=bool,
-                          smoothness=(int, type(None)),
-                          delimit_instance=bool)
+    stack.check_parameter(
+        small_object_size=(int, type(None)),
+        fill_holes=bool,
+        smoothness=(int, type(None)),
+        delimit_instance=bool)
 
     # initialize cleaned image
     image_cleaned = image.copy()
@@ -265,19 +266,26 @@ def remove_disjoint(image):
 
     Parameters
     ----------
-    image : np.ndarray, np.int or np.uint
-        Labelled image with shape (y, x).
+    image : np.ndarray, np.int, np.uint or bool
+        Labelled image with shape (z, y, x) or (y, x).
 
     Returns
     -------
     image_cleaned : np.ndarray, np.int or np.uint
-        Cleaned image with shape (y, x).
+        Cleaned image with shape (z, y, x) or (y, x).
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int64, bool])
+
+    # handle boolean array
+    cast_to_bool = False
+    if image.dtype == bool:
+        cast_to_bool = bool
+        image = image.astype(np.uint8)
 
     # initialize cleaned labels
     image_cleaned = np.zeros_like(image)
@@ -312,119 +320,7 @@ def remove_disjoint(image):
         # add instance in the final label
         image_cleaned[mask_instance] = i
 
+    if cast_to_bool:
+        image_cleaned = image_cleaned.astype(bool)
+
     return image_cleaned
-
-
-# ### Nuclei-cells matching
-
-def match_nuc_cell(nuc_label, cell_label, single_nuc, cell_alone):
-    """Match each nucleus instance with the most overlapping cell instance.
-
-    Parameters
-    ----------
-    nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
-    cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
-    single_nuc : bool
-        Authorized only one nucleus in a cell.
-    cell_alone : bool
-        Authorized cell without nucleus.
-
-    Returns
-    -------
-    new_nuc_label : np.ndarray, np.int or np.uint
-        Labelled image of nuclei with shape (y, x).
-    new_cell_label : np.ndarray, np.int or np.uint
-        Labelled image of cells with shape (y, x).
-
-    """
-    # check parameters
-    stack.check_array(nuc_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
-    stack.check_array(cell_label,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
-
-    # initialize new labelled images
-    new_nuc_label = np.zeros_like(nuc_label)
-    new_cell_label = np.zeros_like(cell_label)
-    remaining_cell_label = cell_label.copy()
-
-    # loop over nuclei
-    i_instance = 1
-    max_nuc_label = nuc_label.max()
-    for i_nuc in range(1, max_nuc_label + 1):
-
-        # get nuc mask
-        nuc_mask = nuc_label == i_nuc
-
-        # check if a nucleus is labelled with this value
-        if nuc_mask.sum() == 0:
-            continue
-
-        # check if a cell is labelled with this value
-        i_cell = _get_most_frequent_value(cell_label[nuc_mask])
-        if i_cell == 0:
-            continue
-
-        # get cell mask
-        cell_mask = cell_label == i_cell
-
-        # ensure nucleus is totally included in cell
-        cell_mask |= nuc_mask
-        cell_label[cell_mask] = i_cell
-        remaining_cell_label[cell_mask] = i_cell
-
-        # assign cell and nucleus
-        new_nuc_label[nuc_mask] = i_instance
-        new_cell_label[cell_mask] = i_instance
-        i_instance += 1
-
-        # remove pixel already assigned
-        remaining_cell_label[cell_mask] = 0
-
-        # if one nucleus per cell only, we remove the cell as candidate
-        if single_nuc:
-            cell_label[cell_mask] = 0
-
-    # if only cell with nucleus are authorized we stop here
-    if not cell_alone:
-        return new_nuc_label, new_cell_label
-
-    # loop over remaining cells
-    max_remaining_cell_label = remaining_cell_label.max()
-    for i_cell in range(1, max_remaining_cell_label + 1):
-
-        # get cell mask
-        cell_mask = remaining_cell_label == i_cell
-
-        # check if a cell is labelled with this value
-        if cell_mask.sum() == 0:
-            continue
-
-        # add cell in the result
-        new_cell_label[cell_mask] = i_instance
-        i_instance += 1
-
-    return new_nuc_label, new_cell_label
-
-
-def _get_most_frequent_value(array):
-    """Count the most frequent value in a array.
-
-    Parameters
-    ----------
-    array : np.ndarray, np.uint or np.int
-        Array-like object.
-
-    Returns
-    -------
-    value : int
-        Most frequent integer in the array.
-
-    """
-    value = np.argmax(np.bincount(array))
-
-    return value

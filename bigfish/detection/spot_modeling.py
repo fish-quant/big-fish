@@ -6,380 +6,89 @@
 Functions to model spots by fitting gaussian parameters.
 """
 
-import warnings
-
 import numpy as np
 
 import bigfish.stack as stack
+
+from .utils import _get_spot_volume
+from .utils import _get_spot_surface
+from .utils import get_object_radius_pixel
 
 from scipy.special import erf
 from scipy.optimize import curve_fit
 
 
-# ### Reference spot ###
-
-def build_reference_spot(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                         psf_z=None, psf_yx=200, alpha=0.5):
-    """Build a median or mean spot in 3 or 2 dimensions as reference.
-
-    Reference spot is computed from a sample of uncropped detected spots. If
-    such sample is not possible, an empty frame is returned.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (z, y, x) or (y, x).
-    spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3) for 3-d images or
-        (nb_spots, 2) for 2-d images.
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, image is
-        considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan, in
-        nanometer. If None, image is considered in 2-d.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan, in
-        nanometer.
-    alpha : int or float
-        Intensity score of the reference spot, between 0 and 1. If 0, reference
-        spot approximates the spot with the lowest intensity. If 1, reference
-        spot approximates the brightest spot. Default is 0.5.
-
-    Returns
-    -------
-    reference_spot : np.ndarray
-        Reference spot in 3-d or 2-d.
-
-    """
-    # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          psf_z=(int, float, type(None)),
-                          psf_yx=(int, float),
-                          alpha=(int, float))
-    if alpha < 0 or alpha > 1:
-        raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
-                         .format(alpha))
-
-    # check number of dimensions
-    ndim = image.ndim
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing.".format(ndim))
-    if ndim == 3 and psf_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'psf_z' parameter is missing.".format(ndim))
-    if ndim != spots.shape[1]:
-        raise ValueError("Provided image has {0} dimensions but spots are "
-                         "detected in {1} dimensions."
-                         .format(ndim, spots.shape[1]))
-    if ndim == 2:
-        voxel_size_z, psf_z = None, None
-
-    # compute radius
-    radius = stack.get_radius(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
-
-    # build reference spot
-    if image.ndim == 3:
-        reference_spot = _build_reference_spot_3d(image, spots, radius, alpha)
-    else:
-        reference_spot = _build_reference_spot_2d(image, spots, radius, alpha)
-
-    return reference_spot
-
-
-def _build_reference_spot_3d(image, spots, radius, alpha):
-    """Build a median or mean spot in 3 dimensions as reference.
-
-    Reference spot is computed from a sample of uncropped detected spots. If
-    such sample is not possible, an empty frame is returned.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (z, y, x).
-    spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 3) for 3-d images.
-    radius : Tuple[float]
-        Radius in pixels of the detected spots, one element per dimension.
-    alpha : int or float
-        Intensity score of the reference spot, between 0 and 1. If 0, reference
-        spot approximates the spot with the lowest intensity. If 1, reference
-        spot approximates the brightest spot.
-
-    Returns
-    -------
-    reference_spot : np.ndarray
-        Reference spot in 3-d.
-
-    """
-    # get a rounded radius for each dimension
-    radius_z = np.ceil(radius[0]).astype(np.int64)
-    z_shape = radius_z * 2 + 1
-    radius_yx = np.ceil(radius[-1]).astype(np.int64)
-    yx_shape = radius_yx * 2 + 1
-
-    # randomly choose some spots to aggregate
-    indices = [i for i in range(spots.shape[0])]
-    np.random.shuffle(indices)
-    indices = indices[:min(2000, spots.shape[0])]
-    candidate_spots = spots[indices, :]
-
-    # collect area around each spot
-    l_reference_spot = []
-    for i_spot in range(candidate_spots.shape[0]):
-
-        # get spot coordinates
-        spot_z, spot_y, spot_x = candidate_spots[i_spot, :]
-
-        # get the volume of the spot
-        image_spot, _, = _get_spot_volume(image, spot_z, spot_y, spot_x,
-                                          radius_z, radius_yx)
-
-        # keep images that are not cropped by the borders
-        if image_spot.shape == (z_shape, yx_shape, yx_shape):
-            l_reference_spot.append(image_spot)
-
-    # if not enough spots are detected
-    if len(l_reference_spot) <= 30:
-        warnings.warn("Problem occurs during the computation of a reference "
-                      "spot. Not enough (uncropped) spots have been detected.",
-                      UserWarning)
-    if len(l_reference_spot) == 0:
-        reference_spot = np.zeros((z_shape, yx_shape, yx_shape),
-                                  dtype=image.dtype)
-        return reference_spot
-
-    # project the different spot images
-    l_reference_spot = np.stack(l_reference_spot, axis=0)
-    alpha_ = alpha * 100
-    reference_spot = np.percentile(l_reference_spot, alpha_, axis=0)
-    reference_spot = reference_spot.astype(image.dtype)
-
-    return reference_spot
-
-
-def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
-    """Get a subimage of a detected spot in 3 dimensions.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (z, y, x).
-    spot_z : np.int64
-        Coordinate of the detected spot along the z axis.
-    spot_y : np.int64
-        Coordinate of the detected spot along the y axis.
-    spot_x : np.int64
-        Coordinate of the detected spot along the x axis.
-    radius_z : int
-        Radius in pixels of the detected spot, along the z axis.
-    radius_yx : int
-        Radius in pixels of the detected spot, on the yx plan.
-
-    Returns
-    -------
-    image_spot : np.ndarray
-        Reference spot in 3-d.
-    _ : Tuple[int]
-        Lower zyx coordinates of the crop.
-
-    """
-    # get boundaries of the volume surrounding the spot
-    z_spot_min = max(0, int(spot_z - radius_z))
-    z_spot_max = min(image.shape[0], int(spot_z + radius_z))
-    y_spot_min = max(0, int(spot_y - radius_yx))
-    y_spot_max = min(image.shape[1], int(spot_y + radius_yx))
-    x_spot_min = max(0, int(spot_x - radius_yx))
-    x_spot_max = min(image.shape[2], int(spot_x + radius_yx))
-
-    # get the volume of the spot
-    image_spot = image[z_spot_min:z_spot_max + 1,
-                       y_spot_min:y_spot_max + 1,
-                       x_spot_min:x_spot_max + 1]
-
-    return image_spot, (z_spot_min, y_spot_min, x_spot_min)
-
-
-def _build_reference_spot_2d(image, spots, radius, alpha):
-    """Build a median or mean spot in 2 dimensions as reference.
-
-    Reference spot is computed from a sample of uncropped detected spots. If
-    such sample is not possible, an empty frame is returned.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (y, x).
-    spots : np.ndarray, np.int64
-        Coordinate of the spots with shape (nb_spots, 2) for 2-d images.
-    radius : Tuple[float]
-        Radius in pixels of the detected spots, one element per dimension.
-    alpha : int or float
-        Intensity score of the reference spot, between 0 and 1. If 0, reference
-        spot approximates the spot with the lowest intensity. If 1, reference
-        spot approximates the brightest spot.
-
-    Returns
-    -------
-    reference_spot : np.ndarray
-        Reference spot in 2-d.
-
-    """
-    # get a rounded radius for each dimension
-    radius_yx = np.ceil(radius[-1]).astype(np.int64)
-    yx_shape = radius_yx * 2 + 1
-
-    # randomly choose some spots to aggregate
-    indices = [i for i in range(spots.shape[0])]
-    np.random.shuffle(indices)
-    indices = indices[:min(2000, spots.shape[0])]
-    candidate_spots = spots[indices, :]
-
-    # collect area around each spot
-    l_reference_spot = []
-    for i_spot in range(candidate_spots.shape[0]):
-
-        # get spot coordinates
-        spot_y, spot_x = candidate_spots[i_spot, :]
-
-        # get the volume of the spot
-        image_spot, _ = _get_spot_surface(image, spot_y, spot_x, radius_yx)
-
-        # keep images that are not cropped by the borders
-        if image_spot.shape == (yx_shape, yx_shape):
-            l_reference_spot.append(image_spot)
-
-    # if not enough spots are detected
-    if len(l_reference_spot) <= 30:
-        warnings.warn("Problem occurs during the computation of a reference "
-                      "spot. Not enough (uncropped) spots have been detected.",
-                      UserWarning)
-    if len(l_reference_spot) == 0:
-        reference_spot = np.zeros((yx_shape, yx_shape), dtype=image.dtype)
-        return reference_spot
-
-    # project the different spot images
-    l_reference_spot = np.stack(l_reference_spot, axis=0)
-    alpha_ = alpha * 100
-    reference_spot = np.percentile(l_reference_spot, alpha_, axis=0)
-    reference_spot = reference_spot.astype(image.dtype)
-
-    return reference_spot
-
-
-def _get_spot_surface(image, spot_y, spot_x, radius_yx):
-    """Get a subimage of a detected spot in 2 dimensions.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image with shape (y, x).
-    spot_y : np.int64
-        Coordinate of the detected spot along the y axis.
-    spot_x : np.int64
-        Coordinate of the detected spot along the x axis.
-    radius_yx : int
-        Radius in pixels of the detected spot, on the yx plan.
-
-    Returns
-    -------
-    image_spot : np.ndarray
-        Reference spot in 2-d.
-    _ : Tuple[int]
-        Lower yx coordinates of the crop.
-
-    """
-    # get boundaries of the surface surrounding the spot
-    y_spot_min = max(0, int(spot_y - radius_yx))
-    y_spot_max = min(image.shape[0], int(spot_y + radius_yx))
-    x_spot_min = max(0, int(spot_x - radius_yx))
-    x_spot_max = min(image.shape[1], int(spot_x + radius_yx))
-
-    # get the surface of the spot
-    image_spot = image[y_spot_min:y_spot_max + 1,
-                       x_spot_min:x_spot_max + 1]
-
-    return image_spot, (y_spot_min, x_spot_min)
-
-
 # ### Spot modelization ###
 
-def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
-                  psf_z=None, psf_yx=200, return_coord=False):
+def modelize_spot(reference_spot, voxel_size, spot_radius, return_coord=False):
     """Fit a gaussian function on the reference spot.
 
     Parameters
     ----------
     reference_spot : np.ndarray
         A 3-d or 2-d image with detected spot and shape (z, y, x) or (y, x).
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, reference
-        spot is considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan, in
-        nanometer. If None, reference spot is considered in 2-d.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan, in
-        nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    spot_radius : int, float, Tuple(int, float) or List(int, float)
+        Radius of the spot, in nanometer. One value per spatial dimension (zyx
+        or yx dimensions). If it's a scalar, the same radius is applied to
+        every dimensions.
     return_coord : bool
-        Return spot coordinates.
+        Return gaussian coordinates.
 
     Returns
     -------
     parameters_fitted : Tuple[float]
         * mu_z : float (optional)
-            Coordinate of the spot center along the z axis, in pixel.
+            Coordinate of the gaussian center along the z axis, in pixel.
         * mu_y : float (optional)
-            Coordinate of the spot center along the y axis, in pixel.
+            Coordinate of the gaussian center along the y axis, in pixel.
         * mu_x : float (optional)
-            Coordinate of the spot center along the x axis, in pixel.
+            Coordinate of the gaussian center along the x axis, in pixel.
         * sigma_z : float
-            Standard deviation of the spot along the z axis, in pixel.
+            Standard deviation of the gaussian along the z axis, in pixel.
             Available only for a 3-d modelization.
         * sigma_yx : float
-            Standard deviation of the spot along the yx axis, in pixel.
+            Standard deviation of the gaussian in the yx plan, in pixel.
         * amplitude : float
-            Amplitude of the spot.
+            Amplitude of the gaussian.
         * background : float
             Background minimum value of the image.
 
     """
     # check parameters
-    stack.check_array(reference_spot,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          psf_z=(int, float, type(None)),
-                          psf_yx=(int, float),
-                          return_coord=bool)
+    stack.check_array(
+        reference_spot,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        spot_radius=(int, float, tuple, list),
+        return_coord=bool)
 
-    # check number of dimensions
+    # check consistency between parameters
     ndim = reference_spot.ndim
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing.".format(ndim))
-    if ndim == 3 and psf_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'psf_z' parameter is missing.".format(ndim))
-    if ndim == 2:
-        voxel_size_z, psf_z = None, None
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+    if isinstance(spot_radius, (tuple, list)):
+        if len(spot_radius) != ndim:
+            raise ValueError(
+                "'spot_radius' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        spot_radius = (spot_radius,) * ndim
 
     # initialize a grid representing the reference spot
     grid, centroid_coord = initialize_grid(
         image_spot=reference_spot,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx,
+        voxel_size=voxel_size,
         return_centroid=True)
 
     # compute amplitude and background of the reference spot
@@ -387,32 +96,30 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
 
     # initialize parameters of the gaussian function
     f = _objective_function(
-        nb_dimension=ndim,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx,
-        psf_z=None,
-        psf_yx=None,
-        psf_amplitude=None)
+        ndim=ndim,
+        voxel_size=voxel_size,
+        sigma_z=None,
+        sigma_yx=None,
+        amplitude=None)
     if ndim == 3:
         # parameters to fit: mu_z, mu_y, mu_x, sigma_z, sigma_yx, amplitude
         # and background
         centroid_z, centroid_y, centroid_x = centroid_coord
-        p0 = [centroid_z, centroid_y, centroid_x, psf_z, psf_yx, amplitude,
-              background]
+        p0 = [centroid_z, centroid_y, centroid_x, spot_radius[0],
+              spot_radius[-1], amplitude, background]
         l_bound = [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, 0]
         u_bound = [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf]
 
     else:
         # parameters to fit: mu_y, mu_x, sigma_yx, amplitude and background
         centroid_y, centroid_x = centroid_coord
-        p0 = [centroid_y, centroid_x, psf_yx, amplitude, background]
+        p0 = [centroid_y, centroid_x, spot_radius[-1], amplitude, background]
         l_bound = [-np.inf, -np.inf, -np.inf, -np.inf, 0]
         u_bound = [np.inf, np.inf, np.inf, np.inf, np.inf]
 
     # fit a gaussian function on this reference spot
-    popt, pcov = _fit_gaussian(f, grid, reference_spot, p0,
-                               lower_bound=l_bound,
-                               upper_bound=u_bound)
+    popt, pcov = _fit_gaussian(
+        f, grid, reference_spot, p0, lower_bound=l_bound, upper_bound=u_bound)
 
     # get optimized parameters to modelize the reference spot as a gaussian
     if ndim == 3:
@@ -442,10 +149,7 @@ def modelize_spot(reference_spot, voxel_size_z=None, voxel_size_yx=100,
             return sigma_yx, amplitude, background
 
 
-# ### Spot modelization: initialization ###
-
-def initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
-                    return_centroid=False):
+def initialize_grid(image_spot, voxel_size, return_centroid=False):
     """Build a grid in nanometer to compute gaussian function values over a
     full volume or surface.
 
@@ -453,11 +157,10 @@ def initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
     ----------
     image_spot : np.ndarray
         An image with detected spot and shape (z, y, x) or (y, x).
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, image spot
-        is considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
     return_centroid : bool
         Compute centroid estimation of the grid.
 
@@ -470,26 +173,45 @@ def initialize_grid(image_spot, voxel_size_z, voxel_size_yx,
         dimension.
 
     """
+    # check parameters
+    stack.check_array(
+        image_spot,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        return_centroid=bool)
+
+    # check consistency between parameters
+    ndim = image_spot.ndim
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+
     # initialize grid in 2-d...
     if image_spot.ndim == 2:
         if return_centroid:
             grid, centroid_y, centroid_x = _initialize_grid_2d(
-                image_spot, voxel_size_yx, return_centroid)
+                image_spot, voxel_size[-1], return_centroid)
             return grid, (centroid_y, centroid_x)
         else:
             grid = _initialize_grid_2d(
-                image_spot, voxel_size_yx, return_centroid)
+                image_spot, voxel_size[-1], return_centroid)
             return grid
 
     # ... or 3-d
     else:
         if return_centroid:
             grid, centroid_z, centroid_y, centroid_x = _initialize_grid_3d(
-                image_spot, voxel_size_z, voxel_size_yx, return_centroid)
+                image_spot, voxel_size[0], voxel_size[-1], return_centroid)
             return grid, (centroid_z, centroid_y, centroid_x)
         else:
             grid = _initialize_grid_3d(
-                image_spot, voxel_size_z, voxel_size_yx, return_centroid)
+                image_spot, voxel_size[0], voxel_size[-1], return_centroid)
             return grid
 
 
@@ -503,9 +225,9 @@ def _initialize_grid_3d(image_spot, voxel_size_z, voxel_size_yx,
     image_spot : np.ndarray
         A 3-d image with detected spot and shape (z, y, x).
     voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+        Size of a voxel along the z axis, in nanometer.
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+        Size of a voxel in the yx plan, in nanometer.
     return_centroid : bool
         Compute centroid estimation of the grid.
 
@@ -562,7 +284,7 @@ def _initialize_grid_2d(image_spot, voxel_size_yx, return_centroid=False):
     image_spot : np.ndarray
         A 2-d image with detected spot and shape (y, x).
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+        Size of a voxel in the yx plan, in nanometer.
     return_centroid : bool
         Compute centroid estimation of the grid.
 
@@ -571,9 +293,9 @@ def _initialize_grid_2d(image_spot, voxel_size_yx, return_centroid=False):
     grid : np.ndarray, np.float32
         A grid with the shape (2, y * x), in nanometer.
     centroid_y : float
-        Estimated centroid of the spot, in nanometer, along the y axis.
+        Estimated centroid of the spot along the y axis, in nanometer.
     centroid_x : float
-        Estimated centroid of the spot, in nanometer, along the x axis.
+        Estimated centroid of the spot along the x axis, in nanometer.
 
     """
     # get targeted size
@@ -613,43 +335,40 @@ def _initialize_background_amplitude(image_spot):
 
     Returns
     -------
-    psf_amplitude : float
+    amplitude : float
         Amplitude of the spot.
-    psf_background : float
+    background : float
         Background minimum value of the voxel.
 
     """
     # compute values
     image_min, image_max = image_spot.min(), image_spot.max()
-    psf_amplitude = image_max - image_min
-    psf_background = image_min
+    amplitude = image_max - image_min
+    background = image_min
 
-    return psf_amplitude, psf_background
+    return amplitude, background
 
 
-# ### Spot modelization: fitting ###
+# ### Pixel fitting ###
 
-def _objective_function(nb_dimension, voxel_size_z, voxel_size_yx, psf_z,
-                        psf_yx, psf_amplitude=None):
+def _objective_function(ndim, voxel_size, sigma_z, sigma_yx,
+                        amplitude):
     """Design the objective function used to fit the gaussian function.
 
     Parameters
     ----------
-    nb_dimension : int
+    ndim : int
         Number of dimensions to consider (2 or 3).
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we
-        consider a 2-d gaussian function.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer. If None, we consider a 2-d gaussian function.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_amplitude : int or float
-        Amplitude of the spot.
+    voxel_size : Tuple(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions).
+    sigma_z : int, float or None
+        Standard deviation of the gaussian along the z axis, in nanometer. If
+        None, we consider a 2-d gaussian function.
+    sigma_yx : int, float or None
+        Standard deviation of the gaussian in the yx plan, in nanometer.
+    amplitude : int, float or None
+        Amplitude of the gaussian.
 
     Returns
     -------
@@ -658,38 +377,38 @@ def _objective_function(nb_dimension, voxel_size_z, voxel_size_yx, psf_z,
 
     """
     # define objective gaussian function
-    if nb_dimension == 3:
-        f = _objective_function_3d(voxel_size_z=voxel_size_z,
-                                   voxel_size_yx=voxel_size_yx,
-                                   psf_z=psf_z,
-                                   psf_yx=psf_yx,
-                                   psf_amplitude=psf_amplitude)
+    if ndim == 3:
+        f = _objective_function_3d(
+            voxel_size_z=voxel_size[0],
+            voxel_size_yx=voxel_size[-1],
+            sigma_z=sigma_z,
+            sigma_yx=sigma_yx,
+            amplitude=amplitude)
     else:
-        f = _objective_function_2d(voxel_size_yx=voxel_size_yx,
-                                   psf_yx=psf_yx,
-                                   psf_amplitude=psf_amplitude)
+        f = _objective_function_2d(
+            voxel_size_yx=voxel_size[-1],
+            sigma_yx=sigma_yx,
+            amplitude=amplitude)
 
     return f
 
 
-def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
-                           psf_amplitude=None):
+def _objective_function_3d(voxel_size_z, voxel_size_yx, sigma_z, sigma_yx,
+                           amplitude):
     """Design the objective function used to fit the gaussian function.
 
     Parameters
     ----------
     voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+        Size of a voxel along the z axis, in nanometer.
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_amplitude : int or float
-        Amplitude of the spot.
+        Size of a voxel in the yx plan, in nanometer.
+    sigma_z : int, float or None
+        Standard deviation of the gaussian along the z axis, in nanometer.
+    sigma_yx : int, float or None
+        Standard deviation of the gaussian in the yx plan, in nanometer.
+    amplitude : int, float or None
+        Amplitude of the gaussian.
 
     Returns
     -------
@@ -698,84 +417,88 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, psf_z, psf_yx,
 
     """
     # sigma is known, we fit mu, amplitude and background
-    if (psf_z is not None
-            and psf_yx is not None
-            and psf_amplitude is None):
-        def f(grid, mu_z, mu_y, mu_x, psf_amplitude, psf_background):
-            values = gaussian_3d(grid=grid,
-                                 mu_z=mu_z,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_z=psf_z,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_z=voxel_size_z,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    if (sigma_z is not None
+            and sigma_yx is not None
+            and amplitude is None):
+        def f(grid, mu_z, mu_y, mu_x, amplitude, background):
+            values = gaussian_3d(
+                grid=grid,
+                mu_z=mu_z,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_z=sigma_z,
+                sigma_yx=sigma_yx,
+                voxel_size_z=voxel_size_z,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     # amplitude is known, we fit sigma, mu and background
-    elif (psf_amplitude is not None
-          and psf_z is None
-          and psf_yx is None):
-        def f(grid, mu_z, mu_y, mu_x, psf_z, psf_yx, psf_background):
-            values = gaussian_3d(grid=grid,
-                                 mu_z=mu_z,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_z=psf_z,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_z=voxel_size_z,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    elif (amplitude is not None
+          and sigma_z is None
+          and sigma_yx is None):
+        def f(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, background):
+            values = gaussian_3d(
+                grid=grid,
+                mu_z=mu_z,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_z=sigma_z,
+                sigma_yx=sigma_yx,
+                voxel_size_z=voxel_size_z,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     # amplitude and sigma are known, we fit mu and background
-    elif (psf_amplitude is not None
-          and psf_z is not None
-          and psf_yx is not None):
-        def f(grid, mu_z, mu_y, mu_x, psf_background):
-            values = gaussian_3d(grid=grid,
-                                 mu_z=mu_z,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_z=psf_z,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_z=voxel_size_z,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    elif (amplitude is not None
+          and sigma_z is not None
+          and sigma_yx is not None):
+        def f(grid, mu_z, mu_y, mu_x, background):
+            values = gaussian_3d(
+                grid=grid,
+                mu_z=mu_z,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_z=sigma_z,
+                sigma_yx=sigma_yx,
+                voxel_size_z=voxel_size_z,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     # we fit mu, sigma, amplitude and background
-    elif (psf_amplitude is None
-          and psf_z is None
-          and psf_yx is None):
-        def f(grid, mu_z, mu_y, mu_x, psf_z, psf_yx, psf_amplitude,
-              psf_background):
-            values = gaussian_3d(grid=grid,
-                                 mu_z=mu_z,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_z=psf_z,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_z=voxel_size_z,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    elif (amplitude is None
+          and sigma_z is None
+          and sigma_yx is None):
+        def f(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, amplitude,
+              background):
+            values = gaussian_3d(
+                grid=grid,
+                mu_z=mu_z,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_z=sigma_z,
+                sigma_yx=sigma_yx,
+                voxel_size_z=voxel_size_z,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     else:
-        raise ValueError("Parameters 'psf_z' and 'psf_yx' should be "
-                         "fixed or optimized together.")
+        raise ValueError("Parameters 'sigma_z' and 'sigma_yx' should be set "
+                         "or optimized together.")
 
     return f
 
 
 # TODO add equations in the docstring
 def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
-                voxel_size_yx, psf_amplitude, psf_background,
+                voxel_size_yx, amplitude, background,
                 precomputed=None):
     """Compute the gaussian function over the grid representing a volume V
     with shape (V_z, V_y, V_x).
@@ -794,17 +517,17 @@ def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
     sigma_z : int or float
         Standard deviation of the gaussian along the z axis, in nanometer.
     sigma_yx : int or float
-        Standard deviation of the gaussian along the yx axis, in nanometer.
+        Standard deviation of the gaussian in the yx plan, in nanometer.
     voxel_size_z : int or float
-        Height of a voxel, in nanometer.
+        Size of a voxel along the z axis, in nanometer.
     voxel_size_yx : int or float
-        size of a voxel, in nanometer.
-    psf_amplitude : float
-        Estimated pixel intensity of a spot.
-    psf_background : float
+        Size of a voxel in the yx plan, in nanometer.
+    amplitude : float
+        Estimated pixel intensity of the gaussian signal.
+    background : float
         Estimated pixel intensity of the background.
-    precomputed : Tuple[np.ndarray]
-        Tuple with one tables of precomputed values for the erf, with shape
+    precomputed : Tuple[np.ndarray] or None
+        Tuple with tables of precomputed values for the erf, with shape
         (nb_value, 2). One table per dimension.
 
     Returns
@@ -847,39 +570,41 @@ def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
         meshgrid_x_plus = meshgrid_x + voxel_size_yx / 2
 
         # compute gaussian function for each voxel (i, j, k) of volume V
-        voxel_integral_z = _rescaled_erf(low=meshgrid_z_minus,
-                                         high=meshgrid_z_plus,
-                                         mu=mu_z,
-                                         sigma=sigma_z)
-        voxel_integral_y = _rescaled_erf(low=meshgrid_y_minus,
-                                         high=meshgrid_y_plus,
-                                         mu=mu_y,
-                                         sigma=sigma_yx)
-        voxel_integral_x = _rescaled_erf(low=meshgrid_x_minus,
-                                         high=meshgrid_x_plus,
-                                         mu=mu_x,
-                                         sigma=sigma_yx)
+        voxel_integral_z = _rescaled_erf(
+            low=meshgrid_z_minus,
+            high=meshgrid_z_plus,
+            mu=mu_z,
+            sigma=sigma_z)
+        voxel_integral_y = _rescaled_erf(
+            low=meshgrid_y_minus,
+            high=meshgrid_y_plus,
+            mu=mu_y,
+            sigma=sigma_yx)
+        voxel_integral_x = _rescaled_erf(
+            low=meshgrid_x_minus,
+            high=meshgrid_x_plus,
+            mu=mu_x,
+            sigma=sigma_yx)
 
     # compute 3-d gaussian values
-    factor = psf_amplitude / (voxel_size_yx ** 2 * voxel_size_z)
+    factor = amplitude / (voxel_size_yx ** 2 * voxel_size_z)
     voxel_integral = voxel_integral_z * voxel_integral_y * voxel_integral_x
-    values = psf_background + factor * voxel_integral
+    values = background + factor * voxel_integral
 
     return values
 
 
-def _objective_function_2d(voxel_size_yx, psf_yx, psf_amplitude=None):
+def _objective_function_2d(voxel_size_yx, sigma_yx, amplitude):
     """Design the objective function used to fit a 2-d gaussian function.
 
     Parameters
     ----------
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
-    psf_amplitude : float
-        Amplitude of the spot.
+        Size of a voxel in the yx plan, in nanometer.
+    sigma_yx : int, float or None
+        Standard deviation of the gaussian in the yx plan, in nanometer.
+    amplitude : int, float or None
+        Amplitude of the gaussian.
 
     Returns
     -------
@@ -888,59 +613,63 @@ def _objective_function_2d(voxel_size_yx, psf_yx, psf_amplitude=None):
 
     """
     # sigma is known, we fit mu, amplitude and background
-    if psf_yx is not None and psf_amplitude is None:
-        def f(grid, mu_y, mu_x, psf_amplitude, psf_background):
-            values = gaussian_2d(grid=grid,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    if sigma_yx is not None and amplitude is None:
+        def f(grid, mu_y, mu_x, amplitude, background):
+            values = gaussian_2d(
+                grid=grid,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_yx=sigma_yx,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     # amplitude is known, we fit sigma, mu and background
-    elif psf_amplitude is not None and psf_yx is None:
-        def f(grid, mu_y, mu_x, psf_yx, psf_background):
-            values = gaussian_2d(grid=grid,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    elif amplitude is not None and sigma_yx is None:
+        def f(grid, mu_y, mu_x, sigma_yx, background):
+            values = gaussian_2d(
+                grid=grid,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_yx=sigma_yx,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     # amplitude and sigma are known, we fit mu and background
-    elif psf_amplitude is not None and psf_yx is not None:
-        def f(grid, mu_y, mu_x, psf_background):
-            values = gaussian_2d(grid=grid,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+    elif amplitude is not None and sigma_yx is not None:
+        def f(grid, mu_y, mu_x, background):
+            values = gaussian_2d(
+                grid=grid,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_yx=sigma_yx,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     # we fit mu, sigma, amplitude and background
     else:
-        def f(grid, mu_y, mu_x, psf_yx, psf_amplitude, psf_background):
-            values = gaussian_2d(grid=grid,
-                                 mu_y=mu_y,
-                                 mu_x=mu_x,
-                                 sigma_yx=psf_yx,
-                                 voxel_size_yx=voxel_size_yx,
-                                 psf_amplitude=psf_amplitude,
-                                 psf_background=psf_background)
+        def f(grid, mu_y, mu_x, sigma_yx, amplitude, background):
+            values = gaussian_2d(
+                grid=grid,
+                mu_y=mu_y,
+                mu_x=mu_x,
+                sigma_yx=sigma_yx,
+                voxel_size_yx=voxel_size_yx,
+                amplitude=amplitude,
+                background=background)
             return values
 
     return f
 
 
 # TODO add equations in the docstring
-def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
-                psf_background, precomputed=None):
+def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, amplitude,
+                background, precomputed=None):
     """Compute the gaussian function over the grid representing a surface S
     with shape (S_y, S_x).
 
@@ -954,15 +683,15 @@ def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
     mu_x : float
         Estimated mean of the gaussian signal along x axis, in nanometer.
     sigma_yx : int or float
-        Standard deviation of the gaussian along the yx axis, in nanometer.
+        Standard deviation of the gaussian in the yx plan, in nanometer.
     voxel_size_yx : int or float
-        size of a voxel, in nanometer.
-    psf_amplitude : float
-        Estimated pixel intensity of a spot.
-    psf_background : float
+        Size of a voxel in the yx plan, in nanometer.
+    amplitude : float
+        Estimated pixel intensity of the gaussian signal.
+    background : float
         Estimated pixel intensity of the background.
-    precomputed : Tuple[np.ndarray]
-        Tuple with one tables of precomputed values for the erf, with shape
+    precomputed : Tuple[np.ndarray] or None
+        Tuple with tables of precomputed values for the erf, with shape
         (nb_value, 2). One table per dimension.
 
     Returns
@@ -999,19 +728,21 @@ def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, psf_amplitude,
         meshgrid_x_plus = meshgrid_x + voxel_size_yx / 2
 
         # compute gaussian function for each voxel (i, j) of surface S
-        voxel_integral_y = _rescaled_erf(low=meshgrid_y_minus,
-                                         high=meshgrid_y_plus,
-                                         mu=mu_y,
-                                         sigma=sigma_yx)
-        voxel_integral_x = _rescaled_erf(low=meshgrid_x_minus,
-                                         high=meshgrid_x_plus,
-                                         mu=mu_x,
-                                         sigma=sigma_yx)
+        voxel_integral_y = _rescaled_erf(
+            low=meshgrid_y_minus,
+            high=meshgrid_y_plus,
+            mu=mu_y,
+            sigma=sigma_yx)
+        voxel_integral_x = _rescaled_erf(
+            low=meshgrid_x_minus,
+            high=meshgrid_x_plus,
+            mu=mu_x,
+            sigma=sigma_yx)
 
     # compute 2-d gaussian values
-    factor = psf_amplitude / (voxel_size_yx ** 2)
+    factor = amplitude / (voxel_size_yx ** 2)
     voxel_integral = voxel_integral_y * voxel_integral_x
-    values = psf_background + factor * voxel_integral
+    values = background + factor * voxel_integral
 
     return values
 
@@ -1064,9 +795,9 @@ def _fit_gaussian(f, grid, image_spot, p0, lower_bound=None, upper_bound=None):
         A 3-d or 2-d image with detected spot and shape (z, y, x) or (y, x).
     p0 : List
         List of parameters to estimate.
-    lower_bound : List
+    lower_bound : List or None
         List of lower bound values for the different parameters.
-    upper_bound : List
+    upper_bound : List or None
         List of upper bound values for the different parameters.
 
     Returns
@@ -1094,21 +825,21 @@ def _fit_gaussian(f, grid, image_spot, p0, lower_bound=None, upper_bound=None):
     return popt, pcov
 
 
-def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
-                   sigma_yx=200, max_grid=200):
+def precompute_erf(ndim, voxel_size, sigma, max_grid=200):
     """Precompute different values for the erf with a nanometer resolution.
 
     Parameters
     ----------
-    voxel_size_z : float or int or None
-        Height of a voxel, in nanometer. If None, we consider a 2-d erf.
-    voxel_size_yx : float or int
-        size of a voxel, in nanometer.
-    sigma_z : float or int or None
-        Standard deviation of the gaussian along the z axis, in nanometer. If
-        None, we consider a 2-d erf.
-    sigma_yx : float or int
-        Standard deviation of the gaussian along the yx axis, in nanometer.
+    ndim : int
+        Number of dimensions to consider (2 or 3).
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    sigma : int, float, Tuple(int, float) or List(int, float)
+        Standard deviation of the gaussian, in nanometer. One value per
+        spatial dimension (zyx or yx dimensions). If it's a scalar, the same
+        value is applied to every dimensions.
     max_grid : int
         Maximum size of the grid on which we precompute the erf, in pixel.
 
@@ -1121,72 +852,90 @@ def precompute_erf(voxel_size_z=None, voxel_size_yx=100, sigma_z=None,
 
     """
     # check parameters
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          sigma_z=(int, float, type(None)),
-                          sigma_yx=(int, float),
-                          max_grid=int)
+    stack.check_parameter(
+        ndim=int,
+        voxel_size=(int, float, tuple, list),
+        sigma=(int, float, tuple, list),
+        max_grid=int)
+    if ndim not in [2, 3]:
+        raise ValueError(
+            "Number of dimensions requested should be 2 or 3, "
+            "not {0}.".format(ndim))
+
+    # check consistency between parameters
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+    if isinstance(sigma, (tuple, list)):
+        if len(sigma) != ndim:
+            raise ValueError(
+                "'sigma' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        sigma = (sigma,) * ndim
 
     # build a grid with a spatial resolution of 1 nm and a size of
     # max_grid * resolution nm
-    max_size_yx = np.ceil(max_grid * voxel_size_yx).astype(np.int64)
+    max_size_yx = np.ceil(max_grid * voxel_size[-1]).astype(np.int64)
     yy = np.array([i for i in range(0, max_size_yx)])
     xx = np.array([i for i in range(0, max_size_yx)])
     mu_y, mu_x = 0, 0
 
     # compute erf values for this grid
-    erf_y = _rescaled_erf(low=yy - voxel_size_yx / 2,
-                          high=yy + voxel_size_yx / 2,
-                          mu=mu_y,
-                          sigma=sigma_yx)
-    erf_x = _rescaled_erf(low=xx - voxel_size_yx / 2,
-                          high=xx + voxel_size_yx / 2,
-                          mu=mu_x,
-                          sigma=sigma_yx)
-
+    erf_y = _rescaled_erf(
+        low=yy - voxel_size[-1] / 2,
+        high=yy + voxel_size[-1] / 2,
+        mu=mu_y,
+        sigma=sigma[-1])
+    erf_x = _rescaled_erf(
+        low=xx - voxel_size[-1] / 2,
+        high=xx + voxel_size[-1] / 2,
+        mu=mu_x,
+        sigma=sigma[-1])
     table_erf_y = np.array([yy, erf_y]).T
     table_erf_x = np.array([xx, erf_x]).T
 
     # precompute erf along z axis if needed
-    if voxel_size_z is None or sigma_z is None:
+    if ndim == 2:
         return table_erf_y, table_erf_x
 
     else:
-        max_size_z = np.ceil(max_grid * voxel_size_z).astype(np.int64)
+        max_size_z = np.ceil(max_grid * voxel_size[0]).astype(np.int64)
         zz = np.array([i for i in range(0, max_size_z)])
         mu_z = 0
-        erf_z = _rescaled_erf(low=zz - voxel_size_z / 2,
-                              high=zz + voxel_size_z / 2,
-                              mu=mu_z,
-                              sigma=sigma_z)
+        erf_z = _rescaled_erf(
+            low=zz - voxel_size[0] / 2,
+            high=zz + voxel_size[0] / 2,
+            mu=mu_z,
+            sigma=sigma[0])
         table_erf_z = np.array([zz, erf_z]).T
         return table_erf_z, table_erf_y, table_erf_x
 
 
 # ### Subpixel fitting ###
 
-def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                 psf_z=None, psf_yx=200):
+def fit_subpixel(image, spots, voxel_size, spot_radius):
     """Fit gaussian signal on every spot to find a subpixel coordinates.
 
     Parameters
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinate of the spots detected, with shape (nb_spots, 3) or
         (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, image is
-        considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan, in
-        nanometer. If None, image is considered in 2-d.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan, in
-        nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    spot_radius : int, float, Tuple(int, float) or List(int, float)
+        Radius of the spot, in nanometer. One value per spatial dimension (zyx
+        or yx dimensions). If it's a scalar, the same radius is applied to
+        every dimensions.
 
     Returns
     -------
@@ -1196,32 +945,43 @@ def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          psf_z=(int, float, type(None)),
-                          psf_yx=(int, float))
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        spot_radius=(int, float, tuple, list))
 
-    # check number of dimensions
+    # check consistency between parameters
     ndim = image.ndim
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing.".format(ndim))
-    if ndim == 3 and psf_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'psf_z' parameter is missing.".format(ndim))
     if ndim != spots.shape[1]:
         raise ValueError("Provided image has {0} dimensions but spots are "
                          "detected in {1} dimensions."
                          .format(ndim, spots.shape[1]))
-    if ndim == 2:
-        voxel_size_z, psf_z = None, None
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+    if isinstance(spot_radius, (tuple, list)):
+        if len(spot_radius) != ndim:
+            raise ValueError(
+                "'spot_radius' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        spot_radius = (spot_radius,) * ndim
 
-    # compute radius
-    radius = stack.get_radius(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+    # compute radius used to crop spot image
+    radius_pixel = get_object_radius_pixel(
+        voxel_size_nm=voxel_size,
+        object_radius_nm=spot_radius,
+        ndim=ndim)
+    radius = [np.sqrt(ndim) * r for r in radius_pixel]
+    radius = tuple(radius)
 
     # loop over every spot
     spots_subpixel = []
@@ -1230,13 +990,18 @@ def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
         # fit subpixel coordinates
         if ndim == 3:
             subpixel_coord = _fit_subpixel_3d(
-                image, coord, radius,
-                voxel_size_z, voxel_size_yx, psf_z, psf_yx)
-
+                image=image, coord=coord,
+                radius_to_crop=radius,
+                voxel_size_z=voxel_size[0],
+                voxel_size_yx=voxel_size[-1],
+                spot_radius_z=spot_radius[0],
+                spot_radius_yx=spot_radius[-1])
         else:
             subpixel_coord = _fit_subpixel_2d(
-                image, coord, radius, voxel_size_yx, psf_yx)
-
+                image=image, coord=coord,
+                radius_to_crop=radius,
+                voxel_size_yx=voxel_size[-1],
+                spot_radius_yx=spot_radius[-1])
         spots_subpixel.append(subpixel_coord)
 
     # format results
@@ -1245,9 +1010,9 @@ def fit_subpixel(image, spots, voxel_size_z=None, voxel_size_yx=100,
     return spots_subpixel
 
 
-def _fit_subpixel_3d(image, coord, radius, voxel_size_z, voxel_size_yx, psf_z,
-                     psf_yx):
-    """Fit a gaussian in a 3-d image.
+def _fit_subpixel_3d(image, coord, radius_to_crop, voxel_size_z, voxel_size_yx,
+                     spot_radius_z, spot_radius_yx):
+    """Fit a 3-d gaussian on a detected spot.
 
     Parameters
     ----------
@@ -1256,18 +1021,17 @@ def _fit_subpixel_3d(image, coord, radius, voxel_size_z, voxel_size_yx, psf_z,
     coord : np.ndarray, np.int64
         Coordinate of the spot detected, with shape (3,). One coordinate per
         dimension (zyx coordinates).
-    radius : Tuple[float]
-        Radius in pixels of the detected spots, one element per dimension.
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer.
+    radius_to_crop : Tuple[float]
+        Enlarged radius of a spot, in pixel, used to crop an image around it.
+        Tuple with 3 scalars (one per dimension zyx).
+    voxel_size_z : int or float
+        Size of a voxel along the z axis, in nanometer.
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan,
-        in nanometer.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Size of a voxel in the yx plan, in nanometer.
+    spot_radius_z : int or float
+        Radius of the spot along the z axis, in nanometer.
+    spot_radius_yx : int or float
+        Radius of the spot in the yx plan, in nanometer.
 
     Returns
     -------
@@ -1278,15 +1042,20 @@ def _fit_subpixel_3d(image, coord, radius, voxel_size_z, voxel_size_yx, psf_z,
     """
     # extract spot image
     image_spot, bbox_low = _get_spot_volume(
-        image, coord[0], coord[1], coord[2], radius[0], radius[1])
+        image=image,
+        spot_z=coord[0],
+        spot_y=coord[1],
+        spot_x=coord[2],
+        radius_z=radius_to_crop[0],
+        radius_yx=radius_to_crop[-1])
 
     # fit gaussian
     try:
-        parameters = modelize_spot(image_spot,
-                                   voxel_size_z=voxel_size_z,
-                                   voxel_size_yx=voxel_size_yx,
-                                   psf_z=psf_z, psf_yx=psf_yx,
-                                   return_coord=True)
+        parameters = modelize_spot(
+            reference_spot=image_spot,
+            voxel_size=(voxel_size_z, voxel_size_yx, voxel_size_yx),
+            spot_radius=(spot_radius_z, spot_radius_yx, spot_radius_yx),
+            return_coord=True)
 
         # format coordinates and ensure it is fitted within the spot image
         z_max, y_max, x_max = image_spot.shape
@@ -1314,8 +1083,9 @@ def _fit_subpixel_3d(image, coord, radius, voxel_size_z, voxel_size_yx, psf_z,
     return new_coord
 
 
-def _fit_subpixel_2d(image, coord, radius, voxel_size_yx, psf_yx):
-    """Fit a gaussian in a 2-d image.
+def _fit_subpixel_2d(image, coord, radius_to_crop, voxel_size_yx,
+                     spot_radius_yx):
+    """Fit a 2-d gaussian on a detected spot.
 
     Parameters
     ----------
@@ -1324,13 +1094,13 @@ def _fit_subpixel_2d(image, coord, radius, voxel_size_yx, psf_yx):
     coord : np.ndarray, np.int64
         Coordinate of the spot detected, with shape (2,). One coordinate per
         dimension (yx coordinates).
-    radius : Tuple[float]
-        Radius in pixels of the detected spots, one element per dimension.
+    radius_to_crop : Tuple[float]
+        Enlarged radius of a spot, in pixel, used to crop an image around it.
+        Tuple with 2 scalars (one per dimension yx).
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan,
-        in nanometer.
+        Size of a voxel in the yx plan, in nanometer.
+    spot_radius_yx : int or float
+        Radius of the spot in the yx plan, in nanometer.
 
     Returns
     -------
@@ -1341,15 +1111,18 @@ def _fit_subpixel_2d(image, coord, radius, voxel_size_yx, psf_yx):
     """
     # extract spot image
     image_spot, bbox_low = _get_spot_surface(
-        image, coord[0], coord[1], radius[0])
+        image=image,
+        spot_y=coord[0],
+        spot_x=coord[1],
+        radius_yx=radius_to_crop[-1])
 
     # fit gaussian
     try:
-        parameters = modelize_spot(image_spot,
-                                   voxel_size_z=None,
-                                   voxel_size_yx=voxel_size_yx,
-                                   psf_z=None, psf_yx=psf_yx,
-                                   return_coord=True)
+        parameters = modelize_spot(
+            reference_spot=image_spot,
+            voxel_size=(voxel_size_yx, voxel_size_yx),
+            spot_radius=(spot_radius_yx, spot_radius_yx),
+            return_coord=True)
 
         # format coordinates and ensure it is fitted within the spot image
         y_max, x_max = image_spot.shape

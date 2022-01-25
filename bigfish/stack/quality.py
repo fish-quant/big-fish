@@ -46,9 +46,10 @@ def compute_focus(image, neighborhood_size=31):
 
     """
     # check parameters
-    check_array(image,
-                ndim=[2, 3],
-                dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(neighborhood_size=(int, tuple, list))
     check_range_value(image, min_=0)
 
@@ -120,12 +121,14 @@ def _compute_focus_2d(image_2d, kernel_size):
 
     # compute focus metric
     ratio_default = np.ones_like(image_2d, dtype=np.float64)
-    ratio_1 = np.divide(image_2d, image_filtered_mean,
-                        out=ratio_default,
-                        where=image_filtered_mean > 0)
-    ratio_2 = np.divide(image_filtered_mean, image_2d,
-                        out=ratio_default,
-                        where=image_2d > 0)
+    ratio_1 = np.divide(
+        image_2d, image_filtered_mean,
+        out=ratio_default,
+        where=image_filtered_mean > 0)
+    ratio_2 = np.divide(
+        image_filtered_mean, image_2d,
+        out=ratio_default,
+        where=image_2d > 0)
     focus = np.where(image_2d >= image_filtered_mean, ratio_1, ratio_2)
 
     return focus

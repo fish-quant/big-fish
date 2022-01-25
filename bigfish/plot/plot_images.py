@@ -9,6 +9,7 @@ Functions to plot 2-d pixel and coordinates images.
 import warnings
 
 import bigfish.stack as stack
+import bigfish.multistack as multistack
 
 from .utils import save_plot, get_minmax_values, create_colormap
 
@@ -58,20 +59,20 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3, 4, 5],
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64,
-                             bool])
-    stack.check_parameter(r=int, c=int, z=int,
-                          rescale=bool,
-                          contrast=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_array(
+        image,
+        ndim=[2, 3, 4, 5],
+        dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64, bool])
+    stack.check_parameter(
+        r=int, c=int, z=int,
+        rescale=bool,
+        contrast=bool,
+        title=(str, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
 
     # get the 2-d image
     if image.ndim == 2:
@@ -145,21 +146,23 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
         images = [images]
 
     # check parameters
-    stack.check_parameter(images=list,
-                          rescale=bool,
-                          contrast=bool,
-                          titles=(str, list, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_parameter(
+        images=list,
+        rescale=bool,
+        contrast=bool,
+        titles=(str, list, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
     for image in images:
-        stack.check_array(image,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64,
-                                 np.float32, np.float64,
-                                 bool])
+        stack.check_array(
+            image,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64,
+                   np.float32, np.float64,
+                   bool])
 
     # we plot 3 images by row maximum
     nrow = int(np.ceil(len(images)/3))
@@ -171,15 +174,16 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
             title = titles[0]
         else:
             title = None
-        plot_yx(images[0],
-                rescale=rescale,
-                contrast=contrast,
-                title=title,
-                framesize=framesize,
-                remove_frame=remove_frame,
-                path_output=path_output,
-                ext=ext,
-                show=show)
+        plot_yx(
+            images[0],
+            rescale=rescale,
+            contrast=contrast,
+            title=title,
+            framesize=framesize,
+            remove_frame=remove_frame,
+            path_output=path_output,
+            ext=ext,
+            show=show)
 
         return
 
@@ -227,8 +231,10 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
                     image = stack.rescale(image, channel_to_stretch=0)
                 ax[row, col].imshow(image)
             if titles is not None:
-                ax[row, col].set_title(titles[i],
-                                       fontweight="bold", fontsize=10)
+                ax[row, col].set_title(
+                    titles[i],
+                    fontweight="bold",
+                    fontsize=10)
 
     plt.tight_layout()
     if path_output is not None:
@@ -272,21 +278,22 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64,
-                             bool])
-    stack.check_array(mask,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64, bool])
-    stack.check_parameter(rescale=bool,
-                          contrast=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list))
+    stack.check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64, bool])
+    stack.check_array(
+        mask,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_parameter(
+        rescale=bool,
+        contrast=bool,
+        title=(str, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list))
 
     # plot
     fig, ax = plt.subplots(1, 3, sharex='col', figsize=framesize)
@@ -373,39 +380,43 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64,
-                             bool])
+    stack.check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64, bool])
     if cell_label is not None:
-        stack.check_array(cell_label,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
+        stack.check_array(
+            cell_label,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64, bool])
     if nuc_label is not None:
-        stack.check_array(nuc_label,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
-    stack.check_parameter(rescale=bool,
-                          contrast=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+        stack.check_array(
+            nuc_label,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_parameter(
+        rescale=bool,
+        contrast=bool,
+        title=(str, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
 
     # get boundaries
     cell_boundaries = None
     nuc_boundaries = None
     if cell_label is not None:
         cell_boundaries = find_boundaries(cell_label, mode='thick')
-        cell_boundaries = np.ma.masked_where(cell_boundaries == 0,
-                                             cell_boundaries)
+        cell_boundaries = np.ma.masked_where(
+            cell_boundaries == 0,
+            cell_boundaries)
     if nuc_label is not None:
         nuc_boundaries = find_boundaries(nuc_label, mode='thick')
-        nuc_boundaries = np.ma.masked_where(nuc_boundaries == 0,
-                                            nuc_boundaries)
+        nuc_boundaries = np.ma.masked_where(
+            nuc_boundaries == 0,
+            nuc_boundaries)
 
     # plot
     if remove_frame:
@@ -473,29 +484,31 @@ def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
 
     """
     # check parameters
-    stack.check_parameter(rescale=bool,
-                          contrast=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64,
-                             bool])
-    stack.check_array(mask_pred,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int32, np.int64,
-                             np.float32, np.float64,
-                             bool])
-    stack.check_array(mask_gt,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int32, np.int64,
-                             np.float32, np.float64,
-                             bool])
+    stack.check_parameter(
+        rescale=bool,
+        contrast=bool,
+        title=(str, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
+    stack.check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64, bool])
+    stack.check_array(
+        mask_pred,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64,
+               bool])
+    stack.check_array(
+        mask_gt,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64,
+               bool])
 
     # plot multiple images
     fig, ax = plt.subplots(1, 3, figsize=framesize)
@@ -545,7 +558,6 @@ def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
 
 # ### Detection plot ###
 
-# TODO allow textual annotations
 def plot_detection(image, spots, shape="circle", radius=3, color="red",
                    linewidth=1, fill=False, rescale=False, contrast=False,
                    title=None, framesize=(15, 10), remove_frame=True,
@@ -565,10 +577,10 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
         among `circle`, `square` or `polygon`. One symbol per array in `spots`.
         If `shape` is a string, the same symbol is used for every elements of
         'spots'.
-    radius : List[int or float] or int or float
-        List of yx radii of the detected spots. One radius per array in
-        `spots`. If `radius` is a scalar, the same value is applied for every
-        elements of `spots`.
+    radius : List[int or float], int or float
+        List of yx radii of the detected spots, in pixel. One radius per array
+        in `spots`. If `radius` is a scalar, the same value is applied for
+        every elements of `spots`.
     color : List[str] or str
         List of colors of the detected spots. One color per array in `spots`.
         If `color` is a string, the same color is applied for every elements
@@ -599,24 +611,25 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64])
-    stack.check_parameter(spots=(list, np.ndarray),
-                          shape=(list, str),
-                          radius=(list, int, float),
-                          color=(list, str),
-                          linewidth=(list, int),
-                          fill=(list, bool),
-                          rescale=bool,
-                          contrast=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64])
+    stack.check_parameter(
+        spots=(list, np.ndarray),
+        shape=(list, str),
+        radius=(list, int, float),
+        color=(list, str),
+        linewidth=(list, int),
+        fill=(list, bool),
+        rescale=bool,
+        contrast=bool,
+        title=(str, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
     if isinstance(spots, list):
         for spots_ in spots:
             stack.check_array(spots_, ndim=2, dtype=[np.int64, np.float64])
@@ -738,22 +751,30 @@ def _define_patch(x, y, shape, radius, color, linewidth, fill):
     """
     # circle
     if shape == "circle":
-        x = plt.Circle((x, y), radius,
-                       color=color,
-                       linewidth=linewidth,
-                       fill=fill)
+        x = plt.Circle(
+            (x, y),
+            radius,
+            color=color,
+            linewidth=linewidth,
+            fill=fill)
     # square
     elif shape == "square":
-        x = plt.Rectangle((x, y), radius, radius,
-                          color=color,
-                          linewidth=linewidth,
-                          fill=fill)
+        x = plt.Rectangle(
+            (x, y),
+            radius,
+            radius,
+            color=color,
+            linewidth=linewidth,
+            fill=fill)
     # polygon
     elif shape == "polygon":
-        x = RegularPolygon((x, y), 5, radius,
-                           color=color,
-                           linewidth=linewidth,
-                           fill=fill)
+        x = RegularPolygon(
+            (x, y),
+            5,
+            radius,
+            color=color,
+            linewidth=linewidth,
+            fill=fill)
     else:
         warnings.warn("shape should take a value among 'circle', 'square' or "
                       "'polygon', but not {0}".format(shape), UserWarning)
@@ -790,18 +811,19 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
 
     """
     # check parameters
-    stack.check_array(reference_spot,
-                      ndim=[2,  3],
-                      dtype=[np.uint8, np.uint16, np.int64,
-                             np.float32, np.float64])
-    stack.check_parameter(rescale=bool,
-                          contrast=bool,
-                          title=(str, type(None)),
-                          framesize=tuple,
-                          remove_frame=bool,
-                          path_output=(str, type(None)),
-                          ext=(str, list),
-                          show=bool)
+    stack.check_array(
+        reference_spot,
+        ndim=[2,  3],
+        dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64])
+    stack.check_parameter(
+        rescale=bool,
+        contrast=bool,
+        title=(str, type(None)),
+        framesize=tuple,
+        remove_frame=bool,
+        path_output=(str, type(None)),
+        ext=(str, list),
+        show=bool)
 
     # project spot in 2-d if necessary
     if reference_spot.ndim == 3:
@@ -821,7 +843,9 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
         plt.imshow(reference_spot)
     else:
         if reference_spot.dtype not in [np.int64, bool]:
-            reference_spot = stack.rescale(reference_spot, channel_to_stretch=0)
+            reference_spot = stack.rescale(
+                reference_spot,
+                channel_to_stretch=0)
         plt.imshow(reference_spot)
     if title is not None and not remove_frame:
         plt.title(title, fontweight="bold", fontsize=25)
@@ -908,25 +932,29 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
     if other_coord is not None:
         stack.check_array(other_coord, ndim=2, dtype=np.int64)
     if image is not None:
-        stack.check_array(image, ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64,
-                                 np.float32, np.float64])
+        stack.check_array(
+            image,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64, np.float32, np.float64])
     if cell_mask is not None:
-        stack.check_array(cell_mask,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
+        stack.check_array(
+            cell_mask,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64, bool])
     if nuc_mask is not None:
-        stack.check_array(nuc_mask,
-                          ndim=2,
-                          dtype=[np.uint8, np.uint16, np.int64, bool])
-    stack.check_parameter(ndim=int,
-                          title=(str, type(None)),
-                          remove_frame=bool,
-                          rescale=bool,
-                          contrast=bool,
-                          framesize=tuple,
-                          path_output=(str, type(None)),
-                          ext=(str, list))
+        stack.check_array(
+            nuc_mask,
+            ndim=2,
+            dtype=[np.uint8, np.uint16, np.int64, bool])
+    stack.check_parameter(
+        ndim=int,
+        title=(str, type(None)),
+        remove_frame=bool,
+        rescale=bool,
+        contrast=bool,
+        framesize=tuple,
+        path_output=(str, type(None)),
+        ext=(str, list))
 
     # plot original image and coordinate representation
     if cell_coord is not None and image is not None:
@@ -943,44 +971,68 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
                 image = stack.rescale(image, channel_to_stretch=0)
             ax[0].imshow(image)
         if cell_mask is not None:
-            cell_boundaries = stack.from_surface_to_boundaries(cell_mask)
-            cell_boundaries = np.ma.masked_where(cell_boundaries == 0,
-                                                 cell_boundaries)
+            cell_boundaries = multistack.from_surface_to_boundaries(
+                cell_mask)
+            cell_boundaries = np.ma.masked_where(
+                cell_boundaries == 0,
+                cell_boundaries)
             ax[0].imshow(cell_boundaries, cmap=ListedColormap(['red']))
         if nuc_mask is not None:
-            nuc_boundaries = stack.from_surface_to_boundaries(nuc_mask)
-            nuc_boundaries = np.ma.masked_where(nuc_boundaries == 0,
-                                                nuc_boundaries)
+            nuc_boundaries = multistack.from_surface_to_boundaries(nuc_mask)
+            nuc_boundaries = np.ma.masked_where(
+                nuc_boundaries == 0,
+                nuc_boundaries)
             ax[0].imshow(nuc_boundaries, cmap=ListedColormap(['blue']))
 
         # coordinate image
-        ax[1].plot(cell_coord[:, 1], cell_coord[:, 0],
-                   c="black", linewidth=2)
+        ax[1].plot(cell_coord[:, 1], cell_coord[:, 0], c="black", linewidth=2)
         if nuc_coord is not None:
-            ax[1].plot(nuc_coord[:, 1], nuc_coord[:, 0],
-                       c="steelblue", linewidth=2)
+            ax[1].plot(
+                nuc_coord[:, 1],
+                nuc_coord[:, 0],
+                c="steelblue",
+                linewidth=2)
         if rna_coord is not None:
-            ax[1].scatter(rna_coord[:, ndim - 1], rna_coord[:, ndim - 2],
-                          s=25, c="firebrick", marker=".")
+            ax[1].scatter(
+                rna_coord[:, ndim - 1],
+                rna_coord[:, ndim - 2],
+                s=25,
+                c="firebrick",
+                marker=".")
         if foci_coord is not None:
             for foci in foci_coord:
-                ax[1].text(foci[ndim-1] + 5, foci[ndim-2] - 5, str(foci[ndim]),
-                           color="darkorange", size=20)
+                ax[1].text(
+                    foci[ndim-1] + 5,
+                    foci[ndim-2] - 5,
+                    str(foci[ndim]),
+                    color="darkorange",
+                    size=20)
             # case where we know which rna belong to a foci
             if rna_coord.shape[1] == ndim + 1:
                 foci_indices = foci_coord[:, ndim + 1]
                 mask_rna_in_foci = np.isin(rna_coord[:, ndim], foci_indices)
                 rna_in_foci_coord = rna_coord[mask_rna_in_foci, :].copy()
-                ax[1].scatter(rna_in_foci_coord[:, ndim - 1],
-                              rna_in_foci_coord[:, ndim - 2],
-                              s=25, c="darkorange", marker=".")
+                ax[1].scatter(
+                    rna_in_foci_coord[:, ndim - 1],
+                    rna_in_foci_coord[:, ndim - 2],
+                    s=25,
+                    c="darkorange",
+                    marker=".")
             # case where we only know the foci centroid
             else:
-                ax[1].scatter(foci_coord[:, ndim - 1], foci_coord[:, ndim - 2],
-                              s=40, c="darkorange", marker="o")
+                ax[1].scatter(
+                    foci_coord[:, ndim - 1],
+                    foci_coord[:, ndim - 2],
+                    s=40,
+                    c="darkorange",
+                    marker="o")
         if other_coord is not None:
-            ax[1].scatter(other_coord[:, ndim - 1], other_coord[:, ndim - 2],
-                          s=25, c="forestgreen", marker="D")
+            ax[1].scatter(
+                other_coord[:, ndim - 1],
+                other_coord[:, ndim - 2],
+                s=25,
+                c="forestgreen",
+                marker="D")
 
         # titles and frames
         _, _, min_y, max_y = ax[1].axis()
@@ -992,10 +1044,14 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             ax[0].axis("off")
             ax[1].axis("off")
         if title is not None:
-            ax[0].set_title("Original image ({0})".format(title),
-                            fontweight="bold", fontsize=10)
-            ax[1].set_title("Coordinate representation ({0})".format(title),
-                            fontweight="bold", fontsize=10)
+            ax[0].set_title(
+                "Original image ({0})".format(title),
+                fontweight="bold",
+                fontsize=10)
+            ax[1].set_title(
+                "Coordinate representation ({0})".format(title),
+                fontweight="bold",
+                fontsize=10)
         plt.tight_layout()
 
         # output
@@ -1018,30 +1074,52 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         # coordinate image
         plt.plot(cell_coord[:, 1], cell_coord[:, 0], c="black", linewidth=2)
         if nuc_coord is not None:
-            plt.plot(nuc_coord[:, 1], nuc_coord[:, 0],
-                     c="steelblue", linewidth=2)
+            plt.plot(
+                nuc_coord[:, 1],
+                nuc_coord[:, 0],
+                c="steelblue",
+                linewidth=2)
         if rna_coord is not None:
-            plt.scatter(rna_coord[:, ndim - 1], rna_coord[:, ndim - 2],
-                        s=25, c="firebrick", marker=".")
+            plt.scatter(
+                rna_coord[:, ndim - 1],
+                rna_coord[:, ndim - 2],
+                s=25,
+                c="firebrick",
+                marker=".")
         if foci_coord is not None:
             for foci in foci_coord:
-                plt.text(foci[ndim-1] + 5, foci[ndim-2] - 5, str(foci[ndim]),
-                         color="darkorange", size=20)
+                plt.text(
+                    foci[ndim-1] + 5,
+                    foci[ndim-2] - 5,
+                    str(foci[ndim]),
+                    color="darkorange",
+                    size=20)
             # case where we know which rna belong to a foci
             if rna_coord.shape[1] == ndim + 1:
                 foci_indices = foci_coord[:, ndim + 1]
                 mask_rna_in_foci = np.isin(rna_coord[:, ndim], foci_indices)
                 rna_in_foci_coord = rna_coord[mask_rna_in_foci, :].copy()
-                plt.scatter(rna_in_foci_coord[:, ndim - 1],
-                            rna_in_foci_coord[:, ndim - 2],
-                            s=25, c="darkorange", marker=".")
+                plt.scatter(
+                    rna_in_foci_coord[:, ndim - 1],
+                    rna_in_foci_coord[:, ndim - 2],
+                    s=25,
+                    c="darkorange",
+                    marker=".")
             # case where we only know the foci centroid
             else:
-                plt.scatter(foci_coord[:, ndim - 1], foci_coord[:, ndim - 2],
-                            s=40, c="darkorange", marker="o")
+                plt.scatter(
+                    foci_coord[:, ndim - 1],
+                    foci_coord[:, ndim - 2],
+                    s=40,
+                    c="darkorange",
+                    marker="o")
         if other_coord is not None:
-            plt.scatter(other_coord[:, ndim - 1], other_coord[:, ndim - 2],
-                        s=25, c="forestgreen", marker="D")
+            plt.scatter(
+                other_coord[:, ndim - 1],
+                other_coord[:, ndim - 2],
+                s=25,
+                c="forestgreen",
+                marker="D")
 
         # titles and frames
         _, _, min_y, max_y = plt.axis()
@@ -1050,8 +1128,10 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         plt.margins(0.01, 0.01)
         plt.axis('scaled')
         if title is not None:
-            plt.title("Coordinate representation ({0})".format(title),
-                      fontweight="bold", fontsize=10)
+            plt.title(
+                "Coordinate representation ({0})".format(title),
+                fontweight="bold",
+                fontsize=10)
         if not remove_frame:
             plt.tight_layout()
 
@@ -1066,7 +1146,14 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
     # plot original image only
     elif cell_coord is None and image is not None:
         plot_segmentation_boundary(
-            image=image, cell_label=cell_mask, nuc_label=nuc_mask,
-            rescale=rescale, contrast=contrast, title=title,
-            framesize=framesize, remove_frame=remove_frame,
-            path_output=path_output, ext=ext, show=show)
+            image=image,
+            cell_label=cell_mask,
+            nuc_label=nuc_mask,
+            rescale=rescale,
+            contrast=contrast,
+            title=title,
+            framesize=framesize,
+            remove_frame=remove_frame,
+            path_output=path_output,
+            ext=ext,
+            show=show)

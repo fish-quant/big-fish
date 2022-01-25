@@ -57,14 +57,18 @@ Compute moving average
 
 ------------
 
-Compute spot scale
-==================
+Convert pixels and nanometers
+=============================
 
-* :func:`bigfish.stack.get_sigma`
-* :func:`bigfish.stack.get_radius`
+.. currentmodule:: bigfish.detection
 
-.. autofunction:: get_sigma
-.. autofunction:: get_radius
+* :func:`bigfish.detection.convert_spot_coordinates`
+* :func:`bigfish.detection.get_object_radius_pixel`
+* :func:`bigfish.detection.get_object_radius_nm`
+
+.. autofunction:: convert_spot_coordinates
+.. autofunction:: get_object_radius_pixel
+.. autofunction:: get_object_radius_nm
 
 ------------
 

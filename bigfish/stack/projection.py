@@ -125,8 +125,9 @@ def focus_projection(image, proportion=5, neighborhood_size=7,
     """
     # check parameters
     check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
-    check_parameter(proportion=(float, int),
-                    neighborhood_size=int)
+    check_parameter(
+        proportion=(float, int),
+        neighborhood_size=int)
     if isinstance(proportion, float) and 0 <= proportion <= 1:
         pass
     elif isinstance(proportion, int) and 0 <= proportion:
@@ -193,10 +194,11 @@ def _one_hot_3d(indices, depth, return_boolean=False):
     """
     # check parameters
     check_parameter(depth=int)
-    check_array(indices,
-                ndim=2,
-                dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                       np.int8, np.int16, np.int32, np.int64])
+    check_array(
+        indices,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+               np.int8, np.int16, np.int32, np.int64])
 
     # initialize the 3-d one-hot matrix
     one_hot = np.zeros((indices.size, depth), dtype=indices.dtype)
@@ -240,9 +242,10 @@ def in_focus_selection(image, focus, proportion):
 
     """
     # check parameters
-    check_array(image,
-                ndim=3,
-                dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    check_array(
+        image,
+        ndim=3,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # select and keep best z-slices
     indices_to_keep = get_in_focus_indices(focus, proportion)

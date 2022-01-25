@@ -7,10 +7,8 @@ Class and functions to segment cells.
 """
 
 import bigfish.stack as stack
+
 from .utils import thresholding
-from .utils import resize_image
-from .utils import get_marge_padding
-from .utils import compute_image_standardization
 from .postprocess import label_instances
 from .postprocess import clean_segmentation
 
@@ -75,8 +73,9 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
 
     """
     # check parameters
-    stack.check_parameter(target_size=(int, type(None)),
-                          test_time_augmentation=bool)
+    stack.check_parameter(
+        target_size=(int, type(None)),
+        test_time_augmentation=bool)
     stack.check_array(nuc, ndim=2, dtype=[np.uint8, np.uint16])
     stack.check_array(cell, ndim=2, dtype=[np.uint8, np.uint16])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
@@ -101,21 +100,21 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
         new_height = int(np.round(height * ratio))
         new_width = int(np.round(width * ratio))
         new_shape = (new_height, new_width)
-        nuc_to_process = resize_image(nuc, new_shape, "bilinear")
-        cell_to_process = resize_image(cell, new_shape, "bilinear")
+        nuc_to_process = stack.resize_image(nuc, new_shape, "bilinear")
+        cell_to_process = stack.resize_image(cell, new_shape, "bilinear")
         nuc_label_to_process = nuc_label.copy()
 
     # get padding marge to make it multiple of 16
-    marge_padding = get_marge_padding(new_height, new_width, x=16)
+    marge_padding = stack.get_marge_padding(new_height, new_width, x=16)
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
     nuc_to_process = pad(nuc_to_process, marge_padding, mode='symmetric')
     cell_to_process = pad(cell_to_process, marge_padding, mode='symmetric')
 
     # standardize and cast cell image
-    nuc_to_process = compute_image_standardization(nuc_to_process)
+    nuc_to_process = stack.compute_image_standardization(nuc_to_process)
     nuc_to_process = nuc_to_process.astype(np.float32)
-    cell_to_process = compute_image_standardization(cell_to_process)
+    cell_to_process = stack.compute_image_standardization(cell_to_process)
     cell_to_process = cell_to_process.astype(np.float32)
 
     # augment images
@@ -154,14 +153,14 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
         # from the image augmentation
         if target_size is not None:
             if i in [0, 1, 2, 6]:
-                prediction_cell = resize_image(
+                prediction_cell = stack.resize_image(
                     prediction_cell, (height, width), "bilinear")
-                prediction_distance = resize_image(
+                prediction_distance = stack.resize_image(
                     prediction_distance, (height, width), "bilinear")
             else:
-                prediction_cell = resize_image(
+                prediction_cell = stack.resize_image(
                     prediction_cell, (width, height), "bilinear")
-                prediction_distance = resize_image(
+                prediction_distance = stack.resize_image(
                     prediction_distance, (width, height), "bilinear")
 
         # store predictions
@@ -186,8 +185,9 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
     mean_prediction_distance /= max_
     mean_prediction_distance = 1 - mean_prediction_distance
     mean_prediction_distance = np.clip(mean_prediction_distance, 0, 1)
-    mean_prediction_distance = stack.cast_img_uint16(mean_prediction_distance,
-                                                     catch_warning=True)
+    mean_prediction_distance = stack.cast_img_uint16(
+        mean_prediction_distance,
+        catch_warning=True)
 
     # postprocess predictions
     _, cell_label_pred = from_distance_to_instances(
@@ -229,8 +229,9 @@ def from_distance_to_instances(label_x_nuc, label_2_cell, label_distance,
 
     """
     # check parameters
-    stack.check_parameter(nuc_3_classes=bool,
-                          compute_nuc_label=bool)
+    stack.check_parameter(
+        nuc_3_classes=bool,
+        compute_nuc_label=bool)
     stack.check_array(label_x_nuc, ndim=2, dtype=[np.float32, np.int64])
     stack.check_array(label_2_cell, ndim=2, dtype=[np.float32])
     stack.check_array(label_distance, ndim=2, dtype=[np.uint16])
@@ -309,9 +310,10 @@ def cell_watershed(image, nuc_label, threshold, alpha=0.8):
         image_2d = image
     cell_mask = thresholding(image_2d, threshold)
     cell_mask[nuc_label > 0] = True
-    cell_mask = clean_segmentation(cell_mask,
-                                   small_object_size=5000,
-                                   fill_holes=True)
+    cell_mask = clean_segmentation(
+        cell_mask,
+        small_object_size=5000,
+        fill_holes=True)
 
     # segment cells
     cell_label = apply_watershed(relief, nuc_label, cell_mask)
@@ -347,9 +349,10 @@ def get_watershed_relief(image, nuc_label, alpha):
 
     """
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16])
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_parameter(alpha=(int, float))
 
@@ -364,22 +367,26 @@ def get_watershed_relief(image, nuc_label, alpha):
         # build watershed relief
         watershed_relief = image.max() - image
         watershed_relief[nuc_label > 0] = 0
-        watershed_relief = np.true_divide(watershed_relief,
-                                          watershed_relief.max(),
-                                          dtype=np.float64)
-        watershed_relief = stack.cast_img_uint16(watershed_relief,
-                                                 catch_warning=True)
+        watershed_relief = np.true_divide(
+            watershed_relief,
+            watershed_relief.max(),
+            dtype=np.float64)
+        watershed_relief = stack.cast_img_uint16(
+            watershed_relief,
+            catch_warning=True)
 
     # use distance from the nuclei
     elif alpha == 0:
         # build watershed relief
         nuc_mask = nuc_label > 0
         watershed_relief = ndi.distance_transform_edt(~nuc_mask)
-        watershed_relief = np.true_divide(watershed_relief,
-                                          watershed_relief.max(),
-                                          dtype=np.float64)
-        watershed_relief = stack.cast_img_uint16(watershed_relief,
-                                                 catch_warning=True)
+        watershed_relief = np.true_divide(
+            watershed_relief,
+            watershed_relief.max(),
+            dtype=np.float64)
+        watershed_relief = stack.cast_img_uint16(
+            watershed_relief,
+            catch_warning=True)
 
     # use a combination of both previous methods
     elif 0 < alpha < 1:
@@ -392,17 +399,20 @@ def get_watershed_relief(image, nuc_label, alpha):
         # build watershed relief
         relief_pixel = image.max() - image
         relief_pixel[nuc_label > 0] = 0
-        relief_pixel = np.true_divide(relief_pixel,
-                                      relief_pixel.max(),
-                                      dtype=np.float64)
+        relief_pixel = np.true_divide(
+            relief_pixel,
+            relief_pixel.max(),
+            dtype=np.float64)
         nuc_mask = nuc_label > 0
         relief_distance = ndi.distance_transform_edt(~nuc_mask)
-        relief_distance = np.true_divide(relief_distance,
-                                         relief_distance.max(),
-                                         dtype=np.float64)
+        relief_distance = np.true_divide(
+            relief_distance,
+            relief_distance.max(),
+            dtype=np.float64)
         watershed_relief = alpha * relief_pixel + (1 - alpha) * relief_distance
-        watershed_relief = stack.cast_img_uint16(watershed_relief,
-                                                 catch_warning=True)
+        watershed_relief = stack.cast_img_uint16(
+            watershed_relief,
+            catch_warning=True)
 
     else:
         raise ValueError("Parameter 'alpha' is wrong. It must be comprised "
@@ -440,9 +450,10 @@ def apply_watershed(watershed_relief, nuc_label, cell_mask):
 
     """
     # check parameters
-    stack.check_array(watershed_relief,
-                      ndim=2,
-                      dtype=[np.uint8, np.uint16, np.int64])
+    stack.check_array(
+        watershed_relief,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int64])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_array(cell_mask, ndim=2, dtype=bool)
 

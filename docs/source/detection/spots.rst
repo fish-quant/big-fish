@@ -28,7 +28,7 @@ It is also possible to perform the main steps of the spot detection separately:
 * :func:`bigfish.detection.spots_thresholding`
 
 See an example of application `here <https://github.com/fish-quant/big-fish-
-examples/blob/master/notebooks/5%20-%20Detect%20spots.ipynb/>`_.
+examples/blob/master/notebooks/5%20-%20Detect%20spots.ipynb>`_.
 
 .. autofunction:: detect_spots
 .. autofunction:: local_maximum_detection
@@ -44,9 +44,11 @@ that limits the possibility to scale a spot detection. Our method includes a
 heuristic function to to automatically set this threshold:
 
 * :func:`bigfish.detection.automated_threshold_setting`
+* :func:`bigfish.detection.get_breaking_point`
 * :func:`bigfish.detection.get_elbow_values`
 
 .. autofunction:: automated_threshold_setting
+.. autofunction:: get_breaking_point
 .. autofunction:: get_elbow_values
 
 ------------
@@ -54,6 +56,9 @@ heuristic function to to automatically set this threshold:
 Compute signal-to-noise ratio
 =============================
 
-Compute a signal-to-noise ratio (SNR) for the image:
+.. currentmodule:: bigfish.detection
+
+Compute a signal-to-noise ratio (SNR) for the image, based on the detected
+spots:
 
 .. autofunction:: compute_snr_spots

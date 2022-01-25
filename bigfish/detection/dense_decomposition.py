@@ -12,9 +12,15 @@ import warnings
 import numpy as np
 
 import bigfish.stack as stack
-from .spot_modeling import build_reference_spot, modelize_spot, precompute_erf
-from .spot_modeling import gaussian_2d, _initialize_grid_2d
-from .spot_modeling import gaussian_3d, _initialize_grid_3d
+
+from .utils import build_reference_spot
+from .utils import get_object_radius_pixel
+from .spot_modeling import modelize_spot
+from .spot_modeling import precompute_erf
+from .spot_modeling import gaussian_2d
+from .spot_modeling import _initialize_grid_2d
+from .spot_modeling import gaussian_3d
+from .spot_modeling import _initialize_grid_3d
 
 from skimage.measure import regionprops
 from skimage.measure import label
@@ -22,8 +28,8 @@ from skimage.measure import label
 
 # ### Main function ###
 
-def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                    psf_z=None, psf_yx=200, alpha=0.5, beta=1, gamma=5):
+def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
+                    alpha=0.5, beta=1, gamma=5):
     """Detect dense and bright regions with potential clustered spots and
     simulate a more realistic number of spots in these regions.
 
@@ -41,17 +47,19 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
         for 3-d or 2-d images respectively.
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, image is
-        considered in 2-d.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan, in
-        nanometer. If None, image is considered in 2-d.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan, in
-        nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    spot_radius : int, float, Tuple(int, float) or List(int, float)
+        Radius of the spot, in nanometer. One value per spatial dimension (zyx
+        or yx dimensions). If it's a scalar, the same radius is applied to
+        every dimensions.
+    kernel_size : int, float, Tuple(float, int), List(float, int) or None
+        Standard deviation used for the gaussian kernel (one for each
+        dimension), in pixel. If it's a scalar, the same standard deviation is
+        applied to every dimensions. If None, we estimate the kernel size from
+        'spot_radius', 'voxel_size' and 'gamma'
     alpha : int or float
         Intensity percentile used to compute the reference spot, between 0
         and 1. The higher, the brighter are the spots simulated in the dense
@@ -68,16 +76,20 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
         With :math:`\\mbox{median spot}` the median value of all detected spot
         signals.
     gamma : int or float
-        Multiplicative factor use to compute a gaussian scale:
+        Multiplicative factor use to compute the gaussian kernel size:
 
         .. math::
-            \\mbox{scale} = \\frac{\\gamma * \\mbox{PSF}}{\\mbox{voxel size}}
+            \\mbox{kernel size} = \\frac{\\gamma * \\mbox{spot radius}}{\\mbox{
+            voxel size}}
 
         We perform a large gaussian filter with such scale to estimate image
         background and remove it from original image. A large gamma increases
         the scale of the gaussian filter and smooth the estimated background.
         To decompose very large bright areas, a larger gamma should be set.
-        If 0, image is not denoised.
+
+    Notes
+    -----
+    If ``gamma = 0`` and ``kernel_size = None``, image is not denoised.
 
     Returns
     -------
@@ -93,18 +105,20 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
         Reference spot in 3-d or 2-d.
 
     """
+    # TODO allow/return float64 spots
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          psf_z=(int, float, type(None)),
-                          psf_yx=(int, float),
-                          alpha=(int, float),
-                          beta=(int, float),
-                          gamma=(int, float))
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        spot_radius=(int, float, tuple, list),
+        kernel_size=(int, float, tuple, list, type(None)),
+        alpha=(int, float),
+        beta=(int, float),
+        gamma=(int, float))
     if alpha < 0 or alpha > 1:
         raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
                          .format(alpha))
@@ -115,20 +129,32 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
         raise ValueError("'gamma' should be a positive value, not {0}"
                          .format(gamma))
 
-    # check number of dimensions
+    # check consistency between parameters
     ndim = image.ndim
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing.".format(ndim))
-    if ndim == 3 and psf_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'psf_z' parameter is missing.".format(ndim))
     if ndim != spots.shape[1]:
         raise ValueError("Provided image has {0} dimensions but spots are "
                          "detected in {1} dimensions."
                          .format(ndim, spots.shape[1]))
-    if ndim == 2:
-        voxel_size_z, psf_z = None, None
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence "
+                "with {0} elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+    if isinstance(spot_radius, (tuple, list)):
+        if len(spot_radius) != ndim:
+            raise ValueError("'spot_radius' must be a scalar or a "
+                             "sequence with {0} elements.".format(ndim))
+    else:
+        spot_radius = (spot_radius,) * ndim
+    if kernel_size is not None:
+        if isinstance(kernel_size, (tuple, list)):
+            if len(kernel_size) != ndim:
+                raise ValueError("'kernel_size' must be a scalar or a "
+                                 "sequence with {0} elements.".format(ndim))
+        else:
+            kernel_size = (kernel_size,) * ndim
 
     # case where no spot were detected
     if spots.size == 0:
@@ -136,24 +162,30 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
         reference_spot = np.zeros((5,) * ndim, dtype=image.dtype)
         return spots, dense_regions, reference_spot
 
-    # compute expected standard deviation of the spots
-    sigma = stack.get_sigma(voxel_size_z, voxel_size_yx, psf_z, psf_yx)
-    large_sigma = tuple([sigma_ * gamma for sigma_ in sigma])
+    # get gaussian kernel to denoise the image
+    if kernel_size is None and gamma > 0:
+        spot_radius_px = get_object_radius_pixel(
+            voxel_size_nm=voxel_size,
+            object_radius_nm=spot_radius,
+            ndim=ndim)
+        kernel_size = tuple([spot_radius_px_ * gamma
+                             for spot_radius_px_ in spot_radius_px])
 
     # denoise the image
-    if gamma > 0:
+    if kernel_size is not None:
         image_denoised = stack.remove_background_gaussian(
-            image,
-            sigma=large_sigma)
+            image=image,
+            sigma=kernel_size)
     else:
         image_denoised = image.copy()
 
     # build a reference median spot
     reference_spot = build_reference_spot(
-        image_denoised,
-        spots,
-        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
-        alpha)
+        image=image_denoised,
+        spots=spots,
+        voxel_size=voxel_size,
+        spot_radius=spot_radius,
+        alpha=alpha)
 
     # case with an empty frame as reference spot
     if reference_spot.sum() == 0:
@@ -162,19 +194,23 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
     # fit a gaussian function on the reference spot to be able to simulate it
     parameters_fitted = modelize_spot(
-        reference_spot, voxel_size_z, voxel_size_yx, psf_z, psf_yx)
+        reference_spot=reference_spot,
+        voxel_size=voxel_size,
+        spot_radius=spot_radius)
     if ndim == 3:
         sigma_z, sigma_yx, amplitude, background = parameters_fitted
+        sigma = (sigma_z, sigma_yx, sigma_yx)
     else:
-        sigma_z = None
         sigma_yx, amplitude, background = parameters_fitted
+        sigma = (sigma_yx, sigma_yx)
 
     # use connected components to detect dense and bright regions
     regions_to_decompose, spots_out_regions, region_size = get_dense_region(
-        image_denoised,
-        spots,
-        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
-        beta)
+        image=image_denoised,
+        spots=spots,
+        voxel_size=voxel_size,
+        spot_radius=spot_radius,
+        beta=beta)
 
     # case where no region where detected
     if regions_to_decompose.size == 0:
@@ -184,16 +220,17 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
     # precompute gaussian function values
     max_grid = region_size + 1
     precomputed_gaussian = precompute_erf(
-        voxel_size_z, voxel_size_yx, sigma_z, sigma_yx, max_grid=max_grid)
+        ndim=ndim,
+        voxel_size=voxel_size,
+        sigma=sigma,
+        max_grid=max_grid)
 
     # simulate gaussian mixtures in the dense regions
     spots_in_regions, dense_regions = simulate_gaussian_mixture(
         image=image_denoised,
         candidate_regions=regions_to_decompose,
-        voxel_size_z=voxel_size_z,
-        voxel_size_yx=voxel_size_yx,
-        sigma_z=sigma_z,
-        sigma_yx=sigma_yx,
+        voxel_size=voxel_size,
+        sigma=sigma,
         amplitude=amplitude,
         background=background,
         precomputed_gaussian=precomputed_gaussian)
@@ -214,8 +251,7 @@ def decompose_dense(image, spots, voxel_size_z=None, voxel_size_yx=100,
 
 # ### Dense regions ###
 
-def get_dense_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
-                     psf_z=None, psf_yx=200, beta=1):
+def get_dense_region(image, spots, voxel_size, spot_radius, beta=1):
     """Detect and filter dense and bright regions.
 
     A candidate region has at least 2 connected pixels above a specific
@@ -227,17 +263,14 @@ def get_dense_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
         Image with shape (z, y, x) or (y, x).
     spots : np.ndarray, np.int64
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we
-        consider a 2-d image.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    psf_z : int or float or None
-        Theoretical size of the PSF emitted by a spot in the z plan, in
-        nanometer. If None, we consider a 2-d image.
-    psf_yx : int or float
-        Theoretical size of the PSF emitted by a spot in the yx plan, in
-        nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    spot_radius : int, float, Tuple(int, float) or List(int, float)
+        Radius of the spot, in nanometer. One value per spatial dimension (zyx
+        or yx dimensions). If it's a scalar, the same radius is applied to
+        every dimensions.
     beta : int or float
         Multiplicative factor for the intensity threshold of a dense region.
         Default is 1. Threshold is computed with the formula:
@@ -261,40 +294,48 @@ def get_dense_region(image, spots, voxel_size_z=None, voxel_size_yx=100,
         Maximum size of the regions.
 
     """
+    # TODO allow/return float64 spots
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_array(spots, ndim=2, dtype=np.int64)
-    stack.check_parameter(voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          psf_z=(int, float, type(None)),
-                          psf_yx=(int, float),
-                          beta=(int, float))
+    stack.check_parameter(
+        voxel_size=(int, float, tuple, list),
+        spot_radius=(int, float, tuple, list),
+        beta=(int, float))
     if beta < 0:
         raise ValueError("'beta' should be a positive value, not {0}"
                          .format(beta))
 
-    # check number of dimensions
+    # check consistency between parameters
     ndim = image.ndim
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing.".format(ndim))
-    if ndim == 3 and psf_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'psf_z' parameter is missing.".format(ndim))
     if ndim != spots.shape[1]:
         raise ValueError("Provided image has {0} dimensions but spots are "
                          "detected in {1} dimensions."
                          .format(ndim, spots.shape[1]))
-    if ndim == 2:
-        voxel_size_z, psf_z = None, None
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+    if isinstance(spot_radius, (tuple, list)):
+        if len(spot_radius) != ndim:
+            raise ValueError(
+                "'spot_radius' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        spot_radius = (spot_radius,) * ndim
 
     # estimate median spot value and a threshold to detect dense regions
     median_spot = build_reference_spot(
-        image,
-        spots,
-        voxel_size_z, voxel_size_yx, psf_z, psf_yx,
+        image=image,
+        spots=spots,
+        voxel_size=voxel_size,
+        spot_radius=spot_radius,
         alpha=0.5)
     threshold = int(median_spot.max() * beta)
 
@@ -460,8 +501,7 @@ def _filter_spot_out_candidate_regions(candidate_bbox, spots, nb_dim):
 
 # ### Gaussian simulation ###
 
-def simulate_gaussian_mixture(image, candidate_regions, voxel_size_z=None,
-                              voxel_size_yx=100, sigma_z=None, sigma_yx=200,
+def simulate_gaussian_mixture(image, candidate_regions, voxel_size, sigma,
                               amplitude=100, background=0,
                               precomputed_gaussian=None):
     """Simulate as many gaussians as possible in the candidate dense regions in
@@ -473,22 +513,20 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size_z=None,
         Image with shape (z, y, x) or (y, x).
     candidate_regions : np.ndarray
         Array with filtered skimage.measure._regionprops._RegionProperties.
-    voxel_size_z : int or float or None
-        Height of a voxel, along the z axis, in nanometer. If None, we consider
-        a 2-d image.
-    voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
-    sigma_z : int or float or None
-        Standard deviation of the gaussian along the z axis, in nanometer. If
-        None, we consider a 2-d image.
-    sigma_yx : int or float
-        Standard deviation of the gaussian along the yx axis, in nanometer.
+    voxel_size : int, float, Tuple(int, float) or List(int, float)
+        Size of a voxel, in nanometer. One value per spatial dimension (zyx or
+        yx dimensions). If it's a scalar, the same value is applied to every
+        dimensions.
+    sigma : int, float, Tuple(int, float) or List(int, float)
+        Standard deviation of the gaussian, in nanometer. One value per
+        spatial dimension (zyx or yx dimensions). If it's a scalar, the same
+        value is applied to every dimensions.
     amplitude : float
         Amplitude of the gaussian.
     background : float
-        Background minimum value of the image.
+        Background minimum value.
     precomputed_gaussian : Tuple[np.ndarray]
-        Tuple with one tables of precomputed values for the erf, with shape
+        Tuple with tables of precomputed values for the erf, with shape
         (nb_value, 2). One table per dimension.
 
     Returns
@@ -504,59 +542,65 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size_z=None,
         average intensity value and its index.
 
     """
+    # TODO allow/return float64 spots
     # check parameters
-    stack.check_array(image,
-                      ndim=[2, 3],
-                      dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_parameter(candidate_regions=np.ndarray,
-                          voxel_size_z=(int, float, type(None)),
-                          voxel_size_yx=(int, float),
-                          sigma_z=(int, float, type(None)),
-                          sigma_yx=(int, float),
-                          amplitude=float,
-                          background=float)
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+    stack.check_parameter(
+        candidate_regions=np.ndarray,
+        voxel_size=(int, float, tuple, list),
+        sigma=(int, float, tuple, list),
+        amplitude=float,
+        background=float)
     if background < 0:
         raise ValueError("Background value can't be negative: {0}"
                          .format(background))
 
-    # check number of dimensions
+    # check consistency between parameters
     ndim = image.ndim
-    if ndim == 3 and voxel_size_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'voxel_size_z' parameter is missing."
-                         .format(ndim))
-    if ndim == 3 and sigma_z is None:
-        raise ValueError("Provided image has {0} dimensions but "
-                         "'sigma_z' parameter is missing.".format(ndim))
-    if ndim == 2:
-        voxel_size_z, sigma_z = None, None
+    if isinstance(voxel_size, (tuple, list)):
+        if len(voxel_size) != ndim:
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        voxel_size = (voxel_size,) * ndim
+    if isinstance(sigma, (tuple, list)):
+        if len(sigma) != ndim:
+            raise ValueError(
+                "'sigma' must be a scalar or a sequence with {0} "
+                "elements.".format(ndim))
+    else:
+        sigma = (sigma,) * ndim
 
     # simulate gaussian mixtures in the candidate regions...
     spots_in_regions = []
     regions = []
 
     # ... for 3-d regions...
-    if image.ndim == 3:
+    if ndim == 3:
 
         for i_region, region in enumerate(candidate_regions):
             image_region, _, coord_gaussian = _gaussian_mixture_3d(
-                image,
-                region,
-                voxel_size_z,
-                voxel_size_yx,
-                sigma_z,
-                sigma_yx,
-                amplitude,
-                background,
-                precomputed_gaussian)
+                image=image,
+                region=region,
+                voxel_size_z=voxel_size[0],
+                voxel_size_yx=voxel_size[-1],
+                sigma_z=sigma[0],
+                sigma_yx=sigma[-1],
+                amplitude=amplitude,
+                background=background,
+                precomputed_gaussian=precomputed_gaussian)
 
             # get coordinates of spots and regions in the original image
             box = region.bbox
             (min_z, min_y, min_x, _, _, _) = box
             coord = np.array(coord_gaussian, dtype=np.float64)
-            coord[:, 0] = (coord[:, 0] / voxel_size_z) + min_z
-            coord[:, 1] = (coord[:, 1] / voxel_size_yx) + min_y
-            coord[:, 2] = (coord[:, 2] / voxel_size_yx) + min_x
+            coord[:, 0] = (coord[:, 0] / voxel_size[0]) + min_z
+            coord[:, 1] = (coord[:, 1] / voxel_size[-1]) + min_y
+            coord[:, 2] = (coord[:, 2] / voxel_size[-1]) + min_x
             spots_in_region = np.zeros((coord.shape[0], 4), dtype=np.int64)
             spots_in_region[:, :3] = coord
             spots_in_region[:, 3] = i_region
@@ -573,20 +617,20 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size_z=None,
 
         for i_region, region in enumerate(candidate_regions):
             image_region, _, coord_gaussian = _gaussian_mixture_2d(
-                image,
-                region,
-                voxel_size_yx,
-                sigma_yx,
-                amplitude,
-                background,
-                precomputed_gaussian)
+                image=image,
+                region=region,
+                voxel_size_yx=voxel_size[-1],
+                sigma_yx=sigma[-1],
+                amplitude=amplitude,
+                background=background,
+                precomputed_gaussian=precomputed_gaussian)
 
             # get coordinates of spots and regions in the original image
             box = region.bbox
             (min_y, min_x, _, _) = box
             coord = np.array(coord_gaussian, dtype=np.float64)
-            coord[:, 0] = (coord[:, 0] / voxel_size_yx) + min_y
-            coord[:, 1] = (coord[:, 1] / voxel_size_yx) + min_x
+            coord[:, 0] = (coord[:, 0] / voxel_size[-1]) + min_y
+            coord[:, 1] = (coord[:, 1] / voxel_size[-1]) + min_x
             spots_in_region = np.zeros((coord.shape[0], 3), dtype=np.int64)
             spots_in_region[:, :2] = coord
             spots_in_region[:, 2] = i_region
@@ -616,19 +660,19 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
     region : skimage.measure._regionprops._RegionProperties
         Properties of a candidate region.
     voxel_size_z : int or float
-        Height of a voxel, along the z axis, in nanometer.
+        Size of a voxel along the z axis, in nanometer.
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+        Size of a voxel in the yx plan, in nanometer.
     sigma_z : int or float
-        Standard deviation of the gaussian along the z axis, in pixel.
+        Standard deviation of the gaussian along the z axis, in nanometer.
     sigma_yx : int or float
-        Standard deviation of the gaussian along the yx axis, in pixel.
+        Standard deviation of the gaussian in the yx plan, in nanometer.
     amplitude : float
         Amplitude of the gaussian.
     background : float
-        Background minimum value of the image.
+        Background minimum value.
     precomputed_gaussian : Tuple[np.ndarray]
-        Tuple with one tables of precomputed values for the erf, with shape
+        Tuple with tables of precomputed values for the erf, with shape
         (nb_value, 2). One table per dimension.
     limit_gaussian : int
         Limit number of gaussian to fit into this region.
@@ -664,17 +708,18 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
     while diff_ssr < 0 or nb_gaussian == limit_gaussian:
         position_gaussian = np.argmax(residual)
         positions_gaussian.append(list(grid[:, position_gaussian]))
-        simulation += gaussian_3d(grid=grid,
-                                  mu_z=float(positions_gaussian[-1][0]),
-                                  mu_y=float(positions_gaussian[-1][1]),
-                                  mu_x=float(positions_gaussian[-1][2]),
-                                  sigma_z=sigma_z,
-                                  sigma_yx=sigma_yx,
-                                  voxel_size_z=voxel_size_z,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=amplitude,
-                                  psf_background=background,
-                                  precomputed=precomputed_gaussian)
+        simulation += gaussian_3d(
+            grid=grid,
+            mu_z=float(positions_gaussian[-1][0]),
+            mu_y=float(positions_gaussian[-1][1]),
+            mu_x=float(positions_gaussian[-1][2]),
+            sigma_z=sigma_z,
+            sigma_yx=sigma_yx,
+            voxel_size_z=voxel_size_z,
+            voxel_size_yx=voxel_size_yx,
+            amplitude=amplitude,
+            background=background,
+            precomputed=precomputed_gaussian)
         residual = image_region_raw - simulation
         new_ssr = np.sum(residual ** 2)
         diff_ssr = new_ssr - ssr
@@ -716,15 +761,15 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
     region : skimage.measure._regionprops._RegionProperties
         Properties of a candidate region.
     voxel_size_yx : int or float
-        Size of a voxel on the yx plan, in nanometer.
+        Size of a voxel in the yx plan, in nanometer.
     sigma_yx : int or float
-        Standard deviation of the gaussian along the yx axis, in pixel.
+        Standard deviation of the gaussian in the yx plan, in nanometer.
     amplitude : float
         Amplitude of the gaussian.
     background : float
-        Background minimum value of the image.
+        Background minimum value.
     precomputed_gaussian : Tuple[np.ndarray]
-        Tuple with one tables of precomputed values for the erf, with shape
+        Tuple with tables of precomputed values for the erf, with shape
         (nb_value, 2). One table per dimension.
     limit_gaussian : int
         Limit number of gaussian to fit into this region.
@@ -760,14 +805,15 @@ def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
     while diff_ssr < 0 or nb_gaussian == limit_gaussian:
         position_gaussian = np.argmax(residual)
         positions_gaussian.append(list(grid[:, position_gaussian]))
-        simulation += gaussian_2d(grid=grid,
-                                  mu_y=float(positions_gaussian[-1][0]),
-                                  mu_x=float(positions_gaussian[-1][1]),
-                                  sigma_yx=sigma_yx,
-                                  voxel_size_yx=voxel_size_yx,
-                                  psf_amplitude=amplitude,
-                                  psf_background=background,
-                                  precomputed=precomputed_gaussian)
+        simulation += gaussian_2d(
+            grid=grid,
+            mu_y=float(positions_gaussian[-1][0]),
+            mu_x=float(positions_gaussian[-1][1]),
+            sigma_yx=sigma_yx,
+            voxel_size_yx=voxel_size_yx,
+            amplitude=amplitude,
+            background=background,
+            precomputed=precomputed_gaussian)
         residual = image_region_raw - simulation
         new_ssr = np.sum(residual ** 2)
         diff_ssr = new_ssr - ssr
