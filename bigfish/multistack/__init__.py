@@ -27,9 +27,16 @@ from .postprocess import match_nuc_cell
 from .postprocess import extract_cell
 from .postprocess import extract_spots_from_frame
 from .postprocess import summarize_extraction_results
+from .postprocess import center_mask_coord
+from .postprocess import from_boundaries_to_surface
+from .postprocess import from_surface_to_boundaries
+from .postprocess import from_binary_to_coord
+from .postprocess import complete_coord_boundaries
+from .postprocess import from_coord_to_frame
+from .postprocess import from_coord_to_surface
 
 
-# TODO complete bigfish.multistack documentation
+# TODO complete bigfish.multistack.preprocess documentation
 
 _utils = [
     "check_recipe",
@@ -54,6 +61,13 @@ _postprocess = [
     "match_nuc_cell",
     "extract_cell",
     "extract_spots_from_frame",
-    "summarize_extraction_results"]
+    "summarize_extraction_results",
+    "center_mask_coord",
+    "from_boundaries_to_surface",
+    "from_surface_to_boundaries",
+    "from_binary_to_coord",
+    "complete_coord_boundaries",
+    "from_coord_to_frame",
+    "from_coord_to_surface"]
 
 __all__ = _utils + _preprocess + _colocalization + _postprocess

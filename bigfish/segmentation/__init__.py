@@ -23,13 +23,6 @@ from .postprocess import label_instances
 from .postprocess import merge_labels
 from .postprocess import clean_segmentation
 from .postprocess import remove_disjoint
-from .postprocess import center_mask_coord
-from .postprocess import from_boundaries_to_surface
-from .postprocess import from_surface_to_boundaries
-from .postprocess import from_binary_to_coord
-from .postprocess import complete_coord_boundaries
-from .postprocess import from_coord_to_frame
-from .postprocess import from_coord_to_surface
 
 from .utils import thresholding
 from .utils import compute_mean_diameter
@@ -56,14 +49,7 @@ _postprocess = [
     "label_instances",
     "merge_labels",
     "clean_segmentation",
-    "remove_disjoint",
-    "center_mask_coord",
-    "from_boundaries_to_surface",
-    "from_surface_to_boundaries",
-    "from_binary_to_coord",
-    "complete_coord_boundaries",
-    "from_coord_to_frame",
-    "from_coord_to_surface"]
+    "remove_disjoint"]
 
 _utils = [
     "thresholding",
