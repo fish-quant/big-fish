@@ -1,7 +1,7 @@
 .. _plot_detection overview:
 
-Detection plots
-***************
+Detection plot
+**************
 
 .. currentmodule:: bigfish.plot
 

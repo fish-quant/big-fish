@@ -5,8 +5,8 @@ Features engineering
 
 .. currentmodule:: bigfish.classification
 
-Input coordinates preparation
-=============================
+Prepare input coordinates
+=========================
 
 Format input coordinates and compute intermediary results to prepare features
 computation:

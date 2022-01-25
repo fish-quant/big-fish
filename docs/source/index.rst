@@ -122,9 +122,6 @@ API reference
 
    utils/utils
 
-* :ref:`Utility functions<utils overview>`: Sanity checks, get constant values,
-  compute hash, save plots, etc...
-
 ------------
 
 Support

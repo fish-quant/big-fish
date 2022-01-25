@@ -1,7 +1,7 @@
 .. _plot_image overview:
 
-Field of view plots
-*******************
+Field of view plot
+******************
 
 .. currentmodule:: bigfish.plot
 

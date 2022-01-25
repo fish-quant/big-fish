@@ -57,20 +57,18 @@ Compute moving average
 
 ------------
 
-Spot detection utilities
-========================
+Convert pixels and nanometers
+=============================
 
 .. currentmodule:: bigfish.detection
 
 * :func:`bigfish.detection.convert_spot_coordinates`
 * :func:`bigfish.detection.get_object_radius_pixel`
 * :func:`bigfish.detection.get_object_radius_nm`
-* :func:`bigfish.detection.get_breaking_point`
 
 .. autofunction:: convert_spot_coordinates
 .. autofunction:: get_object_radius_pixel
 .. autofunction:: get_object_radius_nm
-.. autofunction:: get_breaking_point
 
 ------------
 

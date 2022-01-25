@@ -44,9 +44,11 @@ that limits the possibility to scale a spot detection. Our method includes a
 heuristic function to to automatically set this threshold:
 
 * :func:`bigfish.detection.automated_threshold_setting`
+* :func:`bigfish.detection.get_breaking_point`
 * :func:`bigfish.detection.get_elbow_values`
 
 .. autofunction:: automated_threshold_setting
+.. autofunction:: get_breaking_point
 .. autofunction:: get_elbow_values
 
 ------------
