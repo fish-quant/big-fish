@@ -57,9 +57,6 @@ _model = [
 _clusters = [
     "detect_clusters"]
 
-_snr = [
-    "compute_snr_spots"]
-
 _utils = [
     "convert_spot_coordinates",
     "get_object_radius_pixel",
