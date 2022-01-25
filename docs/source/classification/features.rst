@@ -15,8 +15,8 @@ computation:
 
 ------------
 
-Define and export single-cell results
-=====================================
+Compute features
+================
 
 Functions to compute features about cell morphology and RNAs localization.
 There are two main functions to compute spatial and morphological features are:
