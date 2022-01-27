@@ -563,7 +563,7 @@ def _get_spot_counts(thresholds, value_spots):
     thresholds : np.ndarray, np.float64
         Candidate threshold values.
     count_spots : np.ndarray, np.float64
-        Spots count function.
+        Spots count function (log scale).
 
     """
     # count spots for each threshold
@@ -616,7 +616,7 @@ def get_elbow_values(images, voxel_size=None, spot_radius=None,
     thresholds : np.ndarray, np.float64
         Candidate threshold values.
     count_spots : np.ndarray, np.float64
-        Spots count.
+        Spots count (log scale).
     threshold : float or None
         Threshold automatically set.
 
