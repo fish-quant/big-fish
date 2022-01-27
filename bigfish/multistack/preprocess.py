@@ -634,4 +634,3 @@ def _load_stack_no_recipe(paths, input_dimension=None):
                          "5 dimensions.".format(input_dimension))
 
     return tensor_5d
-
