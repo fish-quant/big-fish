@@ -14,12 +14,14 @@ from .utils import check_array
 from .utils import check_parameter
 from .utils import check_range_value
 
+import skimage
 from skimage import img_as_ubyte
 from skimage import img_as_float32
 from skimage import img_as_float64
 from skimage import img_as_uint
 from skimage.exposure import rescale_intensity
 from skimage.transform import resize
+from sklearn.utils.fixes import parse_version
 
 
 # TODO replace 'tensor' by 'image'
@@ -102,7 +104,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
         ndim=[2, 3, 4, 5],
         dtype=[np.uint8, np.uint16, np.uint32,
                np.int8, np.int16, np.int32,
-               np.float16, np.float32, np.float64])
+               np.float32, np.float64])
     check_range_value(tensor, min_=0)
 
     # enlist 'channel_to_stretch' if necessary
@@ -218,7 +220,8 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
     """
     # target intensity range
     target_range = 'dtype'
-    if tensor.dtype in [np.float16, np.float32, np.float64]:
+    dtype = tensor.dtype
+    if dtype in [np.float16, np.float32, np.float64]:
         target_range = (0, 1)
 
     # rescale each round independently
@@ -252,10 +255,13 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
     # stack rounds
     tensor_5d = np.stack(rounds, axis=0)
 
+    # cast results
+    tensor_5d = tensor_5d.astype(dtype)
+
     return tensor_5d
 
 
-def cast_img_uint8(tensor, catch_warning=False):
+def cast_img_uint8(tensor):
     """Cast the image in np.uint8 and scale values between 0 and 255.
 
     Negative values are not allowed as the skimage method ``img_as_ubyte``
@@ -267,8 +273,6 @@ def cast_img_uint8(tensor, catch_warning=False):
     ----------
     tensor : np.ndarray
         Image to cast.
-    catch_warning : bool
-        Catch and ignore `UserWarning` about possible precision or sign loss.
 
     Returns
     -------
@@ -282,8 +286,8 @@ def cast_img_uint8(tensor, catch_warning=False):
         ndim=[2, 3, 4, 5],
         dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                np.int8, np.int16, np.int32, np.int64,
-               np.float16, np.float32, np.float64])
-    if tensor.dtype in [np.float16, np.float32, np.float64]:
+               np.float32, np.float64])
+    if tensor.dtype in [np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
     elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
         check_range_value(tensor, min_=0)
@@ -300,7 +304,7 @@ def cast_img_uint8(tensor, catch_warning=False):
                          .format(tensor.min(), tensor.max()))
 
     # cast tensor
-    if catch_warning:
+    if parse_version(skimage.__version__) < parse_version("0.16.0"):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             tensor = img_as_ubyte(tensor)
@@ -310,7 +314,7 @@ def cast_img_uint8(tensor, catch_warning=False):
     return tensor
 
 
-def cast_img_uint16(tensor, catch_warning=False):
+def cast_img_uint16(tensor):
     """Cast the data in np.uint16.
 
     Negative values are not allowed as the skimage method ``img_as_uint`` would
@@ -321,8 +325,7 @@ def cast_img_uint16(tensor, catch_warning=False):
     ----------
     tensor : np.ndarray
         Image to cast.
-    catch_warning : bool
-        Catch and ignore `UserWarning` about possible precision or sign loss.
+
     Returns
     -------
     tensor : np.ndarray, np.uint16
@@ -335,8 +338,8 @@ def cast_img_uint16(tensor, catch_warning=False):
         ndim=[2, 3, 4, 5],
         dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                np.int8, np.int16, np.int32, np.int64,
-               np.float16, np.float32, np.float64])
-    if tensor.dtype in [np.float16, np.float32, np.float64]:
+               np.float32, np.float64])
+    if tensor.dtype in [np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
     elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
         check_range_value(tensor, min_=0)
@@ -352,7 +355,7 @@ def cast_img_uint16(tensor, catch_warning=False):
                          .format(tensor.min(), tensor.max()))
 
     # cast tensor
-    if catch_warning:
+    if parse_version(skimage.__version__) < parse_version("0.16.0"):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             tensor = img_as_uint(tensor)
@@ -362,7 +365,7 @@ def cast_img_uint16(tensor, catch_warning=False):
     return tensor
 
 
-def cast_img_float32(tensor, catch_warning=False):
+def cast_img_float32(tensor):
     """Cast the data in np.float32.
 
     If the input data is in (unsigned) integer, the values are scaled between
@@ -372,8 +375,6 @@ def cast_img_float32(tensor, catch_warning=False):
     ----------
     tensor : np.ndarray
         Image to cast.
-    catch_warning : bool
-        Catch and ignore `UserWarning` about possible precision or sign loss.
 
     Returns
     -------
@@ -387,10 +388,10 @@ def cast_img_float32(tensor, catch_warning=False):
         ndim=[2, 3, 4, 5],
         dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                np.int8, np.int16, np.int32, np.int64,
-               np.float16, np.float32, np.float64])
+               np.float32, np.float64])
 
     # cast tensor
-    if catch_warning:
+    if parse_version(skimage.__version__) < parse_version("0.16.0"):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             tensor = img_as_float32(tensor)
@@ -423,7 +424,7 @@ def cast_img_float64(tensor):
         ndim=[2, 3, 4, 5],
         dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
                np.int8, np.int16, np.int32, np.int64,
-               np.float16, np.float32, np.float64])
+               np.float32, np.float64])
 
     # cast tensor
     tensor = img_as_float64(tensor)

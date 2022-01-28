@@ -12,6 +12,7 @@ import numpy as np
 import bigfish.stack as stack
 
 from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_almost_equal
 
 
 # ### Test normalization ###
@@ -19,7 +20,7 @@ from numpy.testing import assert_array_equal
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32,
     np.int8, np.int16, np.int32,
-    np.float16, np.float32, np.float64])
+    np.float32, np.float64])
 def test_rescale(dtype):
     # build a 5x5 random matrix with a limited range of values
     tensor = np.random.randint(35, 105, 25).reshape((5, 5)).astype(dtype)
@@ -66,7 +67,7 @@ def test_stretching():
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64])
+    np.float32, np.float64])
 def test_cast_uint8(dtype):
     # from integer to np.uint8
     if np.issubdtype(dtype, np.integer):
@@ -80,18 +81,19 @@ def test_cast_uint8(dtype):
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
 
     # cast in uint8
-    if dtype in [np.uint8, np.int8]:
-        tensor_uint8 = stack.cast_img_uint8(tensor)
-    else:
-        with pytest.warns(UserWarning):
-            tensor_uint8 = stack.cast_img_uint8(tensor)
+    tensor_uint8 = stack.cast_img_uint8(tensor)
     assert tensor_uint8.dtype == np.uint8
+
+    # check value
+    assert tensor_uint8.max() == 255
+    if dtype == np.uint8:
+        assert_array_equal(tensor_uint8, tensor)
 
 
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64])
+    np.float32, np.float64])
 def test_cast_uint16(dtype):
     # from integer to np.uint16
     if np.issubdtype(dtype, np.integer):
@@ -105,23 +107,25 @@ def test_cast_uint16(dtype):
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
 
     # cast in uint16
-    if dtype in [np.uint8, np.int8, np.uint16, np.int16, np.float16]:
-        tensor_uint16 = stack.cast_img_uint16(tensor)
-    else:
-        with pytest.warns(UserWarning):
-            tensor_uint16 = stack.cast_img_uint16(tensor)
+    tensor_uint16 = stack.cast_img_uint16(tensor)
     assert tensor_uint16.dtype == np.uint16
+
+    # check value
+    assert tensor_uint16.max() == 65535
+    if dtype == np.uint16:
+        assert_array_equal(tensor_uint16, tensor)
 
 
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64])
+    np.float32, np.float64])
 def test_cast_float32(dtype):
     # from integer to np.float32
     if np.issubdtype(dtype, np.integer):
         x = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
+        tensor[0, 0] = np.iinfo(dtype).min
         tensor[2, 2] = np.iinfo(dtype).max
 
     # from float to np.float32
@@ -130,23 +134,30 @@ def test_cast_float32(dtype):
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
 
     # cast in float32
-    if dtype == np.float64:
-        with pytest.warns(UserWarning):
-            tensor_float32 = stack.cast_img_float32(tensor)
-    else:
-        tensor_float32 = stack.cast_img_float32(tensor)
+    tensor_float32 = stack.cast_img_float32(tensor)
     assert tensor_float32.dtype == np.float32
+
+    # check value
+    if dtype in [np.uint8, np.uint16, np.uint32, np.uint64]:
+        assert tensor_float32.min() == 0
+        assert tensor_float32.max() == 1
+    elif dtype in [np.int8, np.int16, np.int32, np.int64]:
+        assert tensor_float32.min() == -1
+        assert tensor_float32.max() == 1
+    else:
+        assert_array_almost_equal(tensor_float32, tensor)
 
 
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64])
+    np.float32, np.float64])
 def test_cast_float64(dtype):
     # from integer to np.float64
     if np.issubdtype(dtype, np.integer):
         x = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
         tensor = np.array(x).reshape((3, 3)).astype(dtype)
+        tensor[0, 0] = np.iinfo(dtype).min
         tensor[2, 2] = np.iinfo(dtype).max
 
     # from float to np.float64
@@ -157,3 +168,13 @@ def test_cast_float64(dtype):
     # cast in float64
     tensor_float64 = stack.cast_img_float64(tensor)
     assert tensor_float64.dtype == np.float64
+
+    # check value
+    if dtype in [np.uint8, np.uint16, np.uint32, np.uint64]:
+        assert tensor_float64.min() == 0
+        assert tensor_float64.max() == 1
+    elif dtype in [np.int8, np.int16, np.int32, np.int64]:
+        assert tensor_float64.min() == -1
+        assert tensor_float64.max() == 1
+    else:
+        assert_array_almost_equal(tensor_float64, tensor)

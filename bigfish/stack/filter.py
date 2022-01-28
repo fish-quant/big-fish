@@ -289,9 +289,9 @@ def log_filter(image, sigma):
 
     # cast filtered image
     if image.dtype == np.uint8:
-        image_filtered = cast_img_uint8(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint8(image_filtered)
     elif image.dtype == np.uint16:
-        image_filtered = cast_img_uint16(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint16(image_filtered)
     else:
         pass
 
@@ -355,9 +355,9 @@ def gaussian_filter(image, sigma, allow_negative=False):
 
     # cast filtered image
     if image.dtype == np.uint8:
-        image_filtered = cast_img_uint8(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint8(image_filtered)
     elif image.dtype == np.uint16:
-        image_filtered = cast_img_uint16(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint16(image_filtered)
     else:
         pass
 

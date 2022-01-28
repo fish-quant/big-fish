@@ -24,7 +24,7 @@ from matplotlib.patches import RegularPolygon
 # ### General plot ###
 
 def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
-            title=None, framesize=(8, 8), remove_frame=True, path_output=None,
+            title=None, framesize=(30, 30), remove_frame=True, path_output=None,
             ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
@@ -113,7 +113,7 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
 
 
 def plot_images(images, rescale=False, contrast=False, titles=None,
-                framesize=(15, 10), remove_frame=True, path_output=None,
+                framesize=(30, 20), remove_frame=True, path_output=None,
                 ext="png", show=True):
     """Plot or subplot of 2-d images.
 
@@ -248,7 +248,7 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
 # ### Segmentation plot ###
 
 def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
-                      framesize=(15, 10), remove_frame=True,
+                      framesize=(30, 20), remove_frame=True,
                       path_output=None, ext="png", show=True):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
@@ -348,7 +348,7 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
 
 def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
                                rescale=False, contrast=False, title=None,
-                               framesize=(10, 10), remove_frame=True,
+                               framesize=(30, 30), remove_frame=True,
                                path_output=None, ext="png", show=True):
     """Plot the boundary of the segmented objects.
 
@@ -451,7 +451,7 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
 
 
 def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
-                           contrast=False, title=None, framesize=(15, 10),
+                           contrast=False, title=None, framesize=(30, 20),
                            remove_frame=True, path_output=None, ext="png",
                            show=True):
     """Plot segmentation results along with ground truth to compare.
@@ -560,7 +560,7 @@ def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
 
 def plot_detection(image, spots, shape="circle", radius=3, color="red",
                    linewidth=1, fill=False, rescale=False, contrast=False,
-                   title=None, framesize=(15, 10), remove_frame=True,
+                   title=None, framesize=(20, 16), remove_frame=True,
                    path_output=None, ext="png", show=True):
     """Plot detected spots and foci on a 2-d image.
 
@@ -973,12 +973,16 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         if cell_mask is not None:
             cell_boundaries = multistack.from_surface_to_boundaries(
                 cell_mask)
+            cell_boundaries = stack.dilation_filter(
+                cell_boundaries, kernel_shape="disk", kernel_size=1)
             cell_boundaries = np.ma.masked_where(
                 cell_boundaries == 0,
                 cell_boundaries)
             ax[0].imshow(cell_boundaries, cmap=ListedColormap(['red']))
         if nuc_mask is not None:
             nuc_boundaries = multistack.from_surface_to_boundaries(nuc_mask)
+            nuc_boundaries = stack.dilation_filter(
+                nuc_boundaries, kernel_shape="disk", kernel_size=1)
             nuc_boundaries = np.ma.masked_where(
                 nuc_boundaries == 0,
                 nuc_boundaries)

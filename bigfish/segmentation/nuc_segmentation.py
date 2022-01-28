@@ -15,7 +15,6 @@ from .postprocess import clean_segmentation
 
 from skimage.morphology.selem import disk
 from skimage.morphology import reconstruction
-from skimage.util import pad
 
 
 # ### Unet model ###
@@ -95,7 +94,8 @@ def apply_unet_3_classes(model, image, target_size=None,
     marge_padding = stack.get_marge_padding(new_height, new_width, x=16)
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
-    image_to_process = pad(image_to_process, marge_padding, mode='symmetric')
+    image_to_process = np.pad(
+        image_to_process, pad_width=marge_padding, mode='symmetric')
 
     # standardize and cast image
     image_to_process = stack.compute_image_standardization(image_to_process)
