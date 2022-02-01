@@ -379,6 +379,7 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
         Show the figure or not.
 
     """
+    # TODO add parameter to enlarge boundary size
     # check parameters
     stack.check_array(
         image,
@@ -917,6 +918,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         Show the figure or not.
 
     """
+    # TODO add parameter to enlarge boundary size
     if cell_coord is None and image is None:
         return
 
