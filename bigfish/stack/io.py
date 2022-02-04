@@ -231,7 +231,7 @@ def read_cell_extracted(path, verbose=False):
     -------
     cell_results : Dict
         Dictionary including information about the cell (image, masks,
-        coordinates arrays). Minimal information are :
+        coordinates arrays). Minimal information are:
 
         * `cell_id`: Unique id of the cell.
         * `bbox`: bounding box coordinates with the order (`min_y`, `min_x`,
