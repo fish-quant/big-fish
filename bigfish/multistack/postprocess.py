@@ -518,6 +518,7 @@ def _check_nucleus_in_cell(cell_mask, nuc_mask):
         return True
 
 
+# TODO fix docstring
 def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     """Get spots coordinates within a given frame.
 
