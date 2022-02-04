@@ -14,6 +14,7 @@ import bigfish.stack as stack
 from bigfish.stack.projection import _one_hot_3d
 
 from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_almost_equal
 
 
 # toy images
@@ -95,6 +96,7 @@ def test_maximum_projection(dtype):
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.float32, np.float64])
 def test_mean_projection(dtype):
+    # 'return_float' == False
     x = x_3d.astype(dtype)
     expected_y = np.array([[2,   0,   0,   0,   0],
                            [0,   5/3, 0,   0,   1],
@@ -104,6 +106,16 @@ def test_mean_projection(dtype):
     y = stack.mean_projection(x)
     assert_array_equal(y, expected_y)
     assert y.dtype == dtype
+
+    # 'return_float' == True
+    expected_y = np.array([[2, 0,   0,   0,   0],
+                           [0, 5/3, 0,   0,   1],
+                           [0, 5/3, 0,   0,   0],
+                           [0, 5/3, 5/3, 5/3, 0],
+                           [0, 0,   0,   0,   0]], dtype=np.float64)
+    y = stack.mean_projection(x, return_float=True)
+    assert_array_almost_equal(y, expected_y)
+    assert y.dtype in [np.float32, np.float64]
 
 
 @pytest.mark.parametrize("dtype", [
