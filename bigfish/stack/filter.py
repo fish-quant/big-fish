@@ -58,7 +58,7 @@ def _define_kernel(shape, size, dtype):
         kernel = diamond(size, dtype=dtype)
     elif shape == "disk":
         kernel = disk(size, dtype=dtype)
-    elif shape == "rectangle" and isinstance(size, tuple):
+    elif shape == "rectangle" and isinstance(size, (tuple, list)):
         kernel = rectangle(size[0], size[1], dtype=dtype)
     elif shape == "square":
         kernel = square(size, dtype=dtype)
