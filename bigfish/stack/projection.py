@@ -19,17 +19,20 @@ def maximum_projection(image):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         A 3-d image with shape (z, y, x).
 
     Returns
     -------
-    projected_image : np.ndarray, np.uint
+    projected_image : np.ndarray
         A 2-d image with shape (y, x).
 
     """
     # check parameters
-    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
+    check_array(
+        image,
+        ndim=3,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # project image along the z axis
     projected_image = image.max(axis=0)
@@ -43,9 +46,9 @@ def mean_projection(image, return_float=False):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         A 3-d tensor with shape (z, y, x).
-    return_float : bool
+    return_float : bool, default=False
         Return a (potentially more accurate) float array.
 
     Returns
@@ -55,7 +58,10 @@ def mean_projection(image, return_float=False):
 
     """
     # check parameters
-    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
+    check_array(
+        image,
+        ndim=3,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # project image along the z axis
     if return_float:
@@ -72,17 +78,20 @@ def median_projection(image):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         A 3-d image with shape (z, y, x).
 
     Returns
     -------
-    projected_image : np.ndarray, np.uint
+    projected_image : np.ndarray
         A 2-d image with shape (y, x).
 
     """
     # check parameters
-    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
+    check_array(
+        image,
+        ndim=3,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # project image along the z axis
     projected_image = np.median(image, axis=0)
@@ -91,7 +100,7 @@ def median_projection(image):
     return projected_image
 
 
-def focus_projection(image, proportion=5, neighborhood_size=7,
+def focus_projection(image, proportion=0.75, neighborhood_size=7,
                      method="median"):
     """Project the z-dimension of an image.
 
@@ -100,41 +109,35 @@ def focus_projection(image, proportion=5, neighborhood_size=7,
     in-focus z-slices and project our image.
 
     #. Compute a focus score for each pixel yx with a fixed neighborhood size.
-    #. We keep 75% of z-slices with the highest average focus score.
-    #. Keep the median/maximum pixel intensity among the top 5 z-slices with
-       the highest focus score.
+    #. We keep a proportion of z-slices with the highest average focus score.
+    #. Keep the median/maximum pixel intensity among the top 5 z-slices (at
+    most) with the highest focus score.
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         A 3-d image with shape (z, y, x).
-    proportion : float or int
+    proportion : float or int, default=0.75
         Proportion of z-slices to keep (float between 0 and 1) or number of
         z-slices to keep (positive integer).
-    neighborhood_size : int
+    neighborhood_size : int or tuple or list, default=7
         The size of the square used to define the neighborhood of each pixel.
-    method : str
-        Projection method applied on the selected pixel values (`median` or
-        `max`).
+        An odd value is preferred. To define a rectangular neighborhood, a
+        tuple or a list with two elements (height, width) can be provided.
+    method : {`median`, `max`}, default=`median`
+        Projection method applied on the selected pixel values.
 
     Returns
     -------
-    projected_image : np.ndarray, np.uint
+    projected_image : np.ndarray
         A 2-d image with shape (y, x).
 
     """
     # check parameters
-    check_array(image, ndim=3, dtype=[np.uint8, np.uint16])
-    check_parameter(
-        proportion=(float, int),
-        neighborhood_size=int)
-    if isinstance(proportion, float) and 0 <= proportion <= 1:
-        pass
-    elif isinstance(proportion, int) and 0 <= proportion:
-        pass
-    else:
-        raise ValueError("'proportion' should be a float between 0 and 1 or a "
-                         "positive integer, but not {0}.".format(proportion))
+    check_array(
+        image,
+        ndim=3,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # compute focus measure for each pixel
     focus = compute_focus(image, neighborhood_size)
@@ -157,11 +160,10 @@ def focus_projection(image, proportion=5, neighborhood_size=7,
     mask = np.sum(mask, axis=0, dtype=in_focus_image.dtype)
 
     # filter top focus pixels in our in-focus image
-    in_focus_image = np.multiply(in_focus_image, mask)
+    in_focus_image = in_focus_image.astype(np.float64)
+    in_focus_image[mask == 0] = np.nan
 
     # project image
-    in_focus_image = in_focus_image.astype(np.float64)
-    in_focus_image[in_focus_image == 0] = np.nan
     if method == "median":
         projected_image = np.nanmedian(in_focus_image, axis=0)
     elif method == "max":

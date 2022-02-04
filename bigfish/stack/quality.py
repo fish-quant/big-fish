@@ -8,7 +8,7 @@ Functions used to detect and clean noisy images.
 
 import numpy as np
 
-from .utils import check_array, check_parameter, check_range_value
+from .utils import check_array, check_parameter
 from .filter import mean_filter
 
 
