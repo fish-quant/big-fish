@@ -5,7 +5,7 @@
 [![Documentation Status](https://readthedocs.org/projects/big-fish/badge/?version=stable)](https://big-fish.readthedocs.io/en/latest/?badge=stable)
 [![codecov](https://codecov.io/gh/fish-quant/big-fish/branch/master/graph/badge.svg)](https://codecov.io/gh/fish-quant/big-fish)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
-[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![Python version](https://img.shields.io/pypi/pyversions/big-fish.svg)](https://pypi.python.org/pypi/big-fish/)
 
 **Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **analyze microscopy images**, such **spot detection** and **segmentation of cells and nuclei**. The package allows the user represent the extract properties of a cell as coordinates (see figure below). The ultimate goal is to simplify **large scale statistical analysis** and quantification.
 
@@ -74,6 +74,7 @@ If you have any question relative to the repository, please open an [issue](http
 
 Version 1.0.0:
 - Complete code coverage.
+- Unpin deeplearning dependencies
 
 ## Development
 
