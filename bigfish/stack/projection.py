@@ -111,7 +111,7 @@ def focus_projection(image, proportion=0.75, neighborhood_size=7,
     #. Compute a focus score for each pixel yx with a fixed neighborhood size.
     #. We keep a proportion of z-slices with the highest average focus score.
     #. Keep the median/maximum pixel intensity among the top 5 z-slices (at
-    most) with the highest focus score.
+       most) with the highest focus score.
 
     Parameters
     ----------
