@@ -100,7 +100,7 @@ Please make sure to update tests as appropriate if you open a pull request. You 
 pip install -r requirements_dev.txt
 ```
 
-To perform unitary tests, run : 
+To perform unit tests, run : 
 
 ```bash
 pytest bigfish
