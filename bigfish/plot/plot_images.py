@@ -24,8 +24,8 @@ from matplotlib.patches import RegularPolygon
 # ### General plot ###
 
 def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
-            title=None, framesize=(30, 30), remove_frame=True, path_output=None,
-            ext="png", show=True):
+            title=None, framesize=(10, 10), remove_frame=True,
+            path_output=None, ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
     Parameters
@@ -33,28 +33,28 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
     image : np.ndarray
         A 2-d, 3-d, 4-d or 5-d image with shape (y, x), (z, y, x),
         (c, z, y, x) or (r, c, z, y, x) respectively.
-    r : int
+    r : int, default=0
         Index of the round to keep.
-    c : int
+    c : int, default=0
         Index of the channel to keep.
-    z : int
+    z : int, default=0
         Index of the z slice to keep.
-    rescale : bool
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    title : str
+    title : str, optional
         Title of the image.
-    framesize : tuple
+    framesize : tuple=(10, 10)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
@@ -113,30 +113,30 @@ def plot_yx(image, r=0, c=0, z=0, rescale=False, contrast=False,
 
 
 def plot_images(images, rescale=False, contrast=False, titles=None,
-                framesize=(30, 20), remove_frame=True, path_output=None,
+                framesize=(15, 10), remove_frame=True, path_output=None,
                 ext="png", show=True):
     """Plot or subplot of 2-d images.
 
     Parameters
     ----------
-    images : np.ndarray or List[np.ndarray]
-        Images with shape (y, x).
-    rescale : bool
+    images : np.ndarray or list
+        Image or list of images with shape (y, x).
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    titles : List[str]
+    titles : str or list, optional
         Titles of the subplots.
-    framesize : tuple
+    framesize : tuple, default=(15, 10)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
 
@@ -248,7 +248,7 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
 # ### Segmentation plot ###
 
 def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
-                      framesize=(30, 20), remove_frame=True,
+                      framesize=(15, 10), remove_frame=True,
                       path_output=None, ext="png", show=True):
     """Plot result of a 2-d segmentation, with labelled instances if available.
 
@@ -258,22 +258,22 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
         A 2-d image with shape (y, x).
     mask : np.ndarray
         A 2-d image with shape (y, x).
-    rescale : bool
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    title : str
+    title : str, optional
         Title of the image.
-    framesize : tuple
+    framesize : tuple, default=(15, 10)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
@@ -347,39 +347,41 @@ def plot_segmentation(image, mask, rescale=False, contrast=False, title=None,
 
 
 def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
-                               rescale=False, contrast=False, title=None,
-                               framesize=(30, 30), remove_frame=True,
-                               path_output=None, ext="png", show=True):
+                               boundary_size=1, rescale=False, contrast=False,
+                               title=None, framesize=(10, 10),
+                               remove_frame=True, path_output=None, ext="png",
+                               show=True):
     """Plot the boundary of the segmented objects.
 
     Parameters
     ----------
     image : np.ndarray
         A 2-d image with shape (y, x).
-    cell_label : np.ndarray
+    cell_label : np.ndarray, optional
         A 2-d image with shape (y, x).
-    nuc_label : np.ndarray
+    nuc_label : np.ndarray, optional
         A 2-d image with shape (y, x).
-    rescale : bool
+    boundary_size : int, default=1
+        Width of the cell and nucleus boundaries, in pixel.
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    title : str
+    title : str, optional
         Title of the image.
-    framesize : tuple
+    framesize : tuple, default=(10, 10)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
-    # TODO add parameter to enlarge boundary size
     # check parameters
     stack.check_array(
         image,
@@ -410,11 +412,19 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
     nuc_boundaries = None
     if cell_label is not None:
         cell_boundaries = find_boundaries(cell_label, mode='thick')
+        cell_boundaries = stack.dilation_filter(
+            image=cell_boundaries,
+            kernel_shape="disk",
+            kernel_size=boundary_size)
         cell_boundaries = np.ma.masked_where(
             cell_boundaries == 0,
             cell_boundaries)
     if nuc_label is not None:
         nuc_boundaries = find_boundaries(nuc_label, mode='thick')
+        nuc_boundaries = stack.dilation_filter(
+            image=nuc_boundaries,
+            kernel_shape="disk",
+            kernel_size=boundary_size)
         nuc_boundaries = np.ma.masked_where(
             nuc_boundaries == 0,
             nuc_boundaries)
@@ -452,35 +462,35 @@ def plot_segmentation_boundary(image, cell_label=None, nuc_label=None,
 
 
 def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
-                           contrast=False, title=None, framesize=(30, 20),
+                           contrast=False, title=None, framesize=(15, 10),
                            remove_frame=True, path_output=None, ext="png",
                            show=True):
     """Plot segmentation results along with ground truth to compare.
 
     Parameters
     ----------
-    image : np.ndarray, np.uint, np.int, np.float or bool
+    image : np.ndarray
         Image with shape (y, x).
-    mask_pred : np.ndarray, np.uint, np.int or np.float
+    mask_pred : np.ndarray
         Image with shape (y, x).
-    mask_gt : np.ndarray, np.uint, np.int or np.float
+    mask_gt : np.ndarray
         Image with shape (y, x).
-    rescale : bool
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    title : str or None
+    title : str, optional
         Title of the plot.
-    framesize : tuple
+    framesize : tuple, default=(15, 10)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str or None
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
@@ -561,7 +571,7 @@ def plot_segmentation_diff(image, mask_pred, mask_gt, rescale=False,
 
 def plot_detection(image, spots, shape="circle", radius=3, color="red",
                    linewidth=1, fill=False, rescale=False, contrast=False,
-                   title=None, framesize=(20, 16), remove_frame=True,
+                   title=None, framesize=(15, 10), remove_frame=True,
                    path_output=None, ext="png", show=True):
     """Plot detected spots and foci on a 2-d image.
 
@@ -569,45 +579,46 @@ def plot_detection(image, spots, shape="circle", radius=3, color="red",
     ----------
     image : np.ndarray
         A 2-d image with shape (y, x).
-    spots : List[np.ndarray] or np.ndarray
+    spots : list or np.ndarray
         Array with coordinates and shape (nb_spots, 3) or (nb_spots, 2). To
         plot different kind of detected spots with different symbols, use a
         list of arrays.
-    shape : List[str] or str
+    shape : list or str, default='circle'
         List of symbols used to localized the detected spots in the image,
         among `circle`, `square` or `polygon`. One symbol per array in `spots`.
         If `shape` is a string, the same symbol is used for every elements of
         'spots'.
-    radius : List[int or float], int or float
+    radius : list or int or float, default=3
         List of yx radii of the detected spots, in pixel. One radius per array
         in `spots`. If `radius` is a scalar, the same value is applied for
         every elements of `spots`.
-    color : List[str] or str
+    color : list or str, default='red'
         List of colors of the detected spots. One color per array in `spots`.
         If `color` is a string, the same color is applied for every elements
         of `spots`.
-    linewidth : List[int] or int
+    linewidth : list or int, default=1
         List of widths or width of the border symbol. One integer per array
         in `spots`. If `linewidth` is an integer, the same width is applied
         for every elements of `spots`.
-    fill : List[bool] or bool
-        List of boolean to fill the symbol the detected spots.
-    rescale : bool
+    fill : list or bool, default=False
+        List of boolean to fill the symbol of the detected spots. If `fill` is
+        a boolean, it is applied for every symbols.
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    title : str
+    title : str, optional
         Title of the image.
-    framesize : tuple
-        Size of the frame used to plot with ``plt.figure(figsize=framesize``.
-    remove_frame : bool
+    framesize : tuple, default=(15, 10)
+        Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
@@ -784,7 +795,7 @@ def _define_patch(x, y, shape, radius, color, linewidth, fill):
 
 
 def plot_reference_spot(reference_spot, rescale=False, contrast=False,
-                        title=None, framesize=(8, 8), remove_frame=True,
+                        title=None, framesize=(5, 5), remove_frame=True,
                         path_output=None, ext="png", show=True):
     """Plot the selected yx plan of the selected dimensions of an image.
 
@@ -792,22 +803,22 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
     ----------
     reference_spot : np.ndarray
         Spot image with shape (z, y, x) or (y, x).
-    rescale : bool
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    title : str
+    title : str, optional
         Title of the image.
-    framesize : tuple
+    framesize : tuple, default=(5, 5)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    path_output : str
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
@@ -864,61 +875,62 @@ def plot_reference_spot(reference_spot, rescale=False, contrast=False,
 
 def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
               foci_coord=None, other_coord=None, image=None, cell_mask=None,
-              nuc_mask=None, title=None, remove_frame=True, rescale=False,
-              contrast=False, framesize=(15, 10), path_output=None, ext="png",
-              show=True):
+              nuc_mask=None, boundary_size=1, title=None, remove_frame=True,
+              rescale=False, contrast=False, framesize=(15, 10),
+              path_output=None, ext="png", show=True):
     """
     Plot image and coordinates extracted for a specific cell.
 
     Parameters
     ----------
-    ndim : int
-        Number of spatial dimensions to consider in the coordinates (2 or 3).
-    cell_coord : np.ndarray, np.int64
+    ndim : {2, 3}
+        Number of spatial dimensions to consider in the coordinates.
+    cell_coord : np.ndarray, np.int64, optional
         Coordinates of the cell border with shape (nb_points, 2). If None,
         coordinate representation of the cell is not shown.
-    nuc_coord : np.ndarray, np.int64
+    nuc_coord : np.ndarray, np.int64, optional
         Coordinates of the nucleus border with shape (nb_points, 2).
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int64, optional
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
         plus the index of the cluster assigned to the spot. If no cluster was
         assigned, value is -1. If only coordinates of spatial dimensions are
         available, only centroid of foci can be shown.
-    foci_coord : np.ndarray, np.int64
+    foci_coord : np.ndarray, np.int64, optional
         Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
         dimension for the foci centroid (zyx or yx dimensions), the number of
         spots detected in the foci and its index.
-    other_coord : np.ndarray, np.int64
+    other_coord : np.ndarray, np.int64, optional
         Coordinates of the detected elements with shape (nb_elements, 3) or
         (nb_elements, 2). One coordinate per dimension (zyx or yx dimensions).
-    image : np.ndarray, np.uint
+    image : np.ndarray, np.uint, optional
         Original image of the cell with shape (y, x). If None, original image
         of the cell is not shown.
-    cell_mask : np.ndarray, np.uint
+    cell_mask : np.ndarray, optional
         Mask of the cell.
-    nuc_mask : np.ndarray, np.uint
+    nuc_mask : np.ndarray, optional
         Mask of the nucleus.
-    title : str or None
+    boundary_size : int, default=1
+        Width of the cell and nucleus boundaries, in pixel.
+    title : str, optional
         Title of the image.
-    remove_frame : bool
+    remove_frame : bool, default=True
         Remove axes and frame.
-    rescale : bool
+    rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
-    contrast : bool
+    contrast : bool, default=False
         Contrast image.
-    framesize : tuple
+    framesize : tuple, default=(15, 10)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    path_output : str or None
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
-    # TODO add parameter to enlarge boundary size
     if cell_coord is None and image is None:
         return
 
@@ -950,6 +962,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             dtype=[np.uint8, np.uint16, np.int64, bool])
     stack.check_parameter(
         ndim=int,
+        boundary_size=int,
         title=(str, type(None)),
         remove_frame=bool,
         rescale=bool,
@@ -976,7 +989,9 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
             cell_boundaries = multistack.from_surface_to_boundaries(
                 cell_mask)
             cell_boundaries = stack.dilation_filter(
-                cell_boundaries, kernel_shape="disk", kernel_size=1)
+                image=cell_boundaries,
+                kernel_shape="disk",
+                kernel_size=boundary_size)
             cell_boundaries = np.ma.masked_where(
                 cell_boundaries == 0,
                 cell_boundaries)
@@ -984,7 +999,9 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         if nuc_mask is not None:
             nuc_boundaries = multistack.from_surface_to_boundaries(nuc_mask)
             nuc_boundaries = stack.dilation_filter(
-                nuc_boundaries, kernel_shape="disk", kernel_size=1)
+                image=nuc_boundaries,
+                kernel_shape="disk",
+                kernel_size=boundary_size)
             nuc_boundaries = np.ma.masked_where(
                 nuc_boundaries == 0,
                 nuc_boundaries)
