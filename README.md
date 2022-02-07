@@ -74,7 +74,8 @@ If you have any question relative to the repository, please open an [issue](http
 
 Version 1.0.0:
 - Complete code coverage.
-- Unpin deeplearning dependencies
+- Unpin deep learning dependencies
+- Add a pretrained pattern recognition model
 
 ## Development
 
