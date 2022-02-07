@@ -15,8 +15,12 @@ from .postprocess import clean_segmentation
 import numpy as np
 from scipy import ndimage as ndi
 
-from skimage.morphology import watershed
-from skimage.util import pad
+import skimage
+from sklearn.utils.fixes import parse_version
+if parse_version(skimage.__version__) < parse_version("0.17.0"):
+    from skimage.morphology import watershed
+else:
+    from skimage.segmentation import watershed
 
 
 # ### Unet models ###
@@ -108,8 +112,10 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
     marge_padding = stack.get_marge_padding(new_height, new_width, x=16)
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
-    nuc_to_process = pad(nuc_to_process, marge_padding, mode='symmetric')
-    cell_to_process = pad(cell_to_process, marge_padding, mode='symmetric')
+    nuc_to_process = np.pad(
+        nuc_to_process, pad_width=marge_padding, mode='symmetric')
+    cell_to_process = np.pad(
+        cell_to_process, pad_width=marge_padding, mode='symmetric')
 
     # standardize and cast cell image
     nuc_to_process = stack.compute_image_standardization(nuc_to_process)
@@ -185,9 +191,7 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
     mean_prediction_distance /= max_
     mean_prediction_distance = 1 - mean_prediction_distance
     mean_prediction_distance = np.clip(mean_prediction_distance, 0, 1)
-    mean_prediction_distance = stack.cast_img_uint16(
-        mean_prediction_distance,
-        catch_warning=True)
+    mean_prediction_distance = stack.cast_img_uint16(mean_prediction_distance)
 
     # postprocess predictions
     _, cell_label_pred = from_distance_to_instances(
@@ -371,9 +375,7 @@ def get_watershed_relief(image, nuc_label, alpha):
             watershed_relief,
             watershed_relief.max(),
             dtype=np.float64)
-        watershed_relief = stack.cast_img_uint16(
-            watershed_relief,
-            catch_warning=True)
+        watershed_relief = stack.cast_img_uint16(watershed_relief)
 
     # use distance from the nuclei
     elif alpha == 0:
@@ -384,9 +386,7 @@ def get_watershed_relief(image, nuc_label, alpha):
             watershed_relief,
             watershed_relief.max(),
             dtype=np.float64)
-        watershed_relief = stack.cast_img_uint16(
-            watershed_relief,
-            catch_warning=True)
+        watershed_relief = stack.cast_img_uint16(watershed_relief)
 
     # use a combination of both previous methods
     elif 0 < alpha < 1:
@@ -410,9 +410,7 @@ def get_watershed_relief(image, nuc_label, alpha):
             relief_distance.max(),
             dtype=np.float64)
         watershed_relief = alpha * relief_pixel + (1 - alpha) * relief_distance
-        watershed_relief = stack.cast_img_uint16(
-            watershed_relief,
-            catch_warning=True)
+        watershed_relief = stack.cast_img_uint16(watershed_relief)
 
     else:
         raise ValueError("Parameter 'alpha' is wrong. It must be comprised "

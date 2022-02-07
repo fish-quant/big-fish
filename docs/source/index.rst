@@ -129,3 +129,17 @@ Support
 
 If you have any question relative to the package, please open an `issue
 <https://github.com/fish-quant/big-fish/issues>`_ on Github.
+
+------------
+
+Citation
+========
+
+If you exploit this package for your work, please cite:
+
+.. code-block:: text
+
+    Arthur Imbert, Wei Ouyang, Adham Safieddine, Emeline Coleno, Christophe
+    Zimmer, Edouard Bertrand, Thomas Walter, Florian Mueller. FISH-quant v2:
+    a scalable and modular analysis tool for smFISH image analysis. bioRxiv
+    (2021) https://doi.org/10.1101/2021.07.20.453024

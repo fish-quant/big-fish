@@ -58,7 +58,7 @@ def _define_kernel(shape, size, dtype):
         kernel = diamond(size, dtype=dtype)
     elif shape == "disk":
         kernel = disk(size, dtype=dtype)
-    elif shape == "rectangle" and isinstance(size, tuple):
+    elif shape == "rectangle" and isinstance(size, (tuple, list)):
         kernel = rectangle(size[0], size[1], dtype=dtype)
     elif shape == "square":
         kernel = square(size, dtype=dtype)
@@ -289,9 +289,9 @@ def log_filter(image, sigma):
 
     # cast filtered image
     if image.dtype == np.uint8:
-        image_filtered = cast_img_uint8(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint8(image_filtered)
     elif image.dtype == np.uint16:
-        image_filtered = cast_img_uint16(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint16(image_filtered)
     else:
         pass
 
@@ -355,9 +355,9 @@ def gaussian_filter(image, sigma, allow_negative=False):
 
     # cast filtered image
     if image.dtype == np.uint8:
-        image_filtered = cast_img_uint8(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint8(image_filtered)
     elif image.dtype == np.uint16:
-        image_filtered = cast_img_uint16(image_filtered, catch_warning=True)
+        image_filtered = cast_img_uint16(image_filtered)
     else:
         pass
 

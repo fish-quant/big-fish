@@ -518,6 +518,7 @@ def _check_nucleus_in_cell(cell_mask, nuc_mask):
         return True
 
 
+# TODO fix docstring
 def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     """Get spots coordinates within a given frame.
 
@@ -567,7 +568,8 @@ def extract_spots_from_frame(spots, z_lim=None, y_lim=None, x_lim=None):
     return extracted_spots
 
 
-def summarize_extraction_results(fov_results, ndim, path_output=None):
+def summarize_extraction_results(fov_results, ndim, path_output=None,
+                                 delimiter=";"):
     """Summarize results extracted from an image and store them in a dataframe.
 
     Parameters
@@ -584,8 +586,11 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
         * `cell_mask`: mask of the cell.
     ndim : int
         Number of spatial dimensions to consider (2 or 3).
-    path_output : str or None
+    path_output : str, optional
         Path to save the dataframe in a csv file.
+    delimiter : str, default=";"
+        Delimiter used to separate columns if the dataframe is saved in a csv
+        file.
 
     Returns
     -------
@@ -613,7 +618,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
     if len(fov_results) == 0:
         df = pd.DataFrame({"cell_id": []})
         if path_output is not None:
-            stack.save_data_to_csv(df, path_output)
+            stack.save_data_to_csv(df, path_output, delimiter)
         return df
 
     # check extra coordinates to summarize
@@ -690,7 +695,7 @@ def summarize_extraction_results(fov_results, ndim, path_output=None):
 
     # save dataframe
     if path_output is not None:
-        stack.save_data_to_csv(df, path_output)
+        stack.save_data_to_csv(df, path_output, delimiter)
 
     return df
 

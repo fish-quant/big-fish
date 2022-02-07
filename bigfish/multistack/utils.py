@@ -344,4 +344,3 @@ def check_datamap(data_map):
         check_recipe(recipe, data_directory=input_folder)
 
     return True
-

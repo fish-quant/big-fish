@@ -120,19 +120,23 @@ def read_array(path):
     return array
 
 
-def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8"):
+def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8",
+                        skiprows=0):
     """Read a numpy array saved in a ``csv`` file.
 
     Parameters
     ----------
     path : str
         Path of the ``csv`` file to read.
-    dtype : type or None
+    dtype : type, optional
         Expected dtype to cast the array.
-    delimiter : str
+    delimiter : str, default=";"
         Delimiter used to separate columns.
-    encoding : str
+    encoding : str, default="utf-8"
         Encoding to use.
+    skiprows : int, default=0
+        Skip the first `skiprows` lines of the file. Useful to skip the first
+        rows of a csv with header.
 
     Returns
     -------
@@ -148,7 +152,11 @@ def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8"):
         encoding=str)
 
     # read csv file
-    array = np.loadtxt(path, delimiter=delimiter, encoding=encoding)
+    array = np.loadtxt(
+        path,
+        delimiter=delimiter,
+        encoding=encoding,
+        skiprows=skiprows)
 
     # cast array dtype
     if dtype is not None:
@@ -231,7 +239,7 @@ def read_cell_extracted(path, verbose=False):
     -------
     cell_results : Dict
         Dictionary including information about the cell (image, masks,
-        coordinates arrays). Minimal information are :
+        coordinates arrays). Minimal information are:
 
         * `cell_id`: Unique id of the cell.
         * `bbox`: bounding box coordinates with the order (`min_y`, `min_x`,

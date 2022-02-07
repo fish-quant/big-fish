@@ -8,7 +8,7 @@ Functions used to detect and clean noisy images.
 
 import numpy as np
 
-from .utils import check_array, check_parameter, check_range_value
+from .utils import check_array, check_parameter
 from .filter import mean_filter
 
 
@@ -34,9 +34,10 @@ def compute_focus(image, neighborhood_size=31):
     ----------
     image : np.ndarray
         A 2-d or 3-d image with shape (y, x) or (z, y, x).
-    neighborhood_size : int
+    neighborhood_size : int or tuple or list, default=31
         The size of the square used to define the neighborhood of each pixel.
-        An odd value is preferred.
+        An odd value is preferred. To define a rectangular neighborhood, a
+        tuple or a list with two elements (height, width) can be provided.
 
     Returns
     -------
@@ -51,7 +52,13 @@ def compute_focus(image, neighborhood_size=31):
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
     check_parameter(neighborhood_size=(int, tuple, list))
-    check_range_value(image, min_=0)
+    if (isinstance(neighborhood_size, (tuple, list))
+            and len(neighborhood_size) != 2):
+        raise ValueError("Parameter 'neighborhood_size' should be an integer "
+                         "(to define a square neighborhood) or a sequence of "
+                         "two elements (to define a rectangular "
+                         "neighborhood). Not a sequence with {0} elements."
+                         .format(len(neighborhood_size)))
 
     # cast image in float if necessary
     if image.dtype in [np.uint8, np.uint16]:
@@ -75,9 +82,10 @@ def _compute_focus_3d(image_3d, kernel_size):
     ----------
     image_3d : np.ndarray, np.float
         A 3-d image with shape (z, y, x).
-    kernel_size : int
-        The size of the square used to define the neighborhood of each pixel.
-        An odd value is preferred.
+    kernel_size : int or tuple or list
+        The size of the square used to define a kernel size. An odd value is
+        preferred. To define a rectangular kernel, a tuple or a list with two
+        elements (height, width) can be provided.
 
     Returns
     -------
@@ -105,9 +113,10 @@ def _compute_focus_2d(image_2d, kernel_size):
     ----------
     image_2d : np.ndarray, np.float
         A 2-d image with shape (y, x).
-    kernel_size : int
-        The size of the square used to define the neighborhood of each pixel.
-        An odd value is preferred.
+    kernel_size : int or tuple or list
+        The size of the square used to define a kernel size. An odd value is
+        preferred. To define a rectangular kernel, a tuple or a list with two
+        elements (height, width) can be provided.
 
     Returns
     -------
@@ -117,17 +126,21 @@ def _compute_focus_2d(image_2d, kernel_size):
 
     """
     # mean filtered image
-    image_filtered_mean = mean_filter(image_2d, "square", kernel_size)
+    if isinstance(kernel_size, int):
+        image_filtered_mean = mean_filter(image_2d, "square", kernel_size)
+    else:
+        image_filtered_mean = mean_filter(image_2d, "rectangle", kernel_size)
 
     # compute focus metric
-    ratio_default = np.ones_like(image_2d, dtype=np.float64)
+    ratio_default_1 = np.ones_like(image_2d, dtype=np.float64)
+    ratio_default_2 = np.ones_like(image_filtered_mean, dtype=np.float64)
     ratio_1 = np.divide(
         image_2d, image_filtered_mean,
-        out=ratio_default,
+        out=ratio_default_1,
         where=image_filtered_mean > 0)
     ratio_2 = np.divide(
         image_filtered_mean, image_2d,
-        out=ratio_default,
+        out=ratio_default_2,
         where=image_2d > 0)
     focus = np.where(image_2d >= image_filtered_mean, ratio_1, ratio_2)
 

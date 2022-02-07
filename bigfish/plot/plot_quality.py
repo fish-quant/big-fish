@@ -28,32 +28,34 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
 
     Parameters
     ----------
-    focus_measures : np.ndarray or List[np.ndarray]
+    focus_measures : np.ndarray or list
         A list of 1-d arrays with the sharpness measure for each z-slices.
-    labels : List[str] or None
+    labels : str or list, optional
         List of labels for the different measures to compare.
-    title : str or None
+    title : str, optional
         Title of the plot.
-    framesize : tuple
+    framesize : tuple, default=(5, 5)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    size_title : int
+    size_title : int, default=20
         Size of the title.
-    size_axes : int
+    size_axes : int, default=15
         Size of the axes label.
-    size_legend : int
+    size_legend : int, default=15
         Size of the legend.
-    path_output : str or None
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
     # enlist values if necessary
     if isinstance(focus_measures, np.ndarray):
         focus_measures = [focus_measures]
+    if labels is not None and isinstance(labels, str):
+        labels = [labels]
 
     # check parameters
     stack.check_parameter(
@@ -111,47 +113,47 @@ def plot_elbow(images, voxel_size=None, spot_radius=None, log_kernel_size=None,
 
     Parameters
     ----------
-    images : List[np.ndarray]
-        List of images with shape (z, y, x) or (y, x). The same threshold is
+    images : list
+        List of ndarrays with shape (z, y, x) or (y, x). The same threshold is
         applied to every images.
-    voxel_size : int, float, Tuple(int, float), List(int, float) or None
+    voxel_size : int or float or tuple or list, optional
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
         dimensions. Not used if 'log_kernel_size' and 'minimum_distance' are
         provided.
-    spot_radius : int, float, Tuple(int, float), List(int, float) or None
+    spot_radius : int or float or tuple or list, optional
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
         every dimensions. Not used if 'log_kernel_size' and 'minimum_distance'
         are provided.
-    log_kernel_size : int, float, Tuple(int, float), List(int, float) or None
+    log_kernel_size : int or float or tuple or list, optional
         Size of the LoG kernel. It equals the standard deviation (in pixels)
         used for the gaussian kernel (one for each dimension). One value per
         spatial dimension (zyx or yx dimensions). If it's a scalar, the same
         standard deviation is applied to every dimensions. If None, we estimate
         it with the voxel size and spot radius.
-    minimum_distance : int, float, Tuple(int, float), List(int, float) or None
+    minimum_distance : int or float or tuple or list, optional
         Minimum distance (in pixels) between two spots we want to be able to
         detect separately. One value per spatial dimension (zyx or yx
         dimensions). If it's a scalar, the same distance is applied to every
         dimensions. If None, we estimate it with the voxel size and spot
         radius.
-    title : str or None
+    title : str, optional
         Title of the plot.
-    framesize : tuple
+    framesize : tuple, default=(5, 5)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    size_title : int
+    size_title : int, default=20
         Size of the title.
-    size_axes : int
+    size_axes : int, default=15
         Size of the axes label.
-    size_legend : int
+    size_legend : int, default=15
         Size of the legend.
-    path_output : str or None
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
-    show : bool
+    show : bool, default=True
         Show the figure or not.
 
     """
@@ -219,25 +221,25 @@ def plot_elbow_colocalized(spots_1, spots_2, voxel_size, threshold_max=None,
         Coordinates of the spots with shape (nb_spots, 3) or (nb_spots, 2).
     spots_2 : np.ndarray
         Coordinates of the spots with shape (nb_spots, 3) or (nb_spots, 2).
-    voxel_size : int, float, Tuple(int, float), or List(int, float)
+    voxel_size : int or float or tuple or list
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
         dimensions.
-    threshold_max : int, float or None
+    threshold_max : int or float, optional
         Maximum threshold value to consider.
-    title : str or None
+    title : str, optional
         Title of the plot.
-    framesize : tuple
+    framesize : tuple, default=(5, 5)
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
-    size_title : int
+    size_title : int, default=20
         Size of the title.
-    size_axes : int
+    size_axes : int, default=15
         Size of the axes label.
-    size_legend : int
+    size_legend : int, default=15
         Size of the legend.
-    path_output : str or None
+    path_output : str, optional
         Path to save the image (without extension).
-    ext : str or List[str]
+    ext : str or list, default='png'
         Extension used to save the plot. If it is a list of strings, the plot
         will be saved several times.
     show : bool
