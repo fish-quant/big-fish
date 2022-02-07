@@ -105,3 +105,9 @@ To perform unitary tests, run :
 ```bash
 pytest bigfish
 ```
+
+## Citation
+
+If you exploit this package for your work, please cite:
+
+> Arthur Imbert, Wei Ouyang, Adham Safieddine, Emeline Coleno, Christophe Zimmer, Edouard Bertrand, Thomas Walter, Florian Mueller. FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis. bioRxiv (2021) https://doi.org/10.1101/2021.07.20.453024
