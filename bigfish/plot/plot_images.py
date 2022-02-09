@@ -164,6 +164,10 @@ def plot_images(images, rescale=False, contrast=False, titles=None,
                    np.float32, np.float64,
                    bool])
 
+    # enlist 'titles' if needed
+    if titles is not None and isinstance(titles, str):
+        titles = [titles]
+
     # we plot 3 images by row maximum
     nrow = int(np.ceil(len(images)/3))
     ncol = min(len(images), 3)
