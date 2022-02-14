@@ -939,6 +939,7 @@ def plot_cell(ndim, cell_coord=None, nuc_coord=None, rna_coord=None,
         return
 
     # check parameters
+    # TODO allow np.float
     if cell_coord is not None:
         stack.check_array(cell_coord, ndim=2, dtype=np.int64)
     if nuc_coord is not None:
