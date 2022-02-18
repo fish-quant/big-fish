@@ -11,10 +11,10 @@ from .plot_images import plot_images
 from .plot_images import plot_segmentation
 from .plot_images import plot_segmentation_boundary
 from .plot_images import plot_segmentation_diff
-
 from .plot_images import plot_detection
 from .plot_images import plot_reference_spot
 from .plot_images import plot_cell
+from .plot_images import plot_cell_coordinates
 
 from .plot_quality import plot_sharpness
 from .plot_quality import plot_elbow
@@ -33,7 +33,8 @@ _images = [
     "plot_segmentation_diff",
     "plot_detection",
     "plot_reference_spot",
-    "plot_cell"]
+    "plot_cell",
+    "plot_cell_coordinates"]
 
 _quality = [
     "plot_sharpness",
