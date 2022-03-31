@@ -665,8 +665,14 @@ def get_breaking_point(x, y):
 
     """
     # check parameters
-    stack.check_array(x, ndim=1, dtype=[np.float64, np.int64])
-    stack.check_array(y, ndim=1, dtype=[np.float64, np.int64])
+    stack.check_array(
+        x,
+        ndim=1,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
+    stack.check_array(
+        y,
+        ndim=1,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
 
     # select threshold where curve break
     slope = (y[-1] - y[0]) / len(y)
