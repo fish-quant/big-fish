@@ -43,7 +43,10 @@ def compute_image_standardization(image):
 
     """
     # check parameters
-    check_array(image, ndim=2, dtype=[np.uint8, np.uint16, np.float32])
+    check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # check image is in 2D
     if len(image.shape) != 2:
@@ -454,7 +457,10 @@ def resize_image(image, output_shape, method="bilinear"):
     """
     # check parameters
     check_parameter(output_shape=tuple, method=str)
-    check_array(image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32])
+    check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.float32, np.float64])
 
     # resize image
     if method == "bilinear":

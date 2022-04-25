@@ -37,7 +37,10 @@ def convert_spot_coordinates(spots, voxel_size):
     """
     # check parameters
     stack.check_parameter(voxel_size=(int, float, tuple, list))
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     dtype = spots.dtype
 
     # check consistency between parameters
@@ -211,7 +214,10 @@ def build_reference_spot(image, spots, voxel_size, spot_radius, alpha=0.5):
         image,
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list),
@@ -303,8 +309,8 @@ def _build_reference_spot_3d(image, spots, radius, alpha):
         spot_z, spot_y, spot_x = candidate_spots[i_spot, :]
 
         # get the volume of the spot
-        image_spot, _, = _get_spot_volume(image, spot_z, spot_y, spot_x,
-                                          radius_z, radius_yx)
+        image_spot, _, = get_spot_volume(
+            image, spot_z, spot_y, spot_x, radius_z, radius_yx)
 
         # keep images that are not cropped by the borders
         if image_spot.shape == (z_shape, yx_shape, yx_shape):
@@ -329,22 +335,22 @@ def _build_reference_spot_3d(image, spots, radius, alpha):
     return reference_spot
 
 
-def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
+def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     """Get a subimage of a detected spot in 3 dimensions.
 
     Parameters
     ----------
     image : np.ndarray
         Image with shape (z, y, x).
-    spot_z : np.int64
+    spot_z : int or float
         Coordinate of the detected spot along the z axis.
-    spot_y : np.int64
+    spot_y : int or float
         Coordinate of the detected spot along the y axis.
-    spot_x : np.int64
+    spot_x : int or float
         Coordinate of the detected spot along the x axis.
-    radius_z : int
+    radius_z : int or float
         Radius in pixel of the detected spot, along the z axis.
-    radius_yx : int
+    radius_yx : int or float
         Radius in pixel of the detected spot, on the yx plan.
 
     Returns
@@ -414,7 +420,7 @@ def _build_reference_spot_2d(image, spots, radius, alpha):
         spot_y, spot_x = candidate_spots[i_spot, :]
 
         # get the volume of the spot
-        image_spot, _ = _get_spot_surface(image, spot_y, spot_x, radius_yx)
+        image_spot, _ = get_spot_surface(image, spot_y, spot_x, radius_yx)
 
         # keep images that are not cropped by the borders
         if image_spot.shape == (yx_shape, yx_shape):
@@ -438,18 +444,18 @@ def _build_reference_spot_2d(image, spots, radius, alpha):
     return reference_spot
 
 
-def _get_spot_surface(image, spot_y, spot_x, radius_yx):
+def get_spot_surface(image, spot_y, spot_x, radius_yx):
     """Get a subimage of a detected spot in 2 dimensions.
 
     Parameters
     ----------
     image : np.ndarray
         Image with shape (y, x).
-    spot_y : np.int64
+    spot_y : int or float
         Coordinate of the detected spot along the y axis.
-    spot_x : np.int64
+    spot_x : int or float
         Coordinate of the detected spot along the x axis.
-    radius_yx : int
+    radius_yx : int or float
         Radius in pixel of the detected spot, on the yx plan.
 
     Returns
@@ -516,7 +522,10 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_range_value(image, min_=0)
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list))
@@ -587,7 +596,7 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
             spot_z = spot[0]
             radius_background_z = radius_background[0]
             max_signal = image_to_process[spot_z, spot_y, spot_x]
-            spot_background_, _ = _get_spot_volume(
+            spot_background_, _ = get_spot_volume(
                 image_to_process, spot_z, spot_y, spot_x,
                 radius_background_z, radius_background_yx)
             spot_background = spot_background_.copy()
@@ -606,7 +615,7 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
 
         else:
             max_signal = image_to_process[spot_y, spot_x]
-            spot_background_, _ = _get_spot_surface(
+            spot_background_, _ = get_spot_surface(
                 image_to_process, spot_y, spot_x, radius_background_yx)
             spot_background = spot_background_.copy()
 
@@ -665,8 +674,14 @@ def get_breaking_point(x, y):
 
     """
     # check parameters
-    stack.check_array(x, ndim=1, dtype=[np.float64, np.int64])
-    stack.check_array(y, ndim=1, dtype=[np.float64, np.int64])
+    stack.check_array(
+        x,
+        ndim=1,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
+    stack.check_array(
+        y,
+        ndim=1,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
 
     # select threshold where curve break
     slope = (y[-1] - y[0]) / len(y)

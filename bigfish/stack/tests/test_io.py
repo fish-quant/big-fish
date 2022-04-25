@@ -120,7 +120,7 @@ def test_dv(dtype):
 
 
 @pytest.mark.parametrize("shape", [
-    (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
+    (8,), (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
 @pytest.mark.parametrize("dtype", [
     np.uint8, np.uint16, np.uint32, np.uint64,
     np.int8, np.int16, np.int32, np.int64,

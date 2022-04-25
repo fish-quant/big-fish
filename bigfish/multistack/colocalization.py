@@ -20,8 +20,13 @@ from scipy.signal import savgol_filter
 
 # ### Main function ###
 
-def detect_spots_colocalization(spots_1, spots_2, voxel_size, threshold=None,
-                                return_indices=False, return_threshold=False):
+def detect_spots_colocalization(
+        spots_1,
+        spots_2,
+        voxel_size,
+        threshold=None,
+        return_indices=False,
+        return_threshold=False):
     """Detect colocalized spots between two arrays of spot coordinates
     'spots_1' and 'spots_2'. Pairs of spots below a specific threshold are
     defined as colocalized.
@@ -76,8 +81,14 @@ def detect_spots_colocalization(spots_1, spots_2, voxel_size, threshold=None,
         return_threshold=bool)
 
     # check spots coordinates
-    stack.check_array(spots_1, ndim=2, dtype=[np.float64, np.int64])
-    stack.check_array(spots_2, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots_1,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
+    stack.check_array(
+        spots_2,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
 
     # convert spots coordinates in nanometer
     spots_1_nanometer = detection.convert_spot_coordinates(
@@ -194,8 +205,14 @@ def get_elbow_value_colocalized(spots_1, spots_2, voxel_size):
     """
     # check parameters
     stack.check_parameter(voxel_size=(int, float, tuple, list))
-    stack.check_array(spots_1, ndim=2, dtype=[np.float64, np.int64])
-    stack.check_array(spots_2, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots_1,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
+    stack.check_array(
+        spots_2,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
 
     # check consistency between parameters
     ndim = spots_1.shape[1]
