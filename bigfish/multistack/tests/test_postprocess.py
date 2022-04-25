@@ -22,9 +22,9 @@ from numpy.testing import assert_array_equal
 
 @pytest.mark.parametrize("ndim", [2, 3])
 @pytest.mark.parametrize("mask_dtype", [
-    np.uint8, np.uint16, np.int64, bool])
+    np.uint8, np.uint16, np.int32, np.int64, bool])
 @pytest.mark.parametrize("spot_dtype", [
-    np.int64, np.float64])
+    np.float32, np.float64, np.int32, np.int64])
 def test_identify_objects_in_region(ndim, mask_dtype, spot_dtype):
     # simulate mask and coordinates
     mask = np.zeros((10, 10), dtype=mask_dtype)
@@ -49,9 +49,9 @@ def test_identify_objects_in_region(ndim, mask_dtype, spot_dtype):
 
 @pytest.mark.parametrize("ndim", [2, 3])
 @pytest.mark.parametrize("mask_dtype", [
-    np.uint8, np.uint16, np.int64, bool])
+    np.uint8, np.uint16, np.int32, np.int64, bool])
 @pytest.mark.parametrize("spot_dtype", [
-    np.int64, np.float64])
+    np.float32, np.float64, np.int32, np.int64])
 def test_remove_transcription_site(ndim, mask_dtype, spot_dtype):
     # simulate mask and coordinates
     nuc_mask = np.zeros((10, 10), dtype=mask_dtype)

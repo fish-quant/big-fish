@@ -13,8 +13,6 @@ import numpy as np
 from skimage.measure import regionprops
 
 
-# TODO make functions compatible with different type of integers
-
 # ### Thresholding method ###
 
 def thresholding(image, threshold):
@@ -23,7 +21,7 @@ def thresholding(image, threshold):
 
     Parameters
     ----------
-    image : np.ndarray, np.uint
+    image : np.ndarray
         A 2-d image to segment with shape (y, x).
     threshold : int or float
         Pixel intensity threshold used to discriminate foreground from
@@ -36,7 +34,11 @@ def thresholding(image, threshold):
 
     """
     # check parameters
-    stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    stack.check_array(
+        image,
+        ndim=2,
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
     stack.check_parameter(threshold=(float, int))
 
     # discriminate nuclei from background, applying a threshold.
@@ -68,7 +70,7 @@ def compute_mean_diameter(image_label):
     stack.check_array(
         image_label,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -107,7 +109,7 @@ def compute_mean_convexity_ratio(image_label):
     stack.check_array(
         image_label,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64])
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -145,7 +147,7 @@ def compute_surface_ratio(image_label):
     stack.check_array(
         image_label,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64])
 
     # compute surface ratio
     surface_instances = image_label > 0
@@ -173,7 +175,7 @@ def count_instances(image_label):
     stack.check_array(
         image_label,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64])
 
     indices = set(image_label.ravel())
     if 0 in indices:

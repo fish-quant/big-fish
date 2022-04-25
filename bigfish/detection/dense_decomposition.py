@@ -28,8 +28,15 @@ from skimage.measure import label
 
 # ### Main function ###
 
-def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
-                    alpha=0.5, beta=1, gamma=5):
+def decompose_dense(
+        image,
+        spots,
+        voxel_size,
+        spot_radius,
+        kernel_size=None,
+        alpha=0.5,
+        beta=1,
+        gamma=5):
     """Detect dense and bright regions with potential clustered spots and
     simulate a more realistic number of spots in these regions.
 
@@ -44,7 +51,7 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2)
         for 3-d or 2-d images respectively.
     voxel_size : int, float, Tuple(int, float) or List(int, float)
@@ -93,7 +100,7 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
 
     Returns
     -------
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinate of the spots detected, with shape (nb_spots, 3) or
         (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
     dense_regions : np.ndarray, np.int64
@@ -105,13 +112,15 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
         Reference spot in 3-d or 2-d.
 
     """
-    # TODO allow/return float64 spots
     # check parameters
     stack.check_array(
         image,
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=np.int64)
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list),
@@ -128,6 +137,9 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
     if gamma < 0:
         raise ValueError("'gamma' should be a positive value, not {0}"
                          .format(gamma))
+
+    # store spots dtype
+    dtype = spots.dtype
 
     # check consistency between parameters
     ndim = image.ndim
@@ -158,7 +170,7 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
 
     # case where no spot were detected
     if spots.size == 0:
-        dense_regions = np.array([], dtype=np.int64).reshape((0, ndim + 4))
+        dense_regions = np.array([], dtype=dtype).reshape((0, ndim + 4))
         reference_spot = np.zeros((5,) * ndim, dtype=image.dtype)
         return spots, dense_regions, reference_spot
 
@@ -189,7 +201,7 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
 
     # case with an empty frame as reference spot
     if reference_spot.sum() == 0:
-        dense_regions = np.array([], dtype=np.int64).reshape((0, ndim + 4))
+        dense_regions = np.array([], dtype=dtype).reshape((0, ndim + 4))
         return spots, dense_regions, reference_spot
 
     # fit a gaussian function on the reference spot to be able to simulate it
@@ -214,7 +226,7 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
 
     # case where no region where detected
     if regions_to_decompose.size == 0:
-        dense_regions = np.array([], dtype=np.int64).reshape((0, ndim + 4))
+        dense_regions = np.array([], dtype=dtype).reshape((0, ndim + 4))
         return spots, dense_regions, reference_spot
 
     # precompute gaussian function values
@@ -234,6 +246,7 @@ def decompose_dense(image, spots, voxel_size, spot_radius, kernel_size=None,
         amplitude=amplitude,
         background=background,
         precomputed_gaussian=precomputed_gaussian)
+    spots_in_regions = spots_in_regions.astype(dtype)
 
     # normally the number of detected spots should increase
     if len(spots_out_regions) + len(spots_in_regions) < len(spots):
@@ -261,7 +274,7 @@ def get_dense_region(image, spots, voxel_size, spot_radius, beta=1):
     ----------
     image : np.ndarray
         Image with shape (z, y, x) or (y, x).
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
@@ -286,7 +299,7 @@ def get_dense_region(image, spots, voxel_size, spot_radius, beta=1):
     dense_regions : np.ndarray
         Array with selected ``skimage.measure._regionprops._RegionProperties``
         objects.
-    spots_out_region : np.ndarray, np.int64
+    spots_out_region : np.ndarray
         Coordinate of the spots detected out of dense regions, with shape
         (nb_spots, 3) or (nb_spots, 2). One coordinate per dimension (zyx or
         yx coordinates).
@@ -294,13 +307,15 @@ def get_dense_region(image, spots, voxel_size, spot_radius, beta=1):
         Maximum size of the regions.
 
     """
-    # TODO allow/return float64 spots
     # check parameters
     stack.check_array(
         image,
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=np.int64)
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list),
@@ -387,14 +402,14 @@ def _filter_connected_region(image, connected_component, spots):
         Image with shape (z, y, x) or (y, x).
     connected_component : np.ndarray, np.int64
         Image labelled with shape (z, y, x) or (y, x).
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
 
     Returns
     -------
     regions_filtered : np.ndarray
         Array with filtered skimage.measure._regionprops._RegionProperties.
-    spots_out_region : np.ndarray, np.int64
+    spots_out_region : np.ndarray
         Coordinate of the spots outside the regions with shape (nb_spots, 3)
         or (nb_spots, 2).
     max_region_size : int
@@ -437,14 +452,14 @@ def _filter_spot_out_candidate_regions(candidate_bbox, spots, nb_dim):
     ----------
     candidate_bbox : List[Tuple]
         List of Tuples with the bounding box coordinates.
-    spots : np.ndarray, np.int64
+    spots : np.ndarray
         Coordinate of the spots with shape (nb_spots, 3) or (nb_spots, 2).
     nb_dim : int
         Number of dimensions to consider (2 or 3).
 
     Returns
     -------
-    spots_out_region : np.ndarray, np.int64
+    spots_out_region : np.ndarray
         Coordinate of the spots outside the regions with shape (nb_spots, 3)
         or (nb_spots, 2).
     max_region_size : int
@@ -501,9 +516,14 @@ def _filter_spot_out_candidate_regions(candidate_bbox, spots, nb_dim):
 
 # ### Gaussian simulation ###
 
-def simulate_gaussian_mixture(image, candidate_regions, voxel_size, sigma,
-                              amplitude=100, background=0,
-                              precomputed_gaussian=None):
+def simulate_gaussian_mixture(
+        image,
+        candidate_regions,
+        voxel_size,
+        sigma,
+        amplitude=100,
+        background=0,
+        precomputed_gaussian=None):
     """Simulate as many gaussians as possible in the candidate dense regions in
     order to get a more realistic number of spots.
 
@@ -542,7 +562,6 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size, sigma,
         average intensity value and its index.
 
     """
-    # TODO allow/return float64 spots
     # check parameters
     stack.check_array(
         image,
@@ -643,14 +662,23 @@ def simulate_gaussian_mixture(image, candidate_regions, voxel_size, sigma,
                             region_area, region_intensity, i_region])
 
     spots_in_regions = np.concatenate(spots_in_regions, axis=0)
+    spots_in_regions = spots_in_regions.astype(np.int64)
     regions = np.array(regions, dtype=np.int64)
 
     return spots_in_regions, regions
 
 
-def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
-                         sigma_yx, amplitude, background, precomputed_gaussian,
-                         limit_gaussian=1000):
+def _gaussian_mixture_3d(
+        image,
+        region,
+        voxel_size_z,
+        voxel_size_yx,
+        sigma_z,
+        sigma_yx,
+        amplitude,
+        background,
+        precomputed_gaussian,
+        limit_gaussian=1000):
     """Fit as many 3-d gaussians as possible in a candidate region.
 
     Parameters
@@ -749,9 +777,15 @@ def _gaussian_mixture_3d(image, region, voxel_size_z, voxel_size_yx, sigma_z,
     return image_region, best_simulation, positions_gaussian
 
 
-def _gaussian_mixture_2d(image, region, voxel_size_yx, sigma_yx, amplitude,
-                         background, precomputed_gaussian,
-                         limit_gaussian=1000):
+def _gaussian_mixture_2d(
+        image,
+        region,
+        voxel_size_yx,
+        sigma_yx,
+        amplitude,
+        background,
+        precomputed_gaussian,
+        limit_gaussian=1000):
     """Fit as many 2-d gaussians as possible in a candidate region.
 
     Parameters

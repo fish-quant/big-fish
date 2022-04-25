@@ -52,7 +52,7 @@ x_out_focus = np.array(
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.float32, np.float64])
+    np.uint8, np.uint16, np.int32, np.int64, np.float32, np.float64])
 @pytest.mark.parametrize("neighborhood_size", [
     31, (5, 11), [11, 5]])
 def test_compute_focus_format(dtype, neighborhood_size):
@@ -60,7 +60,10 @@ def test_compute_focus_format(dtype, neighborhood_size):
     image = np.random.normal(loc=0.0, scale=1.0, size=10000)
     image = np.reshape(image, (100, 100)).astype(dtype)
     focus = stack.compute_focus(image, neighborhood_size=neighborhood_size)
-    assert focus.dtype == np.float64
+    if dtype == np.float32:
+        assert focus.dtype == np.float32
+    else:
+        assert focus.dtype == np.float64
     assert focus.shape == image.shape
     assert focus.min() >= 1
 
@@ -68,7 +71,10 @@ def test_compute_focus_format(dtype, neighborhood_size):
     image = np.random.normal(loc=0.0, scale=1.0, size=100000)
     image = np.reshape(image, (10, 100, 100)).astype(dtype)
     focus = stack.compute_focus(image, neighborhood_size=neighborhood_size)
-    assert focus.dtype == np.float64
+    if dtype == np.float32:
+        assert focus.dtype == np.float32
+    else:
+        assert focus.dtype == np.float64
     assert focus.shape == image.shape
     assert focus.min() >= 1
 

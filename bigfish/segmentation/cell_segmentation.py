@@ -44,8 +44,13 @@ def unet_distance_edge_double():
     return model
 
 
-def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
-                               test_time_augmentation=False):
+def apply_unet_distance_double(
+        model,
+        nuc,
+        cell,
+        nuc_label,
+        target_size=None,
+        test_time_augmentation=False):
     """Segment cell with a pretrained model to predict distance map and  use
     it with a watershed algorithm.
 
@@ -203,8 +208,12 @@ def apply_unet_distance_double(model, nuc, cell, nuc_label, target_size=None,
     return cell_label_pred
 
 
-def from_distance_to_instances(label_x_nuc, label_2_cell, label_distance,
-                               nuc_3_classes=False, compute_nuc_label=False):
+def from_distance_to_instances(
+        label_x_nuc,
+        label_2_cell,
+        label_distance,
+        nuc_3_classes=False,
+        compute_nuc_label=False):
     """Extract instance labels from a distance map and a binary surface
     prediction with a watershed algorithm.
 
@@ -237,8 +246,8 @@ def from_distance_to_instances(label_x_nuc, label_2_cell, label_distance,
         nuc_3_classes=bool,
         compute_nuc_label=bool)
     stack.check_array(label_x_nuc, ndim=2, dtype=[np.float32, np.int64])
-    stack.check_array(label_2_cell, ndim=2, dtype=[np.float32])
-    stack.check_array(label_distance, ndim=2, dtype=[np.uint16])
+    stack.check_array(label_2_cell, ndim=2, dtype=np.float32)
+    stack.check_array(label_distance, ndim=2, dtype=np.uint16)
 
     # get nuclei labels
     if nuc_3_classes and compute_nuc_label:
@@ -451,7 +460,7 @@ def apply_watershed(watershed_relief, nuc_label, cell_mask):
     stack.check_array(
         watershed_relief,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_array(cell_mask, ndim=2, dtype=bool)
 

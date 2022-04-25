@@ -11,24 +11,37 @@ import numpy as np
 from scipy import ndimage as ndi
 
 from skimage.morphology import binary_opening
-from skimage.morphology.selem import disk
+import skimage
+from sklearn.utils.fixes import parse_version
+if parse_version(skimage.__version__) < parse_version("0.19.0"):
+    from skimage.morphology.selem import disk
+else:
+    from skimage.morphology.footprints import disk
 
 import bigfish.stack as stack
 from .input_preparation import prepare_extracted_data
 
 
-# TODO allow RNA coordinates in float64 and int64
-
 # ### Main functions ###
 
-def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
-                     voxel_size_yx=None, foci_coord=None,
-                     centrosome_coord=None,
-                     compute_distance=False, compute_intranuclear=False,
-                     compute_protrusion=False, compute_dispersion=False,
-                     compute_topography=False, compute_foci=False,
-                     compute_area=False, compute_centrosome=False,
-                     return_names=False):
+def compute_features(
+        cell_mask,
+        nuc_mask,
+        ndim,
+        rna_coord,
+        smfish=None,
+        voxel_size_yx=None,
+        foci_coord=None,
+        centrosome_coord=None,
+        compute_distance=False,
+        compute_intranuclear=False,
+        compute_protrusion=False,
+        compute_dispersion=False,
+        compute_topography=False,
+        compute_foci=False,
+        compute_area=False,
+        compute_centrosome=False,
+        return_names=False):
     """Compute requested features.
 
     Parameters
@@ -39,7 +52,7 @@ def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
         Surface of the nucleus with shape (y, x).
     ndim : int
         Number of spatial dimensions to consider (2 or 3).
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
         plus the index of the cluster assigned to the spot. If no cluster was
@@ -49,11 +62,11 @@ def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
         Image of RNAs, with shape (y, x).
     voxel_size_yx : int, float or None
         Size of a voxel on the yx plan, in nanometer.
-    foci_coord : np.ndarray, np.int64
+    foci_coord : np.ndarray, np.int
         Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
         dimension for the foci centroid (zyx or yx coordinates), the number of
         spots detected in the foci and its index.
-    centrosome_coord : np.ndarray, np.int64
+    centrosome_coord : np.ndarray, np.int
         Coordinates of the detected centrosome with shape (nb_elements, 3) or
         (nb_elements, 2). One coordinate per dimension (zyx or yx dimensions).
         These coordinates are mandatory to compute centrosome related features.
@@ -83,22 +96,23 @@ def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
 
     """
     # check parameters
-    stack.check_parameter(voxel_size_yx=(int, float, type(None)),
-                          compute_distance=bool,
-                          compute_intranuclear=bool,
-                          compute_protrusion=bool,
-                          compute_dispersion=bool,
-                          compute_topography=bool,
-                          compute_foci=bool,
-                          compute_area=bool,
-                          compute_centrosome=bool,
-                          return_names=bool)
+    stack.check_parameter(
+        voxel_size_yx=(int, float, type(None)),
+        compute_distance=bool,
+        compute_intranuclear=bool,
+        compute_protrusion=bool,
+        compute_dispersion=bool,
+        compute_topography=bool,
+        compute_foci=bool,
+        compute_area=bool,
+        compute_centrosome=bool,
+        return_names=bool)
     if smfish is not None:
         stack.check_array(smfish, ndim=[2, 3], dtype=[np.uint8, np.uint16])
         if smfish.ndim == 3:
             smfish = stack.maximum_projection(smfish)
     if foci_coord is not None:
-        stack.check_array(foci_coord, ndim=2, dtype=np.int64)
+        stack.check_array(foci_coord, ndim=2, dtype=[np.int32, np.int64])
 
     # prepare input data
     (cell_mask,
@@ -213,14 +227,15 @@ def compute_features(cell_mask, nuc_mask, ndim, rna_coord, smfish=None,
     return features
 
 
-def get_features_name(names_features_distance=False,
-                      names_features_intranuclear=False,
-                      names_features_protrusion=False,
-                      names_features_dispersion=False,
-                      names_features_topography=False,
-                      names_features_foci=False,
-                      names_features_area=False,
-                      names_features_centrosome=False):
+def get_features_name(
+        names_features_distance=False,
+        names_features_intranuclear=False,
+        names_features_protrusion=False,
+        names_features_dispersion=False,
+        names_features_topography=False,
+        names_features_foci=False,
+        names_features_area=False,
+        names_features_centrosome=False):
     """Return the current list of features names.
 
     Parameters
@@ -251,84 +266,99 @@ def get_features_name(names_features_distance=False,
 
     """
     # check parameters
-    stack.check_parameter(names_features_distance=bool,
-                          names_features_intranuclear=bool,
-                          names_features_protrusion=bool,
-                          names_features_dispersion=bool,
-                          names_features_topography=bool,
-                          names_features_foci=bool,
-                          names_features_area=bool,
-                          names_features_centrosome=bool)
+    stack.check_parameter(
+        names_features_distance=bool,
+        names_features_intranuclear=bool,
+        names_features_protrusion=bool,
+        names_features_dispersion=bool,
+        names_features_topography=bool,
+        names_features_foci=bool,
+        names_features_area=bool,
+        names_features_centrosome=bool)
 
     # initialization
     features_name = []
 
     # get feature names
     if names_features_distance:
-        features_name += ["index_mean_distance_cell",
-                          "index_median_distance_cell",
-                          "index_mean_distance_nuc",
-                          "index_median_distance_nuc"]
+        features_name += [
+            "index_mean_distance_cell",
+            "index_median_distance_cell",
+            "index_mean_distance_nuc",
+            "index_median_distance_nuc"]
 
     if names_features_intranuclear:
-        features_name += ["proportion_rna_in_nuc",
-                          "nb_rna_out_nuc",
-                          "nb_rna_in_nuc"]
+        features_name += [
+            "proportion_rna_in_nuc",
+            "nb_rna_out_nuc",
+            "nb_rna_in_nuc"]
 
     if names_features_protrusion:
-        features_name += ["index_rna_protrusion",
-                          "proportion_rna_protrusion",
-                          "protrusion_area"]
+        features_name += [
+            "index_rna_protrusion",
+            "proportion_rna_protrusion",
+            "protrusion_area"]
 
     if names_features_dispersion:
-        features_name += ["index_polarization",
-                          "index_dispersion",
-                          "index_peripheral_distribution"]
+        features_name += [
+            "index_polarization",
+            "index_dispersion",
+            "index_peripheral_distribution"]
 
     if names_features_topography:
-        features_name += ["index_rna_nuc_edge",
-                          "proportion_rna_nuc_edge"]
+        features_name += [
+            "index_rna_nuc_edge",
+            "proportion_rna_nuc_edge"]
 
         a = 500
         for b in range(1000, 3001, 500):
-            features_name += ["index_rna_nuc_radius_{}_{}".format(a, b),
-                              "proportion_rna_nuc_radius_{}_{}".format(a, b)]
+            features_name += [
+                "index_rna_nuc_radius_{}_{}".format(a, b),
+                "proportion_rna_nuc_radius_{}_{}".format(a, b)]
             a = b
 
         a = 0
         for b in range(500, 3001, 500):
-            features_name += ["index_rna_cell_radius_{}_{}".format(a, b),
-                              "proportion_rna_cell_radius_{}_{}".format(a, b)]
+            features_name += [
+                "index_rna_cell_radius_{}_{}".format(a, b),
+                "proportion_rna_cell_radius_{}_{}".format(a, b)]
             a = b
 
     if names_features_foci:
         features_name += ["proportion_rna_in_foci"]
 
     if names_features_area:
-        features_name += ["proportion_nuc_area",
-                          "cell_area",
-                          "nuc_area",
-                          "cell_area_out_nuc"]
+        features_name += [
+            "proportion_nuc_area",
+            "cell_area",
+            "nuc_area",
+            "cell_area_out_nuc"]
 
     if names_features_centrosome:
-        features_name += ["index_mean_distance_centrosome",
-                          "index_median_distance_centrosome",
-                          "index_rna_centrosome",
-                          "proportion_rna_centrosome",
-                          "index_centrosome_dispersion"]
+        features_name += [
+            "index_mean_distance_centrosome",
+            "index_median_distance_centrosome",
+            "index_rna_centrosome",
+            "proportion_rna_centrosome",
+            "index_centrosome_dispersion"]
 
     return features_name
 
 
 # ### Features functions ###
 
-def features_distance(rna_coord, distance_cell, distance_nuc, cell_mask, ndim,
-                      check_input=True):
+def features_distance(
+        rna_coord,
+        distance_cell,
+        distance_nuc,
+        cell_mask,
+        ndim,
+        check_input=True):
     """Compute distance related features.
 
     Parameters
     ----------
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
     distance_cell : np.ndarray, np.float32
@@ -360,7 +390,10 @@ def features_distance(rna_coord, distance_cell, distance_nuc, cell_mask, ndim,
         stack.check_parameter(ndim=int)
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
+        stack.check_array(
+            rna_coord,
+            ndim=2,
+            dtype=[np.int32, np.int64])
         stack.check_array(
             distance_cell,
             ndim=2,
@@ -406,10 +439,10 @@ def features_in_out_nucleus(rna_coord, rna_coord_out_nuc, check_input=True):
 
     Parameters
     ----------
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
-    rna_coord_out_nuc : np.ndarray, np.int64
+    rna_coord_out_nuc : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns. Spots detected inside the nucleus are removed.
     check_input : bool
@@ -428,8 +461,9 @@ def features_in_out_nucleus(rna_coord, rna_coord_out_nuc, check_input=True):
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-        stack.check_array(rna_coord_out_nuc, ndim=2, dtype=np.int64)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
+        stack.check_array(
+            rna_coord_out_nuc, ndim=2, dtype=[np.int32, np.int64])
 
     # count total number of rna
     nb_rna = float(len(rna_coord))
@@ -451,13 +485,18 @@ def features_in_out_nucleus(rna_coord, rna_coord_out_nuc, check_input=True):
     return features
 
 
-def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
-                        check_input=True):
+def features_protrusion(
+        rna_coord,
+        cell_mask,
+        nuc_mask,
+        ndim,
+        voxel_size_yx,
+        check_input=True):
     """Compute protrusion related features.
 
     Parameters
     ----------
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
     cell_mask : np.ndarray, bool
@@ -485,7 +524,6 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
     # TODO fin a better feature for the protrusion (idea: dilate region from
     #  centroid and stop when a majority of new pixels do not belong to the
     #  cell).
-
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
@@ -494,7 +532,7 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
             voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
         stack.check_array(cell_mask, ndim=2, dtype=bool)
         stack.check_array(nuc_mask, ndim=2, dtype=bool)
 
@@ -534,8 +572,15 @@ def features_protrusion(rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx,
     return features
 
 
-def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
-                        centroid_cell, centroid_nuc, ndim, check_input=True):
+def features_dispersion(
+        smfish,
+        rna_coord,
+        centroid_rna,
+        cell_mask,
+        centroid_cell,
+        centroid_nuc,
+        ndim,
+        check_input=True):
     """Compute RNA Distribution Index features (RDI) described in:
 
     RDI Calculator: An analysis Tool to assess RNA distributions in cells,
@@ -545,16 +590,16 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
     ----------
     smfish : np.ndarray, np.uint
         Image of RNAs, with shape (y, x).
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
-    centroid_rna : np.ndarray, np.int64
+    centroid_rna : np.ndarray, np.int
         Coordinates of the rna centroid with shape (2,) or (3,).
     cell_mask : np.ndarray, bool
         Surface of the cell with shape (y, x).
-    centroid_cell : np.ndarray, np.int64
+    centroid_cell : np.ndarray, np.int
         Coordinates of the cell centroid with shape (2,).
-    centroid_nuc : np.ndarray, np.int64
+    centroid_nuc : np.ndarray, np.int
         Coordinates of the nucleus centroid with shape (2,).
     ndim : int
         Number of spatial dimensions to consider.
@@ -578,11 +623,11 @@ def features_dispersion(smfish, rna_coord, centroid_rna, cell_mask,
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(smfish, ndim=2, dtype=[np.uint8, np.uint16])
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-        stack.check_array(centroid_rna, ndim=1, dtype=np.int64)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
+        stack.check_array(centroid_rna, ndim=1, dtype=[np.int32, np.int64])
         stack.check_array(cell_mask, ndim=2, dtype=bool)
-        stack.check_array(centroid_cell, ndim=1, dtype=np.int64)
-        stack.check_array(centroid_nuc, ndim=1, dtype=np.int64)
+        stack.check_array(centroid_cell, ndim=1, dtype=[np.int32, np.int64])
+        stack.check_array(centroid_nuc, ndim=1, dtype=[np.int32, np.int64])
 
     # case where no mRNAs are detected
     if len(rna_coord) == 0:
@@ -645,7 +690,7 @@ def _rmsd(coord, reference_coord):
 
     Parameters
     ----------
-    coord : np.ndarray, np.int64
+    coord : np.ndarray, np.int
         Coordinates with shape (nb_points, 2).
     reference_coord : np.ndarray, np.int64
         Reference coordinate to compute the distance from, with shape (2,).
@@ -664,14 +709,19 @@ def _rmsd(coord, reference_coord):
     return rmsd
 
 
-def features_topography(rna_coord, cell_mask, nuc_mask, cell_mask_out_nuc,
-                        ndim, voxel_size_yx,
-                        check_input=True):
+def features_topography(
+        rna_coord,
+        cell_mask,
+        nuc_mask,
+        cell_mask_out_nuc,
+        ndim,
+        voxel_size_yx,
+        check_input=True):
     """Compute topographic features.
 
     Parameters
     ----------
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
     cell_mask : np.ndarray, bool
@@ -717,7 +767,7 @@ def features_topography(rna_coord, cell_mask, nuc_mask, cell_mask_out_nuc,
             voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
         stack.check_array(cell_mask, ndim=2, dtype=bool)
         stack.check_array(nuc_mask, ndim=2, dtype=bool)
         stack.check_array(cell_mask_out_nuc, ndim=2, dtype=bool)
@@ -807,10 +857,10 @@ def features_foci(rna_coord, foci_coord, ndim, check_input=True):
 
     Parameters
     ----------
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
-    foci_coord : np.ndarray, np.int64
+    foci_coord : np.ndarray, np.int
         Array with shape (nb_foci, 5) or (nb_foci, 4). One coordinate per
         dimension for the foci centroid (zyx or yx coordinates), the number of
         spots detected in the foci and its index.
@@ -831,8 +881,8 @@ def features_foci(rna_coord, foci_coord, ndim, check_input=True):
         stack.check_parameter(ndim=int)
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
-        stack.check_array(foci_coord, ndim=2, dtype=np.int64)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
+        stack.check_array(foci_coord, ndim=2, dtype=[np.int32, np.int64])
 
     if len(rna_coord) == 0 or len(foci_coord) == 0:
         features = (0.,)
@@ -897,15 +947,21 @@ def features_area(cell_mask, nuc_mask, cell_mask_out_nuc, check_input=True):
     return features
 
 
-def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
-                        ndim, voxel_size_yx, check_input=True):
+def features_centrosome(
+        smfish,
+        rna_coord,
+        distance_centrosome,
+        cell_mask,
+        ndim,
+        voxel_size_yx,
+        check_input=True):
     """Compute centrosome related features (in 2 dimensions).
 
     Parameters
     ----------
     smfish : np.ndarray, np.uint
         Image of RNAs, with shape (y, x).
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected RNAs with zyx or yx coordinates in the
         first 3 or 2 columns.
     distance_centrosome : np.ndarray, np.float32
@@ -944,7 +1000,7 @@ def features_centrosome(smfish, rna_coord, distance_centrosome, cell_mask,
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(smfish, ndim=2, dtype=[np.uint8, np.uint16])
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
         stack.check_array(
             distance_centrosome,
             ndim=2,

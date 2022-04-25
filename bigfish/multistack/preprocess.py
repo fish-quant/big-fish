@@ -23,8 +23,11 @@ from .utils import count_nb_fov
 
 # ### Building stack ###
 
-def build_stacks(data_map, input_dimension=None, sanity_check=False,
-                 return_origin=False):
+def build_stacks(
+        data_map,
+        input_dimension=None,
+        sanity_check=False,
+        return_origin=False):
     """Generator to build several stacks from recipe-folder pairs.
 
     To build a stack, a recipe should be linked to a directory including all
@@ -145,8 +148,12 @@ def build_stacks(data_map, input_dimension=None, sanity_check=False,
                 yield tensor
 
 
-def build_stack(recipe, input_folder, input_dimension=None, sanity_check=False,
-                i_fov=0):
+def build_stack(
+        recipe,
+        input_folder,
+        input_dimension=None,
+        sanity_check=False,
+        i_fov=0):
     """Build a 5-d stack from the same field of view (fov).
 
     The recipe dictionary for one field of view takes the form:
@@ -577,8 +584,8 @@ def build_stack_no_recipe(paths, input_dimension=None, sanity_check=False):
     if sanity_check:
         stack.check_array(
             tensor,
-            dtype=[np.uint8, np.uint16, np.uint32,
-                   np.int8, np.int16, np.int32,
+            dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
+                   np.int8, np.int16, np.int32, np.int64,
                    np.float16, np.float32, np.float64,
                    bool],
             ndim=5,

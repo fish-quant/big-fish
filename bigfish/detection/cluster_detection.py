@@ -58,7 +58,10 @@ def detect_clusters(spots, voxel_size, radius=350, nb_min_spots=4):
     # TODO check that the behavior is the same with float64 and int64
     #  coordinates
     # check parameters
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         radius=int,
@@ -158,6 +161,9 @@ def _extract_information(clustered_spots):
         number of spots detected in the cluster and its index.
 
     """
+    # store dtype
+    dtype = clustered_spots.dtype
+
     # extract information for 3-d cluster...
     if clustered_spots.shape[1] == 4:
 
@@ -165,7 +171,7 @@ def _extract_information(clustered_spots):
         labels_clusters = np.unique(
             clustered_spots[clustered_spots[:, 3] != -1, 3])
         if labels_clusters.size == 0:
-            clusters = np.array([], dtype=np.int64).reshape((0, 5))
+            clusters = np.array([], dtype=dtype).reshape((0, 5))
             return clusters
 
         # shape information
@@ -177,7 +183,7 @@ def _extract_information(clustered_spots):
             nb_spots_cluster = len(spots_in_cluster)
             clusters.append([z_cluster, y_cluster, x_cluster,
                              nb_spots_cluster, label])
-        clusters = np.array(clusters, dtype=np.int64)
+        clusters = np.array(clusters, dtype=dtype)
 
     # ... and 2-d cluster
     else:
@@ -186,7 +192,7 @@ def _extract_information(clustered_spots):
         labels_clusters = np.unique(
             clustered_spots[clustered_spots[:, 2] != -1, 2])
         if labels_clusters.size == 0:
-            clusters = np.array([], dtype=np.int64).reshape((0, 4))
+            clusters = np.array([], dtype=dtype).reshape((0, 4))
             return clusters
 
         # shape information
@@ -197,6 +203,6 @@ def _extract_information(clustered_spots):
             y_cluster, x_cluster = spots_in_cluster.mean(axis=0)
             nb_spots_cluster = len(spots_in_cluster)
             clusters.append([y_cluster, x_cluster, nb_spots_cluster, label])
-        clusters = np.array(clusters, dtype=np.int64)
+        clusters = np.array(clusters, dtype=dtype)
 
     return clusters

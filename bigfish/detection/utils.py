@@ -37,7 +37,10 @@ def convert_spot_coordinates(spots, voxel_size):
     """
     # check parameters
     stack.check_parameter(voxel_size=(int, float, tuple, list))
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     dtype = spots.dtype
 
     # check consistency between parameters
@@ -211,7 +214,10 @@ def build_reference_spot(image, spots, voxel_size, spot_radius, alpha=0.5):
         image,
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list),
@@ -336,11 +342,11 @@ def _get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     ----------
     image : np.ndarray
         Image with shape (z, y, x).
-    spot_z : np.int64
+    spot_z : scalar
         Coordinate of the detected spot along the z axis.
-    spot_y : np.int64
+    spot_y : scalar
         Coordinate of the detected spot along the y axis.
-    spot_x : np.int64
+    spot_x : scalar
         Coordinate of the detected spot along the x axis.
     radius_z : int
         Radius in pixel of the detected spot, along the z axis.
@@ -445,9 +451,9 @@ def _get_spot_surface(image, spot_y, spot_x, radius_yx):
     ----------
     image : np.ndarray
         Image with shape (y, x).
-    spot_y : np.int64
+    spot_y : scalar
         Coordinate of the detected spot along the y axis.
-    spot_x : np.int64
+    spot_x : scalar
         Coordinate of the detected spot along the x axis.
     radius_yx : int
         Radius in pixel of the detected spot, on the yx plan.
@@ -516,7 +522,10 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
     stack.check_range_value(image, min_=0)
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list))

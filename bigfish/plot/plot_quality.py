@@ -18,9 +18,17 @@ from .utils import save_plot
 
 # ### Focus - sharpness ###
 
-def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
-                   size_title=20, size_axes=15, size_legend=15,
-                   path_output=None, ext="png", show=True):
+def plot_sharpness(
+        focus_measures,
+        labels=None,
+        title=None,
+        framesize=(5, 5),
+        size_title=20,
+        size_axes=15,
+        size_legend=15,
+        path_output=None,
+        ext="png",
+        show=True):
     """Plot focus measures of a 3-d image, at the z-slice level.
 
     A measure of focus for each z-slice can be computed by averaging the
@@ -105,10 +113,20 @@ def plot_sharpness(focus_measures, labels=None, title=None, framesize=(5, 5),
 
 # ### Elbow plots ###
 
-def plot_elbow(images, voxel_size=None, spot_radius=None, log_kernel_size=None,
-               minimum_distance=None, title=None, framesize=(5, 5),
-               size_title=20, size_axes=15, size_legend=15, path_output=None,
-               ext="png", show=True):
+def plot_elbow(
+        images,
+        voxel_size=None,
+        spot_radius=None,
+        log_kernel_size=None,
+        minimum_distance=None,
+        title=None,
+        framesize=(5, 5),
+        size_title=20,
+        size_axes=15,
+        size_legend=15,
+        path_output=None,
+        ext="png",
+        show=True):
     """Plot the elbow curve that allows an automated spot detection.
 
     Parameters
@@ -208,10 +226,19 @@ def plot_elbow(images, voxel_size=None, spot_radius=None, log_kernel_size=None,
         plt.close()
 
 
-def plot_elbow_colocalized(spots_1, spots_2, voxel_size, threshold_max=None,
-                           title=None, framesize=(5, 5), size_title=20,
-                           size_axes=15, size_legend=15, path_output=None,
-                           ext="png", show=True):
+def plot_elbow_colocalized(
+        spots_1,
+        spots_2,
+        voxel_size,
+        threshold_max=None,
+        title=None,
+        framesize=(5, 5),
+        size_title=20,
+        size_axes=15,
+        size_legend=15,
+        path_output=None,
+        ext="png",
+        show=True):
     """Plot the elbow curve that allows an automated colocalized spot
     detection.
 

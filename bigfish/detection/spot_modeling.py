@@ -215,8 +215,11 @@ def initialize_grid(image_spot, voxel_size, return_centroid=False):
             return grid
 
 
-def _initialize_grid_3d(image_spot, voxel_size_z, voxel_size_yx,
-                        return_centroid=False):
+def _initialize_grid_3d(
+        image_spot,
+        voxel_size_z,
+        voxel_size_yx,
+        return_centroid=False):
     """Build a grid in nanometer to compute gaussian function values over a
     full volume.
 
@@ -351,8 +354,7 @@ def _initialize_background_amplitude(image_spot):
 
 # ### Pixel fitting ###
 
-def _objective_function(ndim, voxel_size, sigma_z, sigma_yx,
-                        amplitude):
+def _objective_function(ndim, voxel_size, sigma_z, sigma_yx, amplitude):
     """Design the objective function used to fit the gaussian function.
 
     Parameters
@@ -393,8 +395,12 @@ def _objective_function(ndim, voxel_size, sigma_z, sigma_yx,
     return f
 
 
-def _objective_function_3d(voxel_size_z, voxel_size_yx, sigma_z, sigma_yx,
-                           amplitude):
+def _objective_function_3d(
+        voxel_size_z,
+        voxel_size_yx,
+        sigma_z,
+        sigma_yx,
+        amplitude):
     """Design the objective function used to fit the gaussian function.
 
     Parameters
@@ -497,9 +503,18 @@ def _objective_function_3d(voxel_size_z, voxel_size_yx, sigma_z, sigma_yx,
 
 
 # TODO add equations in the docstring
-def gaussian_3d(grid, mu_z, mu_y, mu_x, sigma_z, sigma_yx, voxel_size_z,
-                voxel_size_yx, amplitude, background,
-                precomputed=None):
+def gaussian_3d(
+        grid,
+        mu_z,
+        mu_y,
+        mu_x,
+        sigma_z,
+        sigma_yx,
+        voxel_size_z,
+        voxel_size_yx,
+        amplitude,
+        background,
+        precomputed=None):
     """Compute the gaussian function over the grid representing a volume V
     with shape (V_z, V_y, V_x).
 
@@ -668,8 +683,15 @@ def _objective_function_2d(voxel_size_yx, sigma_yx, amplitude):
 
 
 # TODO add equations in the docstring
-def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, amplitude,
-                background, precomputed=None):
+def gaussian_2d(
+        grid,
+        mu_y,
+        mu_x,
+        sigma_yx,
+        voxel_size_yx,
+        amplitude,
+        background,
+        precomputed=None):
     """Compute the gaussian function over the grid representing a surface S
     with shape (S_y, S_x).
 
@@ -747,10 +769,9 @@ def gaussian_2d(grid, mu_y, mu_x, sigma_yx, voxel_size_yx, amplitude,
     return values
 
 
+# TODO add equations in the docstring
 def _rescaled_erf(low, high, mu, sigma):
     """Rescaled the Error function along a specific axis.
-
-    # TODO add equations
 
     Parameters
     ----------
@@ -778,10 +799,9 @@ def _rescaled_erf(low, high, mu, sigma):
     return rescaled_erf
 
 
+# TODO add equations and optimization algorithm in the docstring
 def _fit_gaussian(f, grid, image_spot, p0, lower_bound=None, upper_bound=None):
     """Fit a gaussian function to a 3-d or 2-d image.
-
-    # TODO add equations and algorithm
 
     Parameters
     ----------
@@ -810,7 +830,6 @@ def _fit_gaussian(f, grid, image_spot, p0, lower_bound=None, upper_bound=None):
     """
     # TODO check that we do not fit a 2-d gaussian function to a 3-d image or
     #  the opposite
-
     # compute lower bound and upper bound
     if lower_bound is None:
         lower_bound = [-np.inf for _ in p0]
@@ -939,7 +958,7 @@ def fit_subpixel(image, spots, voxel_size, spot_radius):
 
     Returns
     -------
-    spots_subpixel : np.ndarray, np.float64
+    spots_subpixel : np.ndarray
         Coordinate of the spots detected, with shape (nb_spots, 3) or
         (nb_spots, 2). One coordinate per dimension (zyx or yx coordinates).
 
@@ -949,7 +968,10 @@ def fit_subpixel(image, spots, voxel_size, spot_radius):
         image,
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(spots, ndim=2, dtype=[np.float64, np.int64])
+    stack.check_array(
+        spots,
+        ndim=2,
+        dtype=[np.float32, np.float64, np.int32, np.int64])
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list))
@@ -1006,19 +1028,29 @@ def fit_subpixel(image, spots, voxel_size, spot_radius):
 
     # format results
     spots_subpixel = np.stack(spots_subpixel)
+    if spots.dtype == np.float32:
+        spots_subpixel = spots_subpixel.astype(np.float32)
+    else:
+        spots_subpixel = spots_subpixel.astype(np.float64)
 
     return spots_subpixel
 
 
-def _fit_subpixel_3d(image, coord, radius_to_crop, voxel_size_z, voxel_size_yx,
-                     spot_radius_z, spot_radius_yx):
+def _fit_subpixel_3d(
+        image,
+        coord,
+        radius_to_crop,
+        voxel_size_z,
+        voxel_size_yx,
+        spot_radius_z,
+        spot_radius_yx):
     """Fit a 3-d gaussian on a detected spot.
 
     Parameters
     ----------
     image : np.ndarray
         Image with shape (z, y, x).
-    coord : np.ndarray, np.int64
+    coord : np.ndarray
         Coordinate of the spot detected, with shape (3,). One coordinate per
         dimension (zyx coordinates).
     radius_to_crop : Tuple[float]
@@ -1083,15 +1115,19 @@ def _fit_subpixel_3d(image, coord, radius_to_crop, voxel_size_z, voxel_size_yx,
     return new_coord
 
 
-def _fit_subpixel_2d(image, coord, radius_to_crop, voxel_size_yx,
-                     spot_radius_yx):
+def _fit_subpixel_2d(
+        image,
+        coord,
+        radius_to_crop,
+        voxel_size_yx,
+        spot_radius_yx):
     """Fit a 2-d gaussian on a detected spot.
 
     Parameters
     ----------
     image : np.ndarray
         Image with shape (y, x).
-    coord : np.ndarray, np.int64
+    coord : np.ndarray
         Coordinate of the spot detected, with shape (2,). One coordinate per
         dimension (yx coordinates).
     radius_to_crop : Tuple[float]

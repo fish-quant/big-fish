@@ -50,7 +50,8 @@ def compute_focus(image, neighborhood_size=31):
     check_array(
         image,
         ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
     check_parameter(neighborhood_size=(int, tuple, list))
     if (isinstance(neighborhood_size, (tuple, list))
             and len(neighborhood_size) != 2):
@@ -61,7 +62,7 @@ def compute_focus(image, neighborhood_size=31):
                          .format(len(neighborhood_size)))
 
     # cast image in float if necessary
-    if image.dtype in [np.uint8, np.uint16]:
+    if image.dtype in [np.uint8, np.uint16, np.int32, np.int64]:
         image_float = image.astype(np.float64)
     else:
         image_float = image
@@ -89,7 +90,7 @@ def _compute_focus_3d(image_3d, kernel_size):
 
     Returns
     -------
-    focus : np.ndarray, np.float64
+    focus : np.ndarray, np.float
         A 3-d tensor with the R(z, y, x) computed for each pixel of the
         original image.
 
@@ -101,7 +102,7 @@ def _compute_focus_3d(image_3d, kernel_size):
         focus.append(focus_2d)
 
     #  stack focus metrics
-    focus = np.stack(focus)
+    focus = np.stack(focus).astype(image_3d.dtype)
 
     return focus
 
@@ -120,7 +121,7 @@ def _compute_focus_2d(image_2d, kernel_size):
 
     Returns
     -------
-    focus : np.ndarray, np.float64
+    focus : np.ndarray, np.float
         A 2-d tensor with the R(y, x) computed for each pixel of the original
         image.
 
@@ -132,8 +133,8 @@ def _compute_focus_2d(image_2d, kernel_size):
         image_filtered_mean = mean_filter(image_2d, "rectangle", kernel_size)
 
     # compute focus metric
-    ratio_default_1 = np.ones_like(image_2d, dtype=np.float64)
-    ratio_default_2 = np.ones_like(image_filtered_mean, dtype=np.float64)
+    ratio_default_1 = np.ones_like(image_2d)
+    ratio_default_2 = np.ones_like(image_filtered_mean)
     ratio_1 = np.divide(
         image_2d, image_filtered_mean,
         out=ratio_default_1,
@@ -143,5 +144,8 @@ def _compute_focus_2d(image_2d, kernel_size):
         out=ratio_default_2,
         where=image_2d > 0)
     focus = np.where(image_2d >= image_filtered_mean, ratio_1, ratio_2)
+
+    # cast focus dtype (np.float32 or np.float64)
+    focus = focus.astype(image_2d.dtype)
 
     return focus
