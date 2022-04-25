@@ -361,8 +361,7 @@ def extract_cell(
                               "dimension we consider ({1})."
                               .format(array.shape[1], ndim),
                               UserWarning)
-    # TODO bug if 'image' is None but not 'others_image'
-    if others_image is not None:
+    if others_image is not None and image is not None:
         for key in others_image:
             if key in actual_keys:
                 raise KeyError("Key {0} in 'others_image' is already taken. "
@@ -635,9 +634,11 @@ def summarize_extraction_results(
     -------
     df : pd.DataFrame
         Dataframe with summarized results from the field of view, at the cell
-        level. At least `cell_id` (Unique id of the cell) is returned. Other
-        indicators are summarized if available:
+        level. At least `cell_id` (Unique id of the cell) and 'cell_area' (2-d
+        area of the cell, in pixel) are returned. Other indicators are
+        summarized if available:
 
+        * `nuc_area`: 2-d area of the nucleus, in pixel.
         * `nb_rna`: Number of detected rna in the cell.
         * `nb_rna_in_nuc`: Number of detected rna inside the nucleus.
         * `nb_rna_out_nuc`: Number of detected rna outside the nucleus.
@@ -669,12 +670,15 @@ def summarize_extraction_results(
             continue
         others_coord = cell_results[key]
         if (not isinstance(others_coord, np.ndarray)
-                or others_coord.dtype not in [np.int64, np.float64]):
+                or others_coord.dtype not in [
+                    np.float32, np.float64, np.int32, np.int64]):
             continue
         _extra_coord[key] = []
 
     # summarize results at the cell level
     _cell_id = []
+    _cell_area = []
+    _nuc_area = []
     _nb_rna = []
     _nb_rna_in_nuc = []
     _nb_rna_out_nuc = []
@@ -682,20 +686,27 @@ def summarize_extraction_results(
         # get cell id
         _cell_id.append(cell_results["cell_id"])
 
+        # get cell area
+        cell_mask = cell_results["cell_mask"]
+        cell_area = int(cell_mask.sum())
+        _cell_area.append(cell_area)
+
         # get rna coordinates and relative results
         if "rna_coord" in cell_results:
             rna_coord = cell_results["rna_coord"]
             _nb_rna.append(len(rna_coord))
 
-            # get rna in nucleus
+            # get rna in nucleus and nucleus area
             if "nuc_mask" in cell_results:
                 nuc_mask = cell_results["nuc_mask"]
                 rna_in_nuc, rna_out_nuc = identify_objects_in_region(
                     nuc_mask,
                     rna_coord,
                     ndim)
+                nuc_area = int(nuc_mask.sum())
                 _nb_rna_in_nuc.append(len(rna_in_nuc))
                 _nb_rna_out_nuc.append(len(rna_out_nuc))
+                _nuc_area.append(nuc_area)
 
         # get others coordinates
         for key in _extra_coord:
@@ -710,20 +721,16 @@ def summarize_extraction_results(
         _nb_rna_in_nuc = [np.nan] * n
     if len(_nb_rna_out_nuc) == 0:
         _nb_rna_out_nuc = [np.nan] * n
+    if len(_nuc_area) == 0:
+        _nuc_area = [np.nan] * n
 
     # store minimum results in a dataframe
     result_summary = {"cell_id": _cell_id,
+                      "cell_area": _cell_area,
+                      "nuc_area": _nuc_area,
                       "nb_rna": _nb_rna,
                       "nb_rna_in_nuc": _nb_rna_in_nuc,
                       "nb_rna_out_nuc": _nb_rna_out_nuc}
-
-    # store available results on nucleus and rna
-    if len(_nb_rna) > 0:
-        result_summary["nb_rna"] = _nb_rna
-    if len(_nb_rna_in_nuc) > 0:
-        result_summary["nb_rna_in_nuc"] = _nb_rna_in_nuc
-    if len(_nb_rna_out_nuc) > 0:
-        result_summary["nb_rna_out_nuc"] = _nb_rna_out_nuc
 
     # store results from others elements detected in the cell
     for key in _extra_coord:
