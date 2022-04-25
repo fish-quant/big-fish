@@ -10,8 +10,8 @@ import numpy as np
 
 import bigfish.stack as stack
 
-from .utils import _get_spot_volume
-from .utils import _get_spot_surface
+from .utils import get_spot_volume
+from .utils import get_spot_surface
 from .utils import get_object_radius_pixel
 
 from scipy.special import erf
@@ -1073,7 +1073,7 @@ def _fit_subpixel_3d(
 
     """
     # extract spot image
-    image_spot, bbox_low = _get_spot_volume(
+    image_spot, bbox_low = get_spot_volume(
         image=image,
         spot_z=coord[0],
         spot_y=coord[1],
@@ -1146,7 +1146,7 @@ def _fit_subpixel_2d(
 
     """
     # extract spot image
-    image_spot, bbox_low = _get_spot_surface(
+    image_spot, bbox_low = get_spot_surface(
         image=image,
         spot_y=coord[0],
         spot_x=coord[1],

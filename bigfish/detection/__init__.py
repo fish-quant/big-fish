@@ -30,6 +30,8 @@ from .utils import convert_spot_coordinates
 from .utils import get_object_radius_pixel
 from .utils import get_object_radius_nm
 from .utils import build_reference_spot
+from .utils import get_spot_volume
+from .utils import get_spot_surface
 from .utils import compute_snr_spots
 from .utils import get_breaking_point
 
@@ -62,6 +64,8 @@ _utils = [
     "get_object_radius_pixel",
     "get_object_radius_nm",
     "build_reference_spot",
+    "get_spot_volume",
+    "get_spot_surface",
     "compute_snr_spots",
     "get_breaking_point"]
 

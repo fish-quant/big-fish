@@ -72,6 +72,17 @@ Convert pixels and nanometers
 
 ------------
 
+Extract a spot image
+====================
+
+* :func:`bigfish.detection.get_spot_volume`
+* :func:`bigfish.detection.get_spot_surface`
+
+.. autofunction:: get_spot_volume
+.. autofunction:: get_spot_surface
+
+------------
+
 Format and save plots
 =====================
 
