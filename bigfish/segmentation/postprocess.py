@@ -36,7 +36,7 @@ def label_instances(image_binary):
     stack.check_array(image_binary, ndim=[2, 3], dtype=bool)
 
     # label instances
-    image_label = label(image_binary)
+    image_label = label(image_binary).astype(np.int64)
 
     return image_label
 
