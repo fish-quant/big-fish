@@ -80,7 +80,7 @@ x_3d_out_focus = np.array(
 # ### test 2-d projection ###
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.float32, np.float64])
+    np.uint8, np.uint16, np.int32, np.int64, np.float32, np.float64])
 def test_maximum_projection(dtype):
     x = x_3d.astype(dtype)
     expected_y = np.array([[3, 0, 0, 0, 0],
@@ -94,7 +94,7 @@ def test_maximum_projection(dtype):
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.float32, np.float64])
+    np.uint8, np.uint16, np.int32, np.int64, np.float32, np.float64])
 def test_mean_projection(dtype):
     # 'return_float' == False
     x = x_3d.astype(dtype)
@@ -119,7 +119,7 @@ def test_mean_projection(dtype):
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.float32, np.float64])
+    np.uint8, np.uint16, np.int32, np.int64, np.float32, np.float64])
 def test_median_projection(dtype):
     x = x_3d.astype(dtype)
     expected_y = np.array([[2, 0, 0, 0, 0],
@@ -215,7 +215,7 @@ def test_get_in_focus_indices():
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.float32, np.float64])
+    np.uint8, np.uint16, np.int32, np.int64, np.float32, np.float64])
 def test_in_focus_selection(dtype):
     x = x_3d_out_focus.astype(dtype)
     expected_y = x_3d.astype(dtype)
@@ -226,7 +226,7 @@ def test_in_focus_selection(dtype):
 
 
 @pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.float32, np.float64])
+    np.uint8, np.uint16, np.int32, np.int64, np.float32, np.float64])
 def test_focus_projection(dtype):
     x = x_3d_out_focus.astype(dtype)
 

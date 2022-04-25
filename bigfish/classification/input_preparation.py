@@ -16,8 +16,12 @@ from skimage.measure import regionprops
 
 # ### Input data ###
 
-def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
-                           centrosome_coord=None):
+def prepare_extracted_data(
+        cell_mask,
+        nuc_mask=None,
+        ndim=None,
+        rna_coord=None,
+        centrosome_coord=None):
     """Prepare data extracted from images.
 
     Parameters
@@ -29,12 +33,12 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     ndim : int
         Number of spatial dimensions to consider (2 or 3). Mandatory if
         `rna_coord` is provided.
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
         plus the index of the cluster assigned to the spot. If no cluster was
         assigned, value is -1.
-    centrosome_coord : np.ndarray, np.int64
+    centrosome_coord : np.ndarray, np.int
         Coordinates of the detected centrosome with shape (nb_elements, 3) or
         (nb_elements, 2). One coordinate per dimension (zyx or yx dimensions).
 
@@ -46,7 +50,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
         Distance map from the cell with shape (y, x), in pixels.
     distance_cell_normalized : np.ndarray, np.float32
         Normalized distance map from the cell with shape (y, x).
-    centroid_cell : np.ndarray, np.int64
+    centroid_cell : np.ndarray, np.int
         Coordinates of the cell centroid with shape (2,).
     distance_centroid_cell : np.ndarray, np.float32
         Distance map from the cell centroid with shape (y, x), in pixels.
@@ -58,20 +62,20 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
         Distance map from the nucleus with shape (y, x), in pixels.
     distance_nuc_normalized : np.ndarray, np.float32
         Normalized distance map from the nucleus with shape (y, x).
-    centroid_nuc : np.ndarray, np.int64
+    centroid_nuc : np.ndarray, np.int
         Coordinates of the nucleus centroid with shape (2,).
     distance_centroid_nuc : np.ndarray, np.float32
         Distance map from the nucleus centroid with shape (y, x), in pixels.
-    rna_coord_out_nuc : np.ndarray, np.int64
+    rna_coord_out_nuc : np.ndarray, np.int
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
         plus the index of the cluster assigned to the spot. If no cluster was
         assigned, value is -1. Spots detected inside the nucleus are removed.
-    centroid_rna : np.ndarray, np.int64
+    centroid_rna : np.ndarray, np.int
         Coordinates of the rna centroid with shape (2,) or (3,).
     distance_centroid_rna : np.ndarray, np.float32
         Distance map from the rna centroid with shape (y, x), in pixels.
-    centroid_rna_out_nuc : np.ndarray, np.int64
+    centroid_rna_out_nuc : np.ndarray, np.int
         Coordinates of the rna centroid (outside the nucleus) with shape (2,)
         or (3,).
     distance_centroid_rna_out_nuc : np.ndarray, np.float32
@@ -81,7 +85,6 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
         Distance map from the centrosome with shape (y, x), in pixels.
 
     """
-    # TODO allow RNA coordinates in float64 and int64
     # check parameters
     stack.check_parameter(ndim=(int, type(None)))
     if rna_coord is not None and ndim is None:
@@ -91,18 +94,24 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     stack.check_array(
         cell_mask,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int64, bool])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
     cell_mask = cell_mask.astype(bool)
     if nuc_mask is not None:
         stack.check_array(
             nuc_mask,
             ndim=2,
-            dtype=[np.uint8, np.uint16, np.int64, bool])
+            dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
         nuc_mask = nuc_mask.astype(bool)
     if rna_coord is not None:
-        stack.check_array(rna_coord, ndim=2, dtype=np.int64)
+        stack.check_array(
+            rna_coord,
+            ndim=2,
+            dtype=[np.int32, np.int64])
     if centrosome_coord is not None:
-        stack.check_array(centrosome_coord, ndim=2, dtype=np.int64)
+        stack.check_array(
+            centrosome_coord,
+            ndim=2,
+            dtype=[np.int32, np.int64])
 
     # build distance map from the cell boundaries
     distance_cell = ndi.distance_transform_edt(cell_mask)
@@ -110,7 +119,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
     distance_cell_normalized = distance_cell / distance_cell.max()
 
     # get cell centroid and a distance map from its localisation
-    centroid_cell = _get_centroid_surface(cell_mask)
+    centroid_cell = _get_centroid_surface(cell_mask).astype(rna_coord.dtype)
     distance_centroid_cell = _get_centroid_distance_map(
         centroid_cell,
         cell_mask)
@@ -129,7 +138,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
         distance_nuc_normalized = distance_nuc / distance_nuc.max()
 
         # get nucleus centroid and a distance map from its localisation
-        centroid_nuc = _get_centroid_surface(nuc_mask)
+        centroid_nuc = _get_centroid_surface(nuc_mask).astype(rna_coord.dtype)
         distance_centroid_nuc = _get_centroid_distance_map(
             centroid_nuc,
             cell_mask)
@@ -146,7 +155,7 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
         # get rna centroid
         if len(rna_coord) == 0:
-            centroid_rna = np.array([0] * ndim, dtype=np.int64)
+            centroid_rna = np.array([0] * ndim, dtype=rna_coord.dtype)
         else:
             centroid_rna = _get_centroid_rna(rna_coord, ndim)
 
@@ -164,7 +173,8 @@ def prepare_extracted_data(cell_mask, nuc_mask=None, ndim=None, rna_coord=None,
 
             # get rna centroid (outside nucleus)
             if len(rna_coord_out_nuc) == 0:
-                centroid_rna_out_nuc = np.array([0] * ndim, dtype=np.int64)
+                centroid_rna_out_nuc = np.array(
+                    [0] * ndim, dtype=rna_coord.dtype)
             else:
                 centroid_rna_out_nuc = _get_centroid_rna(
                     rna_coord_out_nuc,
@@ -234,7 +244,7 @@ def _get_centroid_surface(mask):
 
     Returns
     -------
-    centroid : np.ndarray, np.int64
+    centroid : np.ndarray, np.int
         Coordinates of the centroid with shape (2,).
 
     """
@@ -250,7 +260,7 @@ def _get_centroid_rna(rna_coord, ndim):
 
     Parameters
     ----------
-    rna_coord : np.ndarray, np.int64
+    rna_coord : np.ndarray, np.int
         Coordinates of the detected spots with shape (nb_spots, 4) or
         (nb_spots, 3). One coordinate per dimension (zyx or yx dimensions)
         plus the index of the cluster assigned to the spot. If no cluster was
@@ -260,12 +270,12 @@ def _get_centroid_rna(rna_coord, ndim):
 
     Returns
     -------
-    centroid_rna : np.ndarray, np.int64
+    centroid_rna : np.ndarray, np.int
         Coordinates of the rna centroid with shape (2,) or (3,).
 
     """
     # get rna centroids
-    centroid_rna = np.mean(rna_coord[:, :ndim], axis=0, dtype=np.int64)
+    centroid_rna = np.mean(rna_coord[:, :ndim], axis=0, dtype=rna_coord.dtype)
 
     return centroid_rna
 
@@ -275,7 +285,7 @@ def _get_centroid_distance_map(centroid, cell_mask):
 
     Parameters
     ----------
-    centroid : np.ndarray, np.int64
+    centroid : np.ndarray, np.int
         Coordinates of the centroid with shape (2,) or (3,).
     cell_mask : np.ndarray, bool
         Binary surface of the cell with shape (y, x).
@@ -308,7 +318,7 @@ def _get_centrosome_distance_map(centrosome_coord, cell_mask):
 
     Parameters
     ----------
-    centrosome_coord : np.ndarray, np.int64
+    centrosome_coord : np.ndarray, np.int
         Coordinates of the detected centrosome with shape (nb_elements, 3) or
         (nb_elements, 2). One coordinate per dimension (zyx or yx dimensions).
     cell_mask : np.ndarray, bool

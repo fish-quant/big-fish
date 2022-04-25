@@ -22,9 +22,15 @@ from skimage.measure import label
 
 # ### Main function ###
 
-def detect_spots(images, threshold=None, remove_duplicate=True,
-                 return_threshold=False, voxel_size=None, spot_radius=None,
-                 log_kernel_size=None, minimum_distance=None):
+def detect_spots(
+        images,
+        threshold=None,
+        remove_duplicate=True,
+        return_threshold=False,
+        voxel_size=None,
+        spot_radius=None,
+        log_kernel_size=None,
+        minimum_distance=None):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -209,9 +215,13 @@ def detect_spots(images, threshold=None, remove_duplicate=True,
         return spots
 
 
-def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
-                              return_threshold=False, log_kernel_size=None,
-                              min_distance=None):
+def _detect_spots_from_images(
+        images,
+        threshold=None,
+        remove_duplicate=True,
+        return_threshold=False,
+        log_kernel_size=None,
+        min_distance=None):
     """Apply LoG filter followed by a Local Maximum algorithm to detect spots
     in a 2-d or 3-d image.
 
@@ -311,8 +321,8 @@ def _detect_spots_from_images(images, threshold=None, remove_duplicate=True,
         mask_local_max = masks[i]
 
         # detection
-        spots, _ = spots_thresholding(image_filtered, mask_local_max,
-                                      threshold, remove_duplicate)
+        spots, _ = spots_thresholding(
+            image_filtered, mask_local_max, threshold, remove_duplicate)
         all_spots.append(spots)
 
     # return threshold or not
@@ -382,8 +392,11 @@ def local_maximum_detection(image, min_distance):
     return mask
 
 
-def spots_thresholding(image, mask_local_max, threshold,
-                       remove_duplicate=True):
+def spots_thresholding(
+        image,
+        mask_local_max,
+        threshold,
+        remove_duplicate=True):
     """Filter detected spots and get coordinates of the remaining spots.
 
     In order to make the thresholding robust, it should be applied to a
@@ -422,7 +435,7 @@ def spots_thresholding(image, mask_local_max, threshold,
     stack.check_array(
         mask_local_max,
         ndim=[2, 3],
-        dtype=[bool])
+        dtype=bool)
     stack.check_parameter(
         threshold=(float, int, type(None)),
         remove_duplicate=bool)
@@ -499,7 +512,10 @@ def automated_threshold_setting(image, mask_local_max):
         image,
         ndim=[2, 3],
         dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    stack.check_array(mask_local_max, ndim=[2, 3], dtype=[bool])
+    stack.check_array(
+        mask_local_max,
+        ndim=[2, 3],
+        dtype=bool)
 
     # get threshold values we want to test
     thresholds = _get_candidate_thresholds(image.ravel())
@@ -578,8 +594,12 @@ def _get_spot_counts(thresholds, value_spots):
     return thresholds, count_spots
 
 
-def get_elbow_values(images, voxel_size=None, spot_radius=None,
-                     log_kernel_size=None, minimum_distance=None):
+def get_elbow_values(
+        images,
+        voxel_size=None,
+        spot_radius=None,
+        log_kernel_size=None,
+        minimum_distance=None):
     """Get values to plot the elbow curve used to automatically set the
     threshold to detect spots.
 

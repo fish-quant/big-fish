@@ -32,7 +32,8 @@ def maximum_projection(image):
     check_array(
         image,
         ndim=3,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
 
     # project image along the z axis
     projected_image = image.max(axis=0)
@@ -61,7 +62,8 @@ def mean_projection(image, return_float=False):
     check_array(
         image,
         ndim=3,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
 
     # project image along the z axis
     if return_float:
@@ -91,7 +93,8 @@ def median_projection(image):
     check_array(
         image,
         ndim=3,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
 
     # project image along the z axis
     projected_image = np.median(image, axis=0)
@@ -100,8 +103,11 @@ def median_projection(image):
     return projected_image
 
 
-def focus_projection(image, proportion=0.75, neighborhood_size=7,
-                     method="median"):
+def focus_projection(
+        image,
+        proportion=0.75,
+        neighborhood_size=7,
+        method="median"):
     """Project the z-dimension of an image.
 
     Inspired from Samacoits Aubin's thesis (part 5.3, strategy 5). Compare to
@@ -137,7 +143,8 @@ def focus_projection(image, proportion=0.75, neighborhood_size=7,
     check_array(
         image,
         ndim=3,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
 
     # compute focus measure for each pixel
     focus = compute_focus(image, neighborhood_size)
@@ -247,7 +254,8 @@ def in_focus_selection(image, focus, proportion):
     check_array(
         image,
         ndim=3,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64,
+               np.float32, np.float64])
 
     # select and keep best z-slices
     indices_to_keep = get_in_focus_indices(focus, proportion)
@@ -263,7 +271,7 @@ def get_in_focus_indices(focus, proportion):
 
     Parameters
     ----------
-    focus : np.ndarray, np.float64
+    focus : np.ndarray, np.float
         A 3-d tensor with a focus metric computed for each pixel of the
         original image. See :func:`bigfish.stack.compute_focus`.
     proportion : float or int
@@ -278,7 +286,7 @@ def get_in_focus_indices(focus, proportion):
     """
     # check parameters
     check_parameter(proportion=(float, int))
-    check_array(focus, ndim=3, dtype=np.float64)
+    check_array(focus, ndim=3, dtype=[np.float32, np.float64])
     if isinstance(proportion, float) and 0 <= proportion <= 1:
         n = int(focus.shape[0] * proportion)
     elif isinstance(proportion, int) and 0 <= proportion:

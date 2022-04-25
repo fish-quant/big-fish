@@ -38,8 +38,11 @@ def unet_3_classes_nuc():
     return model
 
 
-def apply_unet_3_classes(model, image, target_size=None,
-                         test_time_augmentation=False):
+def apply_unet_3_classes(
+        model,
+        image,
+        target_size=None,
+        test_time_augmentation=False):
     """Segment image with a 3-classes trained model.
 
     Parameters
@@ -168,7 +171,7 @@ def from_3_classes_to_instances(label_3_classes):
 
     """
     # check parameters
-    stack.check_array(label_3_classes, ndim=3, dtype=[np.float32])
+    stack.check_array(label_3_classes, ndim=3, dtype=np.float32)
 
     # get classes indices
     label_3_classes = np.argmax(label_3_classes, axis=-1)

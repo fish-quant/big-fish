@@ -15,8 +15,6 @@ from skimage.measure import label
 from skimage.morphology import remove_small_objects
 
 
-# TODO make functions compatible with different type of integers
-
 # ### Labelled images ###
 
 def label_instances(image_binary):
@@ -38,7 +36,7 @@ def label_instances(image_binary):
     stack.check_array(image_binary, ndim=[2, 3], dtype=bool)
 
     # label instances
-    image_label = label(image_binary)
+    image_label = label(image_binary).astype(np.int64)
 
     return image_label
 
@@ -84,8 +82,12 @@ def merge_labels(image_label_1, image_label_2):
 
 # ### Clean segmentation ###
 # TODO make it available for 3D images
-def clean_segmentation(image, small_object_size=None, fill_holes=False,
-                       smoothness=None, delimit_instance=False):
+def clean_segmentation(
+        image,
+        small_object_size=None,
+        fill_holes=False,
+        smoothness=None,
+        delimit_instance=False):
     """Clean segmentation results (binary masks or integer labels).
 
     Parameters
@@ -279,7 +281,7 @@ def remove_disjoint(image):
     stack.check_array(
         image,
         ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.int64, bool])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
 
     # handle boolean array
     cast_to_bool = False

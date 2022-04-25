@@ -120,8 +120,12 @@ def read_array(path):
     return array
 
 
-def read_array_from_csv(path, dtype=None, delimiter=";", encoding="utf-8",
-                        skiprows=0):
+def read_array_from_csv(
+        path,
+        dtype=None,
+        delimiter=";",
+        encoding="utf-8",
+        skiprows=0):
     """Read a numpy array saved in a ``csv`` file.
 
     Parameters

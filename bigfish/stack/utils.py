@@ -160,7 +160,6 @@ def _check_dtype_array(array, dtype):
     if isinstance(dtype, type):
         dtype = [dtype]
 
-    # TODO simplify
     # check the dtype of the array
     error = True
     for dtype_expected in dtype:
