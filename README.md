@@ -36,11 +36,13 @@ For segmentation purpose, two additional dependencies can be requested:
 To avoid dependency conflicts, we recommend the the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment.  In a terminal run the command:
 
 ```bash
-conda create -n bigfish_env python=3.6
+conda create -n bigfish_env python=X.Y
 source activate bigfish_env
 ```
 
-We recommend two options to then install Big-FISH in your virtual environment.
+With X.Y a valid Python version greater or equal than 3.6. Note that Big-FISH is tested only for Python 3.6, 3.7, 3.8 and 3.9.
+
+We then recommend two options to install Big-FISH in your virtual environment: from PyPi or GitHub.
 
 #### Download the package from PyPi
 
@@ -50,9 +52,9 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Big-FIS
 pip install big-fish
 ```
 
-#### Clone package from Github
+#### Clone package from GitHub
 
-Clone the project's [Github repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
+Clone the project's [GitHub repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
 
 ```bash
 git clone git@github.com:fish-quant/big-fish.git

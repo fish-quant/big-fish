@@ -16,10 +16,15 @@ environments.html>`_ environment.  In a terminal run the command:
 
 .. code-block:: bash
 
-   $ conda create -n bigfish_env python=3.6
+   $ conda create -n bigfish_env python=X.Y
    $ source activate bigfish_env
 
-We recommend two options to then install Big-FISH in your virtual environment.
+With X.Y a valid Python version greater or equal than 3.6. Note that Big-FISH
+is tested only for Python 3.6, 3.7, 3.8 and 3.9.
+
+We then recommend two options to install Big-FISH in your virtual environment:
+from PyPi or GitHub.
+
 
 Download the package from PyPi
 ------------------------------
@@ -31,10 +36,10 @@ Big-FISH. In a terminal run the command:
 
    $ pip install big-fish
 
-Clone package from Github
+Clone package from GitHub
 -------------------------
 
-Clone the project's `Github repository <https://github.com/fish-quant/big-
+Clone the project's `GitHub repository <https://github.com/fish-quant/big-
 fish>`_ and install it manually with the following commands:
 
 .. code-block:: bash
