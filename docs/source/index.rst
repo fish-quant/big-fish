@@ -9,10 +9,10 @@ Big-FISH
 Getting started
 ===============
 
-To avoid dependency conflicts, we recommend the the use of a dedicated
+To avoid dependency conflicts, we recommend the use of a dedicated
 `virtual <https://docs.python.org/3.6/library/venv.html>`_ or `conda
 <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-
-environments.html>`_ environment.  In a terminal run the command:
+environments.html>`_ environment. In a terminal run the command:
 
 .. code-block:: bash
 
@@ -24,7 +24,6 @@ is tested only for Python 3.6, 3.7, 3.8 and 3.9.
 
 We then recommend two options to install Big-FISH in your virtual environment:
 from PyPi or GitHub.
-
 
 Download the package from PyPi
 ------------------------------

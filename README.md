@@ -28,8 +28,8 @@ Big-FISH requires Python 3.6 or newer. Additionally, it has the following depend
 - mrc (>= 0.1.5)
 
 For segmentation purpose, two additional dependencies can be requested:
-- tensorflow (== 2.3.0)
-- tensorflow-addons (== 0.12.1)
+- tensorflow (>= 2.3.0)
+- tensorflow-addons (>= 0.12.1)
 
 ### Virtual environment
 

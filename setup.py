@@ -24,8 +24,8 @@ with open('bigfish/__init__.py', encoding='utf-8') as f:
 with open("requirements.txt", encoding='utf-8') as f:
     REQUIREMENTS = [l.strip() for l in f.readlines() if l]
 DEEPLEARNING_REQUIREMENTS = [
-    'tensorflow == 2.3.0',
-    'tensorflow-addons == 0.12.1']
+    'tensorflow >= 2.3.0',
+    'tensorflow-addons >= 0.12.1']
 
 # long description of the package
 with open("README.md", "r") as f:
