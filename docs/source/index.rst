@@ -163,7 +163,6 @@ If you exploit this package for your work, please cite:
 
 .. code-block:: text
 
-    Arthur Imbert, Wei Ouyang, Adham Safieddine, Emeline Coleno, Christophe
-    Zimmer, Edouard Bertrand, Thomas Walter, Florian Mueller. FISH-quant v2:
-    a scalable and modular analysis tool for smFISH image analysis. bioRxiv
-    (2021) https://doi.org/10.1101/2021.07.20.453024
+    Imbert A, Ouyang W, Safieddine A, Coleno E, Zimmer C, Bertrand E,
+    Walter T, Mueller F. FISH-quant v2: a scalable and modular tool for smFISH
+    image analysis. RNA (2022). doi: 10.1261/rna.079073.121.
