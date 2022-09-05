@@ -64,6 +64,26 @@ quant/big-fish-examples/tree/master/notebooks>`_:
 #. Extract cell level results.
 #. Analyze coordinates.
 
+To run these notebooks, you will need to clone the notebook repository:
+
+.. code-block:: bash
+
+   $ git clone git@github.com:fish-quant/big-fish-examples.git
+
+Activate your environment and install Big-FISH and Jupyter notebook dependencies inside:
+
+.. code-block:: bash
+
+   $ source activate bigfish_env
+   $ cd big-fish-examples
+   $ pip install .
+
+Then launch the notebooks:
+
+.. code-block:: bash
+
+   $ jupyter notebook
+
 You can also run these example online with `mybinder <https://mybinder.org/v2/
 gh/fish-quant/fq-imjoy/binder?urlpath=git-pull%3Frepo%3Dhttps%253A%252F%252F
 github.com%252Ffish-quant%252Fbig-fish-examples%26urlpath%3Dtree%252Fbig-fish-
