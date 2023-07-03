@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from skimage.segmentation import find_boundaries
+from skimage.measure import regionprops
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import RegularPolygon
 
@@ -277,6 +278,7 @@ def plot_segmentation(
         title=None,
         framesize=(15, 10),
         remove_frame=True,
+        show_id=False,
         path_output=None,
         ext="png",
         show=True):
@@ -298,6 +300,8 @@ def plot_segmentation(
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool, default=True
         Remove axes and frame.
+    show_id : bool, default=False
+        Display instance id in the plot.
     path_output : str, optional
         Path to save the image (without extension).
     ext : str or list, default='png'
@@ -324,6 +328,7 @@ def plot_segmentation(
         title=(str, type(None)),
         framesize=tuple,
         remove_frame=bool,
+        show_id=bool,
         path_output=(str, type(None)),
         ext=(str, list))
 
@@ -351,6 +356,14 @@ def plot_segmentation(
         ax[1].set_title("Segmentation", fontweight="bold", fontsize=10)
     if remove_frame:
         ax[1].axis("off")
+    if show_id:
+        instances = regionprops(mask)
+        for instance in instances:
+            label = instance.label
+            y, x = instance.centroid
+            ax[1].text(x, y, label, c="white",
+                       horizontalalignment='center',
+                       verticalalignment='center')
 
     # superposition
     if not rescale and not contrast:
@@ -388,6 +401,7 @@ def plot_segmentation_boundary(
         title=None,
         framesize=(10, 10),
         remove_frame=True,
+        show_id=False,
         path_output=None,
         ext="png",
         show=True):
@@ -413,6 +427,8 @@ def plot_segmentation_boundary(
         Size of the frame used to plot with ``plt.figure(figsize=framesize)``.
     remove_frame : bool, default=True
         Remove axes and frame.
+    show_id : bool, default=False
+        Display instance id in the plot.
     path_output : str, optional
         Path to save the image (without extension).
     ext : str or list, default='png'
@@ -445,6 +461,7 @@ def plot_segmentation_boundary(
         title=(str, type(None)),
         framesize=tuple,
         remove_frame=bool,
+        show_id=bool,
         path_output=(str, type(None)),
         ext=(str, list),
         show=bool)
@@ -487,6 +504,18 @@ def plot_segmentation_boundary(
         if image.dtype not in [np.int64, bool]:
             image = stack.rescale(image, channel_to_stretch=0)
         plt.imshow(image)
+    if show_id:
+        if nuc_label is not None:
+            instances = regionprops(nuc_label)
+        elif cell_label is not None:
+            instances = regionprops(cell_label)
+        else:
+            instances = list()
+        for instance in instances:
+            label = instance.label
+            y, x = instance.centroid
+            plt.text(x, y, label, c="white",
+                     horizontalalignment='center', verticalalignment='center')
     if cell_label is not None:
         plt.imshow(cell_boundaries, cmap=ListedColormap(['red']))
     if nuc_label is not None:
