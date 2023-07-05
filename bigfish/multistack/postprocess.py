@@ -676,12 +676,14 @@ def summarize_extraction_results(
         coordinates arrays). Minimal information are:
 
         * `cell_id`: Unique id of the cell.
-        * `bbox`: bounding box coordinates with the order (`min_y`, `min_x`,
-          `max_y`, `max_x`).
+        * `bbox`: bounding box coordinates with the order (`min_z`, `max_z`,
+        `min_y`, `min_x`, `max_y`, `max_x`) or (`min_y`, `min_x`, `max_y`,
+        `max_x`).
         * `cell_coord`: boundary coordinates of the cell.
         * `cell_mask`: mask of the cell.
     ndim : int
-        Number of spatial dimensions to consider (2 or 3).
+        Number of spatial dimensions to consider for the RNA coordinates
+        (2 or 3).
     path_output : str, optional
         Path to save the dataframe in a csv file.
     delimiter : str, default=";"
@@ -696,7 +698,9 @@ def summarize_extraction_results(
         area of the cell, in pixel) are returned. Other indicators are
         summarized if available:
 
+        * `cell_volume`: 3-d volume of the cell, in pixel.
         * `nuc_area`: 2-d area of the nucleus, in pixel.
+        * `nuc_volume`: 3-d volume of the nucleus, in pixel.
         * `nb_rna`: Number of detected rna in the cell.
         * `nb_rna_in_nuc`: Number of detected rna inside the nucleus.
         * `nb_rna_out_nuc`: Number of detected rna outside the nucleus.
@@ -712,9 +716,15 @@ def summarize_extraction_results(
         path_output=(str, type(None)))
 
     # case if no cell were detected
-    # TODO make it consistent with the case where there are cells
     if len(fov_results) == 0:
-        df = pd.DataFrame({"cell_id": []})
+        df = pd.DataFrame({"cell_id": [],
+                           "cell_area": [],
+                           "cell_volume": [],
+                           "nuc_area": [],
+                           "nuc_volume": [],
+                           "nb_rna": [],
+                           "nb_rna_in_nuc": [],
+                           "nb_rna_out_nuc": []})
         if path_output is not None:
             stack.save_data_to_csv(df, path_output, delimiter)
         return df
@@ -736,7 +746,9 @@ def summarize_extraction_results(
     # summarize results at the cell level
     _cell_id = []
     _cell_area = []
+    _cell_volume = []
     _nuc_area = []
+    _nuc_volume = []
     _nb_rna = []
     _nb_rna_in_nuc = []
     _nb_rna_out_nuc = []
@@ -744,9 +756,15 @@ def summarize_extraction_results(
         # get cell id
         _cell_id.append(cell_results["cell_id"])
 
-        # get cell area
+        # get cell area and volume
         cell_mask = cell_results["cell_mask"]
-        cell_area = int(cell_mask.sum())
+        if cell_mask.ndim == 3:
+            cell_volume = int(cell_mask.sum())
+            _cell_volume.append(cell_volume)
+            cell_mask_2d = stack.maximum_projection(cell_mask.astype(np.uint8))
+            cell_area = int(cell_mask_2d.sum())
+        else:
+            cell_area = int(cell_mask.sum())
         _cell_area.append(cell_area)
 
         # get rna coordinates and relative results
@@ -754,17 +772,24 @@ def summarize_extraction_results(
             rna_coord = cell_results["rna_coord"]
             _nb_rna.append(len(rna_coord))
 
-            # get rna in nucleus and nucleus area
+            # get rna in nucleus, nucleus area and nucleus volume
             if "nuc_mask" in cell_results:
                 nuc_mask = cell_results["nuc_mask"]
+                if nuc_mask.ndim == 3:
+                    nuc_volume = int(nuc_mask.sum())
+                    _nuc_volume.append(nuc_volume)
+                    nuc_mask_2d = stack.maximum_projection(
+                        nuc_mask.astype(np.uint8))
+                    nuc_area = int(nuc_mask_2d.sum())
+                else:
+                    nuc_area = int(nuc_mask.sum())
+                _nuc_area.append(nuc_area)
                 rna_in_nuc, rna_out_nuc = identify_objects_in_region(
                     nuc_mask,
                     rna_coord,
                     ndim)
-                nuc_area = int(nuc_mask.sum())
                 _nb_rna_in_nuc.append(len(rna_in_nuc))
                 _nb_rna_out_nuc.append(len(rna_out_nuc))
-                _nuc_area.append(nuc_area)
 
         # get others coordinates
         for key in _extra_coord:
@@ -773,6 +798,8 @@ def summarize_extraction_results(
 
     # complete missing mandatory results
     n = len(_cell_id)
+    if len(_cell_volume) == 0:
+        _cell_volume = [np.nan] * n
     if len(_nb_rna) == 0:
         _nb_rna = [np.nan] * n
     if len(_nb_rna_in_nuc) == 0:
@@ -781,11 +808,15 @@ def summarize_extraction_results(
         _nb_rna_out_nuc = [np.nan] * n
     if len(_nuc_area) == 0:
         _nuc_area = [np.nan] * n
+    if len(_nuc_volume) == 0:
+        _nuc_volume = [np.nan] * n
 
     # store minimum results in a dataframe
     result_summary = {"cell_id": _cell_id,
                       "cell_area": _cell_area,
+                      "cell_volume": _cell_volume,
                       "nuc_area": _nuc_area,
+                      "nuc_volume": _nuc_volume,
                       "nb_rna": _nb_rna,
                       "nb_rna_in_nuc": _nb_rna_in_nuc,
                       "nb_rna_out_nuc": _nb_rna_out_nuc}

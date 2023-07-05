@@ -16,9 +16,8 @@ from numpy.testing import assert_array_equal
 
 
 # TODO add test bigfish.multistack.match_nuc_cell
-# TODO add test bigfish.multistack.extract_cell
 # TODO add test bigfish.multistack.extract_spots_from_frame
-# TODO add test bigfish.multistack.summarize_extraction_results
+
 # TODO add test bigfish.multistack.center_mask_coord
 # TODO add test bigfish.multistack.from_boundaries_to_surface
 # TODO add test bigfish.multistack.from_surface_to_boundaries
@@ -469,9 +468,96 @@ def test_extract_cell_3d_mask(mask_dtype, spot_dtype, ndim):
     assert len(fov_results) == 0
 
 
-if __name__ == '__main__':
-    mask_dtype = np.int64
-    spot_dtype = np.int64
-    ndim = 3
-    test_extract_cell_3d_mask(mask_dtype, spot_dtype, ndim)
+def test_summarize_extraction_results():
+    # simulate mask and coordinates
+    cell_label_3d = np.zeros((10, 10, 10), dtype=np.int64)
+    cell_label_3d[1:6, 1:4, 1:5] = np.ones((5, 3, 4), dtype=np.int64)
+    nuc_label_3d = np.zeros((10, 10, 10), dtype=np.int64)
+    nuc_label_3d[2:4, 2:3, 2:4] = np.ones((2, 1, 2), dtype=np.int64)
+
+    cell_label_2d = cell_label_3d[2, :, :]
+    nuc_label_2d = nuc_label_3d[2, :, :]
+
+    spots_in = [[2, 2, 2, -1], [2, 3, 1, -1], [5, 2, 2, -1]]
+    spots_in = np.array(spots_in, dtype=np.int64)
+    spots_out = [[2, 1, 8, -1], [3, 7, 2, -1]]
+    spots_out = np.array(spots_out, dtype=np.int64)
+    spots = np.concatenate((spots_in, spots_out))
+
+    # test mask 2d, spots 2d
+    fov_results = multistack.extract_cell(
+        cell_label_2d,
+        ndim=2,
+        nuc_label=nuc_label_2d,
+        rna_coord=spots[:, 1:],
+        remove_cropped_cell=True,
+        check_nuc_in_cell=True)
+    df = multistack.summarize_extraction_results(fov_results, ndim=2)
+    for key in ["cell_id", "cell_area", "cell_volume", "nuc_area",
+                "nuc_volume", "nb_rna", "nb_rna_in_nuc", "nb_rna_out_nuc"]:
+        assert key in df.columns
+    assert df.shape == (1, 8)
+    assert df.loc[0, "cell_id"] == 1
+    assert df.loc[0, "cell_area"] == 12
+    assert np.isnan(df.loc[0, "cell_volume"])
+    assert df.loc[0, "nuc_area"] == 2
+    assert np.isnan(df.loc[0, "nuc_volume"])
+    assert df.loc[0, "nb_rna"] == 3
+    assert df.loc[0, "nb_rna_in_nuc"] == 2
+    assert df.loc[0, "nb_rna_out_nuc"] == 1
+
+    # test mask 2d, spots 3d
+    fov_results = multistack.extract_cell(
+        cell_label_2d,
+        ndim=3,
+        nuc_label=nuc_label_2d,
+        rna_coord=spots,
+        remove_cropped_cell=True,
+        check_nuc_in_cell=True)
+    df = multistack.summarize_extraction_results(fov_results, ndim=3)
+    assert df.shape == (1, 8)
+    assert df.loc[0, "cell_id"] == 1
+    assert df.loc[0, "cell_area"] == 12
+    assert np.isnan(df.loc[0, "cell_volume"])
+    assert df.loc[0, "nuc_area"] == 2
+    assert np.isnan(df.loc[0, "nuc_volume"])
+    assert df.loc[0, "nb_rna"] == 3
+    assert df.loc[0, "nb_rna_in_nuc"] == 2
+    assert df.loc[0, "nb_rna_out_nuc"] == 1
+
+    # test mask 3d, spots 3d
+    fov_results = multistack.extract_cell(
+        cell_label_3d,
+        ndim=3,
+        nuc_label=nuc_label_3d,
+        rna_coord=spots,
+        remove_cropped_cell=True,
+        check_nuc_in_cell=True)
+    df = multistack.summarize_extraction_results(fov_results, ndim=3)
+    for key in ["cell_id", "cell_area", "cell_volume", "nuc_area",
+                "nuc_volume", "nb_rna", "nb_rna_in_nuc", "nb_rna_out_nuc"]:
+        assert key in df.columns
+    assert df.shape == (1, 8)
+    assert df.loc[0, "cell_id"] == 1
+    assert df.loc[0, "cell_volume"] == 60
+    assert df.loc[0, "cell_area"] == 12
+    assert df.loc[0, "nuc_volume"] == 4
+    assert df.loc[0, "nuc_area"] == 2
+    assert df.loc[0, "nb_rna"] == 3
+    assert df.loc[0, "nb_rna_in_nuc"] == 1
+    assert df.loc[0, "nb_rna_out_nuc"] == 2
+
+    # test empty
+    cell_label_3d = np.zeros((10, 10, 10), dtype=np.int64)
+    cell_label_3d[0:6, 1:4, 1:5] = np.ones((6, 3, 4), dtype=np.int64)
+    fov_results = multistack.extract_cell(
+        cell_label_3d,
+        ndim=3,
+        nuc_label=nuc_label_3d,
+        rna_coord=spots,
+        remove_cropped_cell=True,
+        check_nuc_in_cell=True)
+    df = multistack.summarize_extraction_results(fov_results, ndim=3)
+    assert "cell_id" in df.columns
+    assert df.shape == (0, 8)
 
