@@ -31,7 +31,6 @@ from .postprocess import center_mask_coord
 from .postprocess import from_boundaries_to_surface
 from .postprocess import from_surface_to_boundaries
 from .postprocess import from_binary_to_coord
-from .postprocess import complete_coord_boundaries
 from .postprocess import from_coord_to_frame
 from .postprocess import from_coord_to_surface
 
@@ -66,7 +65,6 @@ _postprocess = [
     "from_boundaries_to_surface",
     "from_surface_to_boundaries",
     "from_binary_to_coord",
-    "complete_coord_boundaries",
     "from_coord_to_frame",
     "from_coord_to_surface"]
 

@@ -19,6 +19,11 @@ from numpy.testing import assert_array_equal
 # TODO add test bigfish.multistack.extract_cell
 # TODO add test bigfish.multistack.extract_spots_from_frame
 # TODO add test bigfish.multistack.summarize_extraction_results
+# TODO add test bigfish.multistack.center_mask_coord
+# TODO add test bigfish.multistack.from_boundaries_to_surface
+# TODO add test bigfish.multistack.from_surface_to_boundaries
+# TODO add test bigfish.multistack.from_coord_to_frame
+# TODO add test bigfish.multistack.from_coord_to_surface
 
 @pytest.mark.parametrize("mask_dtype", [
     np.uint8, np.uint16, np.int32, np.int64, bool])
@@ -216,14 +221,257 @@ def test_remove_transcription_site_3d_mask(ndim, mask_dtype, spot_dtype):
         assert ts_.dtype == ts.dtype
 
 
+@pytest.mark.parametrize("binary_dtype", [
+    np.uint8, np.uint16, np.int32, np.int64, bool])
+def test_from_binary_to_coord(binary_dtype):
+    # simulate binary
+    binary_2d = np.zeros((10, 10), dtype=binary_dtype)
+    binary_2d[1:4, 1:5] = np.ones((3, 4), dtype=binary_dtype)
+    binary_3d = np.zeros((10, 10, 10), dtype=binary_dtype)
+    binary_3d[1:6, 1:4, 1:5] = np.ones((5, 3, 4), dtype=binary_dtype)
 
-def test_extract_cell():
+    # test
+    coord_2d = multistack.from_binary_to_coord(binary_2d)
+    assert coord_2d.shape[1] == 2
+    if binary_dtype == np.int32:
+        assert coord_2d.dtype == np.int32
+    else:
+        assert coord_2d.dtype == np.int64
 
-    pass
+    coord_3d = multistack.from_binary_to_coord(binary_3d)
+    assert coord_3d.shape[1] == 3
+    if binary_dtype == np.int32:
+        assert coord_3d.dtype == np.int32
+    else:
+        assert coord_3d.dtype == np.int64
 
-# value error different ndim
-# KeyError key taken x2
-# warning others_coord
-# remove cropped cells
-# from_binary_to_coord
-# complete_coord_boundaries
+
+@pytest.mark.parametrize("ndim", [2, 3])
+@pytest.mark.parametrize("mask_dtype", [
+    np.uint8, np.uint16, np.int32, np.int64])
+@pytest.mark.parametrize("spot_dtype", [
+    np.float32, np.float64, np.int32, np.int64])
+def test_extract_cell_2d_mask(mask_dtype, spot_dtype, ndim):
+    # simulate mask and coordinates
+    cell_label = np.zeros((10, 10), dtype=mask_dtype)
+    cell_label[1:4, 1:5] = np.ones((3, 4), dtype=mask_dtype)
+    nuc_label = np.zeros((10, 10), dtype=mask_dtype)
+    nuc_label[2:3, 2:4] = np.ones((1, 2), dtype=mask_dtype)
+
+    spots_in = [[2, 1, 1, -1], [2, 3, 1, -1], [5, 2, 2, -1]]
+    spots_in = np.array(spots_in, dtype=spot_dtype)
+    spots_out = [[2, 1, 8, -1], [3, 7, 2, -1]]
+    spots_out = np.array(spots_out, dtype=spot_dtype)
+
+    if ndim == 2:
+        spots_in = spots_in[:, 1:]
+        spots_out = spots_out[:, 1:]
+    spots = np.concatenate((spots_in, spots_out))
+
+    # test
+    spots_in[:, ndim - 2] -= 1
+    spots_in[:, ndim - 1] -= 1
+    fov_results = multistack.extract_cell(
+        cell_label,
+        ndim,
+        nuc_label=nuc_label,
+        rna_coord=spots,
+        others_coord={"rna_coord_bis": spots},
+        image=cell_label.astype(np.uint8),
+        others_image={"image_bis": cell_label.astype(np.uint8)},
+        remove_cropped_cell=True,
+        check_nuc_in_cell=True)
+    assert len(fov_results) == 1
+    for key in ["cell_id", "bbox", "cell_coord", "cell_mask", "nuc_coord",
+                "nuc_mask", "rna_coord", "rna_coord_bis", "image",
+                "image_bis"]:
+        assert key in fov_results[0]
+    assert fov_results[0]["cell_id"] == 1
+    assert fov_results[0]["bbox"] == (1, 1, 4, 5)
+    assert fov_results[0]["cell_coord"].shape[1] == 2
+    assert_array_equal(fov_results[0]["cell_mask"],
+                       cell_label[1:4, 1:5].astype(bool))
+    assert fov_results[0]["nuc_coord"].shape[1] == 2
+    assert_array_equal(fov_results[0]["nuc_mask"],
+                       nuc_label[1:4, 1:5].astype(bool))
+    assert_array_equal(fov_results[0]["rna_coord"], spots_in)
+    assert_array_equal(fov_results[0]["rna_coord_bis"], spots_in)
+    assert_array_equal(fov_results[0]["image"],
+                       cell_label[1:4, 1:5].astype(np.uint8))
+    assert_array_equal(fov_results[0]["image_bis"],
+                       cell_label[1:4, 1:5].astype(np.uint8))
+
+    # test exceptions
+    with pytest.raises(KeyError):  # duplicated key 'rna_coord'
+        multistack.extract_cell(
+            cell_label,
+            ndim,
+            nuc_label=nuc_label,
+            rna_coord=spots,
+            others_coord={"rna_coord": spots},
+            image=cell_label.astype(np.uint8),
+            remove_cropped_cell=False,
+            check_nuc_in_cell=False)
+    with pytest.raises(KeyError):  # duplicated key 'image'
+        multistack.extract_cell(
+            cell_label,
+            ndim,
+            nuc_label=nuc_label,
+            rna_coord=spots,
+            image=cell_label.astype(np.uint8),
+            others_image={"image": cell_label.astype(np.uint8)},
+            remove_cropped_cell=False,
+            check_nuc_in_cell=False)
+    with pytest.warns(UserWarning):  # 'image_bis' with different shape
+        multistack.extract_cell(
+            cell_label,
+            ndim,
+            nuc_label=nuc_label,
+            rna_coord=spots,
+            image=cell_label.astype(np.uint8),
+            others_image={"image_bis": cell_label[1:, :].astype(np.uint8)},
+            remove_cropped_cell=False,
+            check_nuc_in_cell=False)
+
+    # test removed cropped cells
+    cell_label = np.zeros((10, 10), dtype=mask_dtype)
+    cell_label[0:4, 1:5] = np.ones((4, 4), dtype=mask_dtype)
+    fov_results = multistack.extract_cell(
+        cell_label,
+        ndim,
+        nuc_label=nuc_label,
+        rna_coord=spots,
+        image=cell_label.astype(np.uint8),
+        remove_cropped_cell=True,
+        check_nuc_in_cell=False)
+    assert len(fov_results) == 0
+
+    # test nuc in cell
+    cell_label = np.zeros((10, 10), dtype=mask_dtype)
+    cell_label[1:4, 1:5] = np.ones((3, 4), dtype=mask_dtype)
+    nuc_label = np.zeros((10, 10), dtype=mask_dtype)
+    nuc_label[6:8, 5:8] = np.ones((2, 3), dtype=mask_dtype)
+    fov_results = multistack.extract_cell(
+        cell_label,
+        ndim,
+        nuc_label=nuc_label,
+        rna_coord=spots,
+        image=cell_label.astype(np.uint8),
+        remove_cropped_cell=False,
+        check_nuc_in_cell=True)
+    assert len(fov_results) == 0
+
+
+@pytest.mark.parametrize("ndim", [2, 3])
+@pytest.mark.parametrize("mask_dtype", [
+    np.uint8, np.uint16, np.int32, np.int64])
+@pytest.mark.parametrize("spot_dtype", [
+    np.float32, np.float64, np.int32, np.int64])
+def test_extract_cell_3d_mask(mask_dtype, spot_dtype, ndim):
+    # simulate mask and coordinates
+    cell_label = np.zeros((10, 10, 10), dtype=mask_dtype)
+    cell_label[1:6, 1:4, 1:5] = np.ones((5, 3, 4), dtype=mask_dtype)
+    nuc_label = np.zeros((10, 10, 10), dtype=mask_dtype)
+    nuc_label[2:4, 2:3, 2:4] = np.ones((2, 1, 2), dtype=mask_dtype)
+
+    spots_in = [[2, 1, 1, -1], [2, 3, 1, -1], [5, 2, 2, -1]]
+    spots_in = np.array(spots_in, dtype=spot_dtype)
+    spots_out = [[2, 1, 8, -1], [3, 7, 2, -1]]
+    spots_out = np.array(spots_out, dtype=spot_dtype)
+
+    if ndim == 2:
+        spots_in = spots_in[:, 1:]
+        spots_out = spots_out[:, 1:]
+    spots = np.concatenate((spots_in, spots_out))
+
+    # test
+    if ndim == 3:
+        spots_in[:, 0] -= 1
+        spots_in[:, 1] -= 1
+        spots_in[:, 2] -= 1
+        fov_results = multistack.extract_cell(
+            cell_label,
+            ndim,
+            nuc_label=nuc_label,
+            rna_coord=spots,
+            others_coord={"rna_coord_bis": spots},
+            image=cell_label.astype(np.uint8),
+            others_image={"image_bis": cell_label.astype(np.uint8)},
+            remove_cropped_cell=True,
+            check_nuc_in_cell=True)
+        assert len(fov_results) == 1
+        for key in ["cell_id", "bbox", "cell_coord", "cell_mask", "nuc_coord",
+                    "nuc_mask", "rna_coord", "rna_coord_bis", "image",
+                    "image_bis"]:
+            assert key in fov_results[0]
+        assert fov_results[0]["cell_id"] == 1
+        assert fov_results[0]["bbox"] == (1, 1, 1, 6, 4, 5)
+        assert fov_results[0]["cell_coord"].shape[1] == 3
+        assert_array_equal(fov_results[0]["cell_mask"],
+                           cell_label[1:6, 1:4, 1:5].astype(bool))
+        assert fov_results[0]["nuc_coord"].shape[1] == 3
+        assert_array_equal(fov_results[0]["nuc_mask"],
+                           nuc_label[1:6, 1:4, 1:5].astype(bool))
+        assert_array_equal(fov_results[0]["rna_coord"], spots_in)
+        assert_array_equal(fov_results[0]["rna_coord_bis"], spots_in)
+        assert_array_equal(fov_results[0]["image"],
+                           cell_label[1:6, 1:4, 1:5].astype(np.uint8))
+        assert_array_equal(fov_results[0]["image_bis"],
+                           cell_label[1:6, 1:4, 1:5].astype(np.uint8))
+    else:
+        with pytest.raises(ValueError):
+            multistack.extract_cell(
+                cell_label,
+                ndim,
+                nuc_label=nuc_label,
+                rna_coord=spots,
+                image=cell_label.astype(np.uint8),
+                remove_cropped_cell=False,
+                check_nuc_in_cell=False)
+
+    # test exceptions
+    with pytest.raises(ValueError):  # cell_label.ndim != nuc_label.ndim
+        multistack.extract_cell(
+            cell_label,
+            ndim,
+            nuc_label=nuc_label[3, :, :],
+            rna_coord=spots,
+            image=cell_label.astype(np.uint8),
+            remove_cropped_cell=False,
+            check_nuc_in_cell=False)
+
+    # test removed cropped cells
+    cell_label = np.zeros((10, 10, 10), dtype=mask_dtype)
+    cell_label[0:6, 1:4, 1:5] = np.ones((6, 3, 4), dtype=mask_dtype)
+    fov_results = multistack.extract_cell(
+        cell_label,
+        ndim,
+        nuc_label=nuc_label,
+        rna_coord=spots,
+        image=cell_label.astype(np.uint8),
+        remove_cropped_cell=True,
+        check_nuc_in_cell=False)
+    assert len(fov_results) == 0
+
+    # test nuc in cell
+    cell_label = np.zeros((10, 10, 10), dtype=mask_dtype)
+    cell_label[1:6, 1:4, 1:5] = np.ones((5, 3, 4), dtype=mask_dtype)
+    nuc_label = np.zeros((10, 10, 10), dtype=mask_dtype)
+    nuc_label[2:4, 6:8, 5:8] = np.ones((2, 2, 3), dtype=mask_dtype)
+    fov_results = multistack.extract_cell(
+        cell_label,
+        ndim,
+        nuc_label=nuc_label,
+        rna_coord=spots,
+        image=cell_label.astype(np.uint8),
+        remove_cropped_cell=False,
+        check_nuc_in_cell=True)
+    assert len(fov_results) == 0
+
+
+if __name__ == '__main__':
+    mask_dtype = np.int64
+    spot_dtype = np.int64
+    ndim = 3
+    test_extract_cell_3d_mask(mask_dtype, spot_dtype, ndim)
+
