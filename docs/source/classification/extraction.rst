@@ -27,7 +27,8 @@ More generally, identify detected objects within a specific cellular region:
 Define and export single-cell results
 =====================================
 
-Extract detection and segmentation results and for every individual cell:
+Extract detection and segmentation results for every individual cell, in 2D
+and 3D:
 
 * :func:`bigfish.multistack.extract_cell`
 * :func:`bigfish.multistack.extract_spots_from_frame`
@@ -52,7 +53,6 @@ manipulates coordinates:
 * :func:`bigfish.multistack.from_boundaries_to_surface`
 * :func:`bigfish.multistack.from_surface_to_boundaries`
 * :func:`bigfish.multistack.from_binary_to_coord`
-* :func:`bigfish.multistack.complete_coord_boundaries`
 * :func:`bigfish.multistack.from_coord_to_frame`
 * :func:`bigfish.multistack.from_coord_to_surface`
 
@@ -60,6 +60,5 @@ manipulates coordinates:
 .. autofunction:: from_boundaries_to_surface
 .. autofunction:: from_surface_to_boundaries
 .. autofunction:: from_binary_to_coord
-.. autofunction:: complete_coord_boundaries
 .. autofunction:: from_coord_to_frame
 .. autofunction:: from_coord_to_surface
