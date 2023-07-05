@@ -1001,7 +1001,7 @@ def plot_cell(
         ext="png",
         show=True):
     """
-    Plot image and coordinates extracted for a specific cell.
+    Plot image and coordinates extracted for a specific cell in 2-d.
 
     Parameters
     ----------
