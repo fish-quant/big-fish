@@ -13,7 +13,10 @@ import bigfish.stack as stack
 from .postprocess import label_instances
 from .postprocess import clean_segmentation
 
-from skimage.morphology.selem import disk
+try:
+    from skimage.morphology.selem import disk
+except ModuleNotFoundError:
+    from skimage.morphology import disk
 from skimage.morphology import reconstruction
 
 
