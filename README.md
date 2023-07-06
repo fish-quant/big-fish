@@ -93,7 +93,7 @@ git checkout develop
 
 ### Contributing
 
-[Pull requests](https://github.com/fish-quant/big-fish/pulls) are welcome. For major changes, please open an [issue](https://github.com/fish-quant/big-fish/issues) first to discuss what you would like to change.
+[Pull requests](https://github.com/fish-quant/big-fish/pulls) on the `develop` branch are welcome. For major changes, please open an [issue](https://github.com/fish-quant/big-fish/issues) first to discuss what you would like to change.
 
 ### Testing
 
