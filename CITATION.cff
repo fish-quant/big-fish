@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Imbert"
+  given-names: "Arthur"
+- family-names: "Ouyang"
+  given-names: "Wei"
+- family-names: "Safieddine"
+  given-names: "Adham"
+- family-names: "Coleno"
+  given-names: "Emeline"
+- family-names: "Zimmer"
+  given-names: "Christophe"
+- family-names: "Bertrand"
+  given-names: "Edouard"
+- family-names: "Walter"
+  given-names: "Thomas"
+- family-names: "Mueller"
+  given-names: "Florian"
+title: "FISH-quant v2: a scalable and modular tool for smFISH image analysis"
+doi: 10.1261/rna.079073.121
+date-released: 2022-03
+url: "https://github.com/fish-quant/big-fish"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Imbert"
+    given-names: "Arthur"
+  - family-names: "Ouyang"
+    given-names: "Wei"
+  - family-names: "Safieddine"
+    given-names: "Adham"
+  - family-names: "Coleno"
+    given-names: "Emeline"
+  - family-names: "Zimmer"
+    given-names: "Christophe"
+  - family-names: "Bertrand"
+    given-names: "Edouard"
+  - family-names: "Walter"
+    given-names: "Thomas"
+  - family-names: "Mueller"
+    given-names: "Florian"
+  doi: 10.1261/rna.079073.121
+  journal: "RNA"
+  month: 3
+  start: 786
+  end: 795
+  title: "FISH-quant v2: a scalable and modular tool for smFISH image analysis"
+  issue: 6
+  volume: 28
+  year: 2022
