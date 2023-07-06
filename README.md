@@ -52,7 +52,7 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Big-FIS
 pip install big-fish
 ```
 
-#### Clone package from GitHub
+#### Clone the package from GitHub
 
 Clone the project's [GitHub repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
 
