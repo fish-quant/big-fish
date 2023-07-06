@@ -109,8 +109,23 @@ To perform unit tests, run :
 pytest bigfish
 ```
 
-## Citation
+## Bibtex citation
 
 If you exploit this package for your work, please cite:
 
-> Imbert A, Ouyang W, Safieddine A, Coleno E, Zimmer C, Bertrand E, Walter T, Mueller F. FISH-quant v2: a scalable and modular tool for smFISH image analysis. RNA (2022). doi: 10.1261/rna.079073.121.
+```bibtex
+@article{Imbert2022,
+    author  = {Imbert, Arthur and Ouyang, Wei and Safieddine, Adham and 
+               Coleno, Emeline and Zimmer, Christophe and 
+               Bertrand, Edouard and Walter, Thomas and Mueller, Florian},
+    doi     = {10.1261/rna.079073.121},
+    journal = {RNA},
+    month   = mar,
+    number  = {6},
+    pages   = {786--795},
+    title   = {{FISH-quant v2: a scalable and modular tool for smFISH image 
+                analysis}},
+    volume  = {28},
+    year    = {2022}
+}
+```
