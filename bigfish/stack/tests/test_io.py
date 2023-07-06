@@ -56,9 +56,17 @@ def test_image(shape, dtype, extension):
             with pytest.raises(ValueError):
                 stack.save_image(test, path)
 
-        # warning: 2-d image with 'png', 'jpg' or 'jpeg'
+        # error: non-boolean 2-d image with 'png', 'jpg' or 'jpeg'
         elif (extension in ["png", "jpg", "jpeg"]
-                and len(test.shape) == 2):
+                and len(test.shape) == 2
+                and test.dtype != bool):
+            with pytest.raises(ValueError):
+                stack.save_image(test, path)
+
+        # warning: boolean 2-d image with 'png', 'jpg' or 'jpeg'
+        elif (extension in ["png", "jpg", "jpeg"]
+                and len(test.shape) == 2
+                and test.dtype == bool):
             with pytest.warns(UserWarning):
                 stack.save_image(test, path)
                 tensor = stack.read_image(path, sanity_check=True)

@@ -337,9 +337,9 @@ def save_image(image, path, extension="tif"):
                          .format(extension))
     if (extension in ["png", "jpg", "jpeg"] and len(image.shape) == 2
             and image.dtype != bool):
-        warnings.warn("Extension {0} is not consistent with dtype. To prevent "
-                      "'image' from being cast you should use 'tif' or 'tiff' "
-                      "extension.".format(extension), UserWarning)
+        raise ValueError("Extension {0} is not supported with dtype. Use "
+                         "'tif' or 'tiff' extension instead."
+                         .format(extension))
     if (extension in ["png", "jpg", "jpeg"] and len(image.shape) == 2
             and image.dtype == bool):
         warnings.warn("Extension {0} is not consistent with dtype. To prevent "
@@ -349,7 +349,7 @@ def save_image(image, path, extension="tif"):
     if (extension in ["tif", "tiff"] and len(image.shape) == 2
             and image.dtype == bool):
         raise ValueError("Extension {0} is not fitted with boolean images. "
-                         "Use 'png', 'jpg' or 'jpeg' extension instead."
+                         "Use 'bigfish.stack.save_array' function instead."
                          .format(extension))
     if (extension in ["png", "jpg", "jpeg", "tif", "tiff"]
             and len(image.shape) > 2 and image.dtype == bool):
