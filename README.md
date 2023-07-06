@@ -33,14 +33,14 @@ For segmentation purpose, two additional dependencies can be requested:
 
 ### Virtual environment
 
-To avoid dependency conflicts, we recommend the the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment.  In a terminal run the command:
+To avoid dependency conflicts, we recommend the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment.  In a terminal run the command:
 
 ```bash
 conda create -n bigfish_env python=X.Y
 source activate bigfish_env
 ```
 
-With X.Y a valid Python version greater or equal than 3.6. Note that Big-FISH is tested only for Python 3.6, 3.7, 3.8 and 3.9.
+With X.Y a valid Python version greater or equal than 3.6. Note that Big-FISH has been tested for Python 3.6, 3.7, 3.8, 3.9 and 3.10.
 
 We then recommend two options to install Big-FISH in your virtual environment: from PyPi or GitHub.
 
@@ -70,7 +70,7 @@ This package is part of the [FISH-Quant](https://fish-quant.github.io/) framewor
 
 ## Support
 
-If you have any question relative to the repository, please open an [issue](https://github.com/fish-quant/big-fish/issues). You can also contact [Arthur Imbert](mailto:arthur.imbert@mines-paristech.fr) or [Florian Mueller](mailto:muellerf.research@gmail.com).
+If you have any question relative to the repository, please open an [issue](https://github.com/fish-quant/big-fish/issues). You can also contact [Arthur Imbert](mailto:arthur.imbert.pro@gmail.com) or [Florian Mueller](mailto:muellerf.research@gmail.com).
 
 ## Roadmap (suggestion)
 
