@@ -34,7 +34,7 @@ def detect_clusters(spots, voxel_size, radius=350, nb_min_spots=4):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     radius : int
         The maximum distance between two samples for one to be considered as
         in the neighborhood of the other. Radius expressed in nanometer.

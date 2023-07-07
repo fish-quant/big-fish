@@ -80,11 +80,11 @@ def get_object_radius_pixel(voxel_size_nm, object_radius_nm, ndim):
     voxel_size_nm : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     object_radius_nm : int, float, Tuple(int, float) or List(int, float)
         Radius of the object, in nanometer. One value per spatial dimension
         (zyx or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     ndim : int
         Number of spatial dimension to consider.
 
@@ -140,11 +140,11 @@ def get_object_radius_nm(voxel_size_nm, object_radius_px, ndim):
     voxel_size_nm : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     object_radius_px : int, float, Tuple(int, float) or List(int, float)
         Radius of the object, in pixel. One value per spatial dimension
         (zyx or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     ndim : int
         Number of spatial dimension to consider.
 
@@ -206,11 +206,11 @@ def build_reference_spot(image, spots, voxel_size, spot_radius, alpha=0.5):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     spot_radius : int, float, Tuple(int, float) or List(int, float)
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     alpha : int or float
         Intensity score of the reference spot, between 0 and 1. If 0, reference
         spot approximates the spot with the lowest intensity. If 1, reference
@@ -362,13 +362,13 @@ def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     image : np.ndarray
         Image with shape (z, y, x).
     spot_z : int or float
-        Coordinate of the detected spot along the z axis.
+        Coordinate of the detected spot along the z-axis.
     spot_y : int or float
-        Coordinate of the detected spot along the y axis.
+        Coordinate of the detected spot along the y-axis.
     spot_x : int or float
-        Coordinate of the detected spot along the x axis.
+        Coordinate of the detected spot along the x-axis.
     radius_z : int or float
-        Radius in pixel of the detected spot, along the z axis.
+        Radius in pixel of the detected spot, along the z-axis.
     radius_yx : int or float
         Radius in pixel of the detected spot, on the yx plan.
 
@@ -474,9 +474,9 @@ def get_spot_surface(image, spot_y, spot_x, radius_yx):
     image : np.ndarray
         Image with shape (y, x).
     spot_y : int or float
-        Coordinate of the detected spot along the y axis.
+        Coordinate of the detected spot along the y-axis.
     spot_x : int or float
-        Coordinate of the detected spot along the x axis.
+        Coordinate of the detected spot along the x-axis.
     radius_yx : int or float
         Radius in pixel of the detected spot, on the yx plan.
 
@@ -526,18 +526,18 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
     voxel_size : int, float, Tuple(int, float), List(int, float) or None
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions. Not used if 'log_kernel_size' and 'minimum_distance' are
+        dimension. Not used if 'log_kernel_size' and 'minimum_distance' are
         provided.
     spot_radius : int, float, Tuple(int, float), List(int, float) or None
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions. Not used if 'log_kernel_size' and 'minimum_distance'
+        every dimension. Not used if 'log_kernel_size' and 'minimum_distance'
         are provided.
 
     Returns
     -------
     snr : float
-        Median signal-to-noise ratio computed for every spots.
+        Median signal-to-noise ratio computed for every spot.
 
     """
     # check parameters
@@ -686,7 +686,7 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
 
 
 def get_breaking_point(x, y):
-    """Select the x-axis value where a L-curve has a kink.
+    """Select the x-axis value where an L-curve has a kink.
 
     Assuming a L-curve from A to B, the 'breaking_point' is the more distant
     point to the segment [A, B].

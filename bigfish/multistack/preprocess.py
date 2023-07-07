@@ -59,11 +59,11 @@ def build_stacks(
 
     - A field of view is defined by a string common to every images belonging
     to the same field of view ("fov").
-    - At least every images are in 2-d with x and y dimensions. So we need to
+    - At least every image are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
     strings to identify the images to stack.
-    - An extra information to identify the files to stack in the input folder
+    - Extra information to identify the files to stack in the input folder
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
@@ -167,11 +167,11 @@ def build_stack(
 
     - A field of view is defined by a string common to every images belonging
     to the same field of view ("fov").
-    - At least every images are in 2-d with x and y dimensions. So we need to
+    - At least every image are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
     strings to identify the images to stack.
-    - An extra information to identify the files to stack in the input folder
+    - Extra information to identify the files to stack in the input folder
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").
@@ -269,7 +269,7 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
 
     The function stacks a set of images using a recipe mapping the
     different images with the dimensions they represent. Each stacking step
-    add a new dimension to the original tensors (eg. we stack 2-d images with
+    add a new dimension to the original tensors (e.g. we stack 2-d images with
     the same xy coordinates to get a 3-d image). If the files we need to build
     a new dimension are not included in the recipe, an empty dimension is
     added. This operation is repeated until we get a 5-d tensor. We first
@@ -289,11 +289,11 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
 
     - A field of view is defined by a string common to every images belonging
     to the same field of view ("fov").
-    - At least every images are in 2-d with x and y dimensions. So we need to
+    - At least every image are in 2-d with x and y dimensions. So we need to
     mention the round-dimension, the channel-dimension and the z-dimension to
     add ("r", "c" and "z"). For these keys, we provide a list of
     strings to identify the images to stack.
-    - An extra information to identify the files to stack in the input folder
+    - Extra information to identify the files to stack in the input folder
     can be provided with the file extension "ext" (usually 'tif' or 'tiff') or
     an optional morpheme ("opt").
     - A pattern used to get the filename ("pattern").

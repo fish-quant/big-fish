@@ -13,9 +13,12 @@ import bigfish.stack as stack
 from .postprocess import label_instances
 from .postprocess import clean_segmentation
 
-try:
+import skimage
+from sklearn.utils.fixes import parse_version
+
+if parse_version(skimage.__version__) < parse_version("0.19.0"):
     from skimage.morphology.selem import disk
-except ModuleNotFoundError:
+else:
     from skimage.morphology import disk
 from skimage.morphology import reconstruction
 

@@ -60,24 +60,24 @@ def detect_spots(
     voxel_size : int, float, Tuple(int, float), List(int, float) or None
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions. Not used if 'log_kernel_size' and 'minimum_distance' are
+        dimension. Not used if 'log_kernel_size' and 'minimum_distance' are
         provided.
     spot_radius : int, float, Tuple(int, float), List(int, float) or None
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions. Not used if 'log_kernel_size' and 'minimum_distance'
+        every dimension. Not used if 'log_kernel_size' and 'minimum_distance'
         are provided.
     log_kernel_size : int, float, Tuple(int, float), List(int, float) or None
         Size of the LoG kernel. It equals the standard deviation (in pixels)
         used for the gaussian kernel (one for each dimension). One value per
         spatial dimension (zyx or yx dimensions). If it's a scalar, the same
-        standard deviation is applied to every dimensions. If None, we estimate
+        standard deviation is applied to every dimension. If None, we estimate
         it with the voxel size and spot radius.
     minimum_distance : int, float, Tuple(int, float), List(int, float) or None
         Minimum distance (in pixels) between two spots we want to be able to
         detect separately. One value per spatial dimension (zyx or yx
         dimensions). If it's a scalar, the same distance is applied to every
-        dimensions. If None, we estimate it with the voxel size and spot
+        dimension. If None, we estimate it with the voxel size and spot
         radius.
 
     Returns
@@ -270,7 +270,7 @@ def _detect_spots_from_images(
     ----------
     images : List[np.ndarray]
         List of images with shape (z, y, x) or (y, x). The same threshold is
-        applied to every images.
+        applied to every image.
     threshold : float or int
         A threshold to discriminate relevant spots from noisy blobs. If None,
         optimal threshold is selected automatically. If several images are
@@ -284,13 +284,13 @@ def _detect_spots_from_images(
         Size of the LoG kernel. It equals the standard deviation (in pixels)
         used for the gaussian kernel (one for each dimension). One value per
         spatial dimension (zyx or yx dimensions). If it's a scalar, the same
-        standard deviation is applied to every dimensions. If None, we estimate
+        standard deviation is applied to every dimension. If None, we estimate
         it with the voxel size and spot radius.
     min_distance : int, float, Tuple(int, float), List(int, float) or None
         Minimum distance (in pixels) between two spots we want to be able to
         detect separately. One value per spatial dimension (zyx or yx
         dimensions). If it's a scalar, the same distance is applied to every
-        dimensions. If None, we estimate it with the voxel size and spot
+        dimension. If None, we estimate it with the voxel size and spot
         radius.
 
     Returns
@@ -644,24 +644,24 @@ def get_elbow_values(
     voxel_size : int, float, Tuple(int, float), List(int, float) or None
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions. Not used if 'log_kernel_size' and 'minimum_distance' are
+        dimension. Not used if 'log_kernel_size' and 'minimum_distance' are
         provided.
     spot_radius : int, float, Tuple(int, float), List(int, float) or None
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions. Not used if 'log_kernel_size' and 'minimum_distance'
+        every dimension. Not used if 'log_kernel_size' and 'minimum_distance'
         are provided.
     log_kernel_size : int, float, Tuple(int, float), List(int, float) or None
         Size of the LoG kernel. It equals the standard deviation (in pixels)
         used for the gaussian kernel (one for each dimension). One value per
         spatial dimension (zyx or yx dimensions). If it's a scalar, the same
-        standard deviation is applied to every dimensions. If None, we estimate
+        standard deviation is applied to every dimension. If None, we estimate
         it with the voxel size and spot radius.
     minimum_distance : int, float, Tuple(int, float), List(int, float) or None
         Minimum distance (in pixels) between two spots we want to be able to
         detect separately. One value per spatial dimension (zyx or yx
         dimensions). If it's a scalar, the same distance is applied to every
-        dimensions. If None, we estimate it with the voxel size and spot
+        dimension. If None, we estimate it with the voxel size and spot
         radius.
 
     Returns

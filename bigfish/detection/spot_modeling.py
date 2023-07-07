@@ -31,11 +31,11 @@ def modelize_spot(reference_spot, voxel_size, spot_radius, return_coord=False):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     spot_radius : int, float, Tuple(int, float) or List(int, float)
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     return_coord : bool
         Return gaussian coordinates.
 
@@ -43,13 +43,13 @@ def modelize_spot(reference_spot, voxel_size, spot_radius, return_coord=False):
     -------
     parameters_fitted : Tuple[float]
         * mu_z : float (optional)
-            Coordinate of the gaussian center along the z axis, in pixel.
+            Coordinate of the gaussian center along the z-axis, in pixel.
         * mu_y : float (optional)
-            Coordinate of the gaussian center along the y axis, in pixel.
+            Coordinate of the gaussian center along the y-axis, in pixel.
         * mu_x : float (optional)
-            Coordinate of the gaussian center along the x axis, in pixel.
+            Coordinate of the gaussian center along the x-axis, in pixel.
         * sigma_z : float
-            Standard deviation of the gaussian along the z axis, in pixel.
+            Standard deviation of the gaussian along the z-axis, in pixel.
             Available only for a 3-d modelization.
         * sigma_yx : float
             Standard deviation of the gaussian in the yx plan, in pixel.
@@ -173,7 +173,7 @@ def initialize_grid(image_spot, voxel_size, return_centroid=False):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     return_centroid : bool
         Compute centroid estimation of the grid.
 
@@ -256,11 +256,11 @@ def _initialize_grid_3d(
     grid : np.ndarray, np.float32
         A grid with the shape (3, z * y * x), in nanometer.
     centroid_z : float
-        Estimated centroid of the spot, in nanometer, along the z axis.
+        Estimated centroid of the spot, in nanometer, along the z-axis.
     centroid_y : float
-        Estimated centroid of the spot, in nanometer, along the y axis.
+        Estimated centroid of the spot, in nanometer, along the y-axis.
     centroid_x : float
-        Estimated centroid of the spot, in nanometer, along the x axis.
+        Estimated centroid of the spot, in nanometer, along the x-axis.
 
     """
     # get targeted size
@@ -314,9 +314,9 @@ def _initialize_grid_2d(image_spot, voxel_size_yx, return_centroid=False):
     grid : np.ndarray, np.float32
         A grid with the shape (2, y * x), in nanometer.
     centroid_y : float
-        Estimated centroid of the spot along the y axis, in nanometer.
+        Estimated centroid of the spot along the y-axis, in nanometer.
     centroid_x : float
-        Estimated centroid of the spot along the x axis, in nanometer.
+        Estimated centroid of the spot along the x-axis, in nanometer.
 
     """
     # get targeted size
@@ -384,7 +384,7 @@ def _objective_function(ndim, voxel_size, sigma_z, sigma_yx, amplitude):
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions).
     sigma_z : int, float or None
-        Standard deviation of the gaussian along the z axis, in nanometer. If
+        Standard deviation of the gaussian along the z-axis, in nanometer. If
         None, we consider a 2-d gaussian function.
     sigma_yx : int, float or None
         Standard deviation of the gaussian in the yx plan, in nanometer.
@@ -428,7 +428,7 @@ def _objective_function_3d(
     voxel_size_yx : int or float
         Size of a voxel in the yx plan, in nanometer.
     sigma_z : int, float or None
-        Standard deviation of the gaussian along the z axis, in nanometer.
+        Standard deviation of the gaussian along the z-axis, in nanometer.
     sigma_yx : int, float or None
         Standard deviation of the gaussian in the yx plan, in nanometer.
     amplitude : int, float or None
@@ -548,17 +548,17 @@ def gaussian_3d(
         Grid data to compute the gaussian function for different voxel within
         a volume V. In nanometer, with shape (3, V_z * V_y * V_x).
     mu_z : float
-        Estimated mean of the gaussian signal along z axis, in nanometer.
+        Estimated mean of the gaussian signal along z-axis, in nanometer.
     mu_y : float
-        Estimated mean of the gaussian signal along y axis, in nanometer.
+        Estimated mean of the gaussian signal along y-axis, in nanometer.
     mu_x : float
-        Estimated mean of the gaussian signal along x axis, in nanometer.
+        Estimated mean of the gaussian signal along x-axis, in nanometer.
     sigma_z : int or float
-        Standard deviation of the gaussian along the z axis, in nanometer.
+        Standard deviation of the gaussian along the z-axis, in nanometer.
     sigma_yx : int or float
         Standard deviation of the gaussian in the yx plan, in nanometer.
     voxel_size_z : int or float
-        Size of a voxel along the z axis, in nanometer.
+        Size of a voxel along the z-axis, in nanometer.
     voxel_size_yx : int or float
         Size of a voxel in the yx plan, in nanometer.
     amplitude : float
@@ -728,9 +728,9 @@ def gaussian_2d(
         Grid data to compute the gaussian function for different voxel within
         a surface S. In nanometer, with shape (2, S_y * S_x).
     mu_y : float
-        Estimated mean of the gaussian signal along y axis, in nanometer.
+        Estimated mean of the gaussian signal along y-axis, in nanometer.
     mu_x : float
-        Estimated mean of the gaussian signal along x axis, in nanometer.
+        Estimated mean of the gaussian signal along x-axis, in nanometer.
     sigma_yx : int or float
         Standard deviation of the gaussian in the yx plan, in nanometer.
     voxel_size_yx : int or float
@@ -877,11 +877,11 @@ def precompute_erf(ndim, voxel_size, sigma, max_grid=200):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     sigma : int, float, Tuple(int, float) or List(int, float)
         Standard deviation of the gaussian, in nanometer. One value per
         spatial dimension (zyx or yx dimensions). If it's a scalar, the same
-        value is applied to every dimensions.
+        value is applied to every dimension.
     max_grid : int
         Maximum size of the grid on which we precompute the erf, in pixel.
 
@@ -981,7 +981,7 @@ def fit_subpixel(image, spots, voxel_size, spot_radius):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     spot_radius : int, float, Tuple(int, float) or List(int, float)
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
@@ -1093,11 +1093,11 @@ def _fit_subpixel_3d(
         Enlarged radius of a spot, in pixel, used to crop an image around it.
         Tuple with 3 scalars (one per dimension zyx).
     voxel_size_z : int or float
-        Size of a voxel along the z axis, in nanometer.
+        Size of a voxel along the z-axis, in nanometer.
     voxel_size_yx : int or float
         Size of a voxel in the yx plan, in nanometer.
     spot_radius_z : int or float
-        Radius of the spot along the z axis, in nanometer.
+        Radius of the spot along the z-axis, in nanometer.
     spot_radius_yx : int or float
         Radius of the spot in the yx plan, in nanometer.
 

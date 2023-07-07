@@ -44,7 +44,7 @@ def detect_spots_colocalization(
     voxel_size : int, float, Tuple(int, float), or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     threshold : int, float or None
         A threshold to discriminate colocalized spots from distant ones. If
         None, an optimal threshold is selected automatically.

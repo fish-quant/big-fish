@@ -756,25 +756,25 @@ def plot_detection(
         plot different kind of detected spots with different symbols, use a
         list of arrays.
     shape : list or str, default='circle'
-        List of symbols used to localized the detected spots in the image,
+        List of symbols used to localize the detected spots in the image,
         among `circle`, `square` or `polygon`. One symbol per array in `spots`.
-        If `shape` is a string, the same symbol is used for every elements of
+        If `shape` is a string, the same symbol is used for every element of
         'spots'.
     radius : list or int or float, default=3
         List of yx radii of the detected spots, in pixel. One radius per array
         in `spots`. If `radius` is a scalar, the same value is applied for
-        every elements of `spots`.
+        every element of `spots`.
     color : list or str, default='red'
         List of colors of the detected spots. One color per array in `spots`.
-        If `color` is a string, the same color is applied for every elements
+        If `color` is a string, the same color is applied for every element
         of `spots`.
     linewidth : list or int, default=1
         List of widths or width of the border symbol. One integer per array
         in `spots`. If `linewidth` is an integer, the same width is applied
-        for every elements of `spots`.
+        for every element of `spots`.
     fill : list or bool, default=False
         List of boolean to fill the symbol of the detected spots. If `fill` is
-        a boolean, it is applied for every symbols.
+        a boolean, it is applied for every symbol.
     rescale : bool, default=False
         Rescale pixel values of the image (made by default in matplotlib).
     contrast : bool, default=False

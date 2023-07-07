@@ -105,7 +105,7 @@ def check_recipe(recipe, data_directory=None):
 def fit_recipe(recipe):
     """Fit a recipe.
 
-    Fitting a recipe consists in wrapping every values of `fov`, `r`, `c` and
+    Fitting a recipe consists in wrapping every value of `fov`, `r`, `c` and
     `z` in a list (an empty one if necessary). Values for `ext` and `opt` are
     also initialized.
 
@@ -150,7 +150,7 @@ def fit_recipe(recipe):
 def _is_recipe_fitted(recipe):
     """Check if a recipe is ready to be used.
 
-    Fitting a recipe consists in wrapping every values of `fov`, `r`, `c` and
+    Fitting a recipe consists in wrapping every value of `fov`, `r`, `c` and
     `z` in a list (an empty one if necessary). Values for `ext` and `opt` are
     also initialized.
 

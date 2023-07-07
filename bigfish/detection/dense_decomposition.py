@@ -59,15 +59,15 @@ def decompose_dense(
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     spot_radius : int, float, Tuple(int, float) or List(int, float)
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     kernel_size : int, float, Tuple(float, int), List(float, int) or None
         Standard deviation used for the gaussian kernel (one for each
         dimension), in pixel. If it's a scalar, the same standard deviation is
-        applied to every dimensions. If None, we estimate the kernel size from
+        applied to every dimension. If None, we estimate the kernel size from
         'spot_radius', 'voxel_size' and 'gamma'
     alpha : int or float
         Intensity percentile used to compute the reference spot, between 0
@@ -295,11 +295,11 @@ def get_dense_region(image, spots, voxel_size, spot_radius, beta=1):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     spot_radius : int, float, Tuple(int, float) or List(int, float)
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     beta : int or float
         Multiplicative factor for the intensity threshold of a dense region.
         Default is 1. Threshold is computed with the formula:
@@ -560,11 +560,11 @@ def simulate_gaussian_mixture(
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     sigma : int, float, Tuple(int, float) or List(int, float)
         Standard deviation of the gaussian, in nanometer. One value per
         spatial dimension (zyx or yx dimensions). If it's a scalar, the same
-        value is applied to every dimensions.
+        value is applied to every dimension.
     amplitude : float
         Amplitude of the gaussian.
     background : float

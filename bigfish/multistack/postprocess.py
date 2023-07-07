@@ -101,7 +101,7 @@ def remove_transcription_site(rna, clusters, nuc_mask, ndim):
     """Distinguish RNA molecules detected in a transcription site from the
     rest.
 
-    A transcription site is defined as as a foci detected within the nucleus.
+    A transcription site is defined as a foci detected within the nucleus.
 
     Parameters
     ----------

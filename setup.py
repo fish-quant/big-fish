@@ -2,9 +2,7 @@
 # Author: Arthur Imbert <arthur.imbert.pro@gmail.com>
 # License: BSD 3 clause
 
-"""
-Setup script.
-"""
+"""Setup script."""
 
 from setuptools import setup, find_packages
 

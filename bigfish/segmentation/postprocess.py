@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Postprocessing functions functions for bigfish.segmentation subpackage.
+Postprocessing functions for bigfish.segmentation subpackage.
 """
 
 import bigfish.stack as stack
@@ -103,7 +103,7 @@ def clean_segmentation(
     fill_holes : bool
         Fill holes within a labelled or masked area.
     smoothness : int or None
-        Radius of a median kernel filter. The higher the smoother instance
+        Radius of a median kernel filter. The higher, the smoother instance
         boundaries are.
     delimit_instance : bool
         Delimit clearly instances boundaries by preventing contact between each

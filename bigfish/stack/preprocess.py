@@ -71,7 +71,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     or between 0 and 1 (float).
 
     Each round and each channel is rescaled independently. Tensor has between
-    2 to 5 dimensions, in the following order: (round, channel, z, y, x).
+    2 and 5 dimensions, in the following order: (round, channel, z, y, x).
 
     By default, we rescale the tensor intensity range to its dtype range (or
     between 0 and 1 for float tensor). We can improve the contrast by
