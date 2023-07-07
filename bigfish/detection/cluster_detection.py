@@ -18,6 +18,7 @@ from sklearn.cluster import DBSCAN
 
 # ### Detect clusters ###
 
+
 def detect_clusters(spots, voxel_size, radius=350, nb_min_spots=4):
     """Cluster spots and detect relevant aggregated structures.
 
@@ -59,25 +60,26 @@ def detect_clusters(spots, voxel_size, radius=350, nb_min_spots=4):
     #  coordinates
     # check parameters
     stack.check_array(
-        spots,
-        ndim=2,
-        dtype=[np.float32, np.float64, np.int32, np.int64])
+        spots, ndim=2, dtype=[np.float32, np.float64, np.int32, np.int64]
+    )
     stack.check_parameter(
-        voxel_size=(int, float, tuple, list),
-        radius=int,
-        nb_min_spots=int)
+        voxel_size=(int, float, tuple, list), radius=int, nb_min_spots=int
+    )
 
     # check consistency between parameters
     dtype = spots.dtype
     ndim = spots.shape[1]
     if ndim not in [2, 3]:
-        raise ValueError("Spot coordinates should be in 2 or 3 dimensions, "
-                         "not {0}.".format(ndim))
+        raise ValueError(
+            "Spot coordinates should be in 2 or 3 dimensions, "
+            "not {0}.".format(ndim)
+        )
     if isinstance(voxel_size, (tuple, list)):
         if len(voxel_size) != ndim:
             raise ValueError(
                 "'voxel_size' must be a scalar or a sequence with {0} "
-                "elements.".format(ndim))
+                "elements.".format(ndim)
+            )
     else:
         voxel_size = (voxel_size,) * ndim
 
@@ -88,8 +90,7 @@ def detect_clusters(spots, voxel_size, radius=350, nb_min_spots=4):
         return clustered_spots, clusters
 
     # cluster spots
-    clustered_spots = _cluster_spots(
-        spots, voxel_size, radius, nb_min_spots)
+    clustered_spots = _cluster_spots(spots, voxel_size, radius, nb_min_spots)
 
     # extract and shape clusters information
     clusters = _extract_information(clustered_spots)
@@ -127,7 +128,8 @@ def _cluster_spots(spots, voxel_size, radius, nb_min_spots):
     """
     # convert spots coordinates in nanometer
     spots_nanometer = convert_spot_coordinates(
-        spots=spots, voxel_size=voxel_size)
+        spots=spots, voxel_size=voxel_size
+    )
 
     # fit a DBSCAN clustering algorithm with a specific radius
     dbscan = DBSCAN(eps=radius, min_samples=nb_min_spots)
@@ -166,10 +168,10 @@ def _extract_information(clustered_spots):
 
     # extract information for 3-d cluster...
     if clustered_spots.shape[1] == 4:
-
         # get 3-d cluster labels
         labels_clusters = np.unique(
-            clustered_spots[clustered_spots[:, 3] != -1, 3])
+            clustered_spots[clustered_spots[:, 3] != -1, 3]
+        )
         if labels_clusters.size == 0:
             clusters = np.array([], dtype=dtype).reshape((0, 5))
             return clusters
@@ -177,20 +179,22 @@ def _extract_information(clustered_spots):
         # shape information
         clusters = []
         for label in labels_clusters:
-            spots_in_cluster = clustered_spots[clustered_spots[:, 3] == label,
-                                               :3]
+            spots_in_cluster = clustered_spots[
+                clustered_spots[:, 3] == label, :3
+            ]
             z_cluster, y_cluster, x_cluster = spots_in_cluster.mean(axis=0)
             nb_spots_cluster = len(spots_in_cluster)
-            clusters.append([z_cluster, y_cluster, x_cluster,
-                             nb_spots_cluster, label])
+            clusters.append(
+                [z_cluster, y_cluster, x_cluster, nb_spots_cluster, label]
+            )
         clusters = np.array(clusters, dtype=dtype)
 
     # ... and 2-d cluster
     else:
-
         # get 2-d cluster labels
         labels_clusters = np.unique(
-            clustered_spots[clustered_spots[:, 2] != -1, 2])
+            clustered_spots[clustered_spots[:, 2] != -1, 2]
+        )
         if labels_clusters.size == 0:
             clusters = np.array([], dtype=dtype).reshape((0, 4))
             return clusters
@@ -198,8 +202,9 @@ def _extract_information(clustered_spots):
         # shape information
         clusters = []
         for label in labels_clusters:
-            spots_in_cluster = clustered_spots[clustered_spots[:, 2] == label,
-                                               :2]
+            spots_in_cluster = clustered_spots[
+                clustered_spots[:, 2] == label, :2
+            ]
             y_cluster, x_cluster = spots_in_cluster.mean(axis=0)
             nb_spots_cluster = len(spots_in_cluster)
             clusters.append([y_cluster, x_cluster, nb_spots_cluster, label])

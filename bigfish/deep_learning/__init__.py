@@ -11,7 +11,8 @@ try:
 except ImportError:
     raise ImportError(
         "Tensorflow package is missing. You can install it by running the "
-        "command 'pip install tensorflow>=2.3.0' in a bash shell.")
+        "command 'pip install tensorflow>=2.3.0' in a bash shell."
+    )
 
 # check tensorflow-addons package
 try:
@@ -19,7 +20,8 @@ try:
 except ImportError:
     raise ImportError(
         "Tensorflow addons package is missing. You can install it by running "
-        "the command 'pip install tensorflow-addons>=0.12.1' in a bash shell.")
+        "the command 'pip install tensorflow-addons>=0.12.1' in a bash shell."
+    )
 
 from .utils_models import SameConv
 from .utils_models import UpConv
@@ -42,14 +44,16 @@ _utils_models = [
     "UpBlock",
     "Encoder",
     "Decoder",
-    "EncoderDecoder"]
+    "EncoderDecoder",
+]
 
 _models_segmentation = [
     "load_pretrained_model",
     "check_pretrained_weights",
     "build_compile_3_classes_model",
     "build_compile_distance_model",
-    "build_compile_double_distance_model"]
+    "build_compile_double_distance_model",
+]
 
 
 __all__ = (_utils_models, _models_segmentation)

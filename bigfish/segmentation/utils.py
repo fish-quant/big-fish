@@ -15,6 +15,7 @@ from skimage.measure import regionprops
 
 # ### Thresholding method ###
 
+
 def thresholding(image, threshold):
     """Segment a 2-d image to discriminate object from background applying a
     threshold.
@@ -37,8 +38,15 @@ def thresholding(image, threshold):
     stack.check_array(
         image,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+        ],
+    )
     stack.check_parameter(threshold=(float, int))
 
     # discriminate nuclei from background, applying a threshold.
@@ -48,6 +56,7 @@ def thresholding(image, threshold):
 
 
 # ### Instances measures ###
+
 
 def compute_mean_diameter(image_label):
     """Compute the averaged size of the segmented instances.
@@ -68,9 +77,8 @@ def compute_mean_diameter(image_label):
     """
     # check parameters
     stack.check_array(
-        image_label,
-        ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64])
+        image_label, ndim=2, dtype=[np.uint8, np.uint16, np.int32, np.int64]
+    )
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -107,9 +115,8 @@ def compute_mean_convexity_ratio(image_label):
     """
     # check parameters
     stack.check_array(
-        image_label,
-        ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64])
+        image_label, ndim=2, dtype=[np.uint8, np.uint16, np.int32, np.int64]
+    )
 
     # compute properties of the segmented instances
     props = regionprops(image_label)
@@ -145,9 +152,8 @@ def compute_surface_ratio(image_label):
     """
     # check parameters
     stack.check_array(
-        image_label,
-        ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64])
+        image_label, ndim=2, dtype=[np.uint8, np.uint16, np.int32, np.int64]
+    )
 
     # compute surface ratio
     surface_instances = image_label > 0
@@ -173,9 +179,8 @@ def count_instances(image_label):
     """
     # check parameters
     stack.check_array(
-        image_label,
-        ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64])
+        image_label, ndim=2, dtype=[np.uint8, np.uint16, np.int32, np.int64]
+    )
 
     indices = set(image_label.ravel())
     if 0 in indices:

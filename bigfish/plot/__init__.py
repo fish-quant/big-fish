@@ -34,16 +34,11 @@ _images = [
     "plot_detection",
     "plot_reference_spot",
     "plot_cell",
-    "plot_cell_coordinates"]
+    "plot_cell_coordinates",
+]
 
-_quality = [
-    "plot_sharpness",
-    "plot_elbow",
-    "plot_elbow_colocalized"]
+_quality = ["plot_sharpness", "plot_elbow", "plot_elbow_colocalized"]
 
-_utils = [
-    "save_plot",
-    "get_minmax_values",
-    "create_colormap"]
+_utils = ["save_plot", "get_minmax_values", "create_colormap"]
 
 __all__ = _images + _quality + _utils

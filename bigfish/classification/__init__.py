@@ -21,8 +21,7 @@ from .features import features_area
 from .features import features_centrosome
 
 
-_input_preparation = [
-    "prepare_extracted_data"]
+_input_preparation = ["prepare_extracted_data"]
 
 _features = [
     "compute_features",
@@ -34,6 +33,7 @@ _features = [
     "features_topography"
     "features_foci"
     "features_area"
-    "features_centrosome"]
+    "features_centrosome",
+]
 
 __all__ = _input_preparation + _features

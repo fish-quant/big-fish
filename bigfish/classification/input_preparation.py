@@ -16,12 +16,10 @@ from skimage.measure import regionprops
 
 # ### Input data ###
 
+
 def prepare_extracted_data(
-        cell_mask,
-        nuc_mask=None,
-        ndim=None,
-        rna_coord=None,
-        centrosome_coord=None):
+    cell_mask, nuc_mask=None, ndim=None, rna_coord=None, centrosome_coord=None
+):
     """Prepare data extracted from images.
 
     Parameters
@@ -94,24 +92,20 @@ def prepare_extracted_data(
     stack.check_array(
         cell_mask,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool],
+    )
     cell_mask = cell_mask.astype(bool)
     if nuc_mask is not None:
         stack.check_array(
             nuc_mask,
             ndim=2,
-            dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
+            dtype=[np.uint8, np.uint16, np.int32, np.int64, bool],
+        )
         nuc_mask = nuc_mask.astype(bool)
     if rna_coord is not None:
-        stack.check_array(
-            rna_coord,
-            ndim=2,
-            dtype=[np.int32, np.int64])
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
     if centrosome_coord is not None:
-        stack.check_array(
-            centrosome_coord,
-            ndim=2,
-            dtype=[np.int32, np.int64])
+        stack.check_array(centrosome_coord, ndim=2, dtype=[np.int32, np.int64])
 
     # build distance map from the cell boundaries
     distance_cell = ndi.distance_transform_edt(cell_mask)
@@ -121,12 +115,11 @@ def prepare_extracted_data(
     # get cell centroid and a distance map from its localisation
     centroid_cell = _get_centroid_surface(cell_mask).astype(rna_coord.dtype)
     distance_centroid_cell = _get_centroid_distance_map(
-        centroid_cell,
-        cell_mask)
+        centroid_cell, cell_mask
+    )
 
     # prepare arrays relative to the nucleus
     if nuc_mask is not None:
-
         # get cell mask outside nucleus
         cell_mask_out_nuc = cell_mask.copy()
         cell_mask_out_nuc[nuc_mask] = False
@@ -140,8 +133,8 @@ def prepare_extracted_data(
         # get nucleus centroid and a distance map from its localisation
         centroid_nuc = _get_centroid_surface(nuc_mask).astype(rna_coord.dtype)
         distance_centroid_nuc = _get_centroid_distance_map(
-            centroid_nuc,
-            cell_mask)
+            centroid_nuc, cell_mask
+        )
 
     else:
         cell_mask_out_nuc = None
@@ -152,7 +145,6 @@ def prepare_extracted_data(
 
     # prepare arrays relative to the rna
     if rna_coord is not None:
-
         # get rna centroid
         if len(rna_coord) == 0:
             centroid_rna = np.array([0] * ndim, dtype=rna_coord.dtype)
@@ -161,29 +153,31 @@ def prepare_extracted_data(
 
         # build rna distance map
         distance_centroid_rna = _get_centroid_distance_map(
-            centroid_rna, cell_mask)
+            centroid_rna, cell_mask
+        )
 
         # combine rna and nucleus results
         if nuc_mask is not None:
-
             # get rna outside nucleus
-            mask_rna_in_nuc = nuc_mask[rna_coord[:, ndim - 2],
-                                       rna_coord[:, ndim - 1]]
+            mask_rna_in_nuc = nuc_mask[
+                rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+            ]
             rna_coord_out_nuc = rna_coord[~mask_rna_in_nuc]
 
             # get rna centroid (outside nucleus)
             if len(rna_coord_out_nuc) == 0:
                 centroid_rna_out_nuc = np.array(
-                    [0] * ndim, dtype=rna_coord.dtype)
+                    [0] * ndim, dtype=rna_coord.dtype
+                )
             else:
                 centroid_rna_out_nuc = _get_centroid_rna(
-                    rna_coord_out_nuc,
-                    ndim)
+                    rna_coord_out_nuc, ndim
+                )
 
             # build rna distance map (outside nucleus)
             distance_centroid_rna_out_nuc = _get_centroid_distance_map(
-                centroid_rna_out_nuc,
-                cell_mask)
+                centroid_rna_out_nuc, cell_mask
+            )
 
         else:
             rna_coord_out_nuc = None
@@ -199,14 +193,13 @@ def prepare_extracted_data(
 
     # prepare arrays relative to the centrosome
     if centrosome_coord is not None:
-
         # build distance map from centroid
         if len(centrosome_coord) == 0:
             distance_centrosome = distance_cell.copy()
         else:
             distance_centrosome = _get_centrosome_distance_map(
-                centrosome_coord,
-                cell_mask)
+                centrosome_coord, cell_mask
+            )
 
     else:
         distance_centrosome = None
@@ -229,7 +222,8 @@ def prepare_extracted_data(
         distance_centroid_rna,
         centroid_rna_out_nuc,
         distance_centroid_rna_out_nuc,
-        distance_centrosome)
+        distance_centrosome,
+    )
 
     return prepared_inputs
 
@@ -337,8 +331,9 @@ def _get_centrosome_distance_map(centrosome_coord, cell_mask):
 
     # get mask centrosome
     mask_centrosome = np.zeros_like(cell_mask)
-    mask_centrosome[centrosome_coord_2d[:, 0],
-                    centrosome_coord_2d[:, 1]] = True
+    mask_centrosome[
+        centrosome_coord_2d[:, 0], centrosome_coord_2d[:, 1]
+    ] = True
 
     # compute distance map
     distance_map = ndi.distance_transform_edt(~mask_centrosome)

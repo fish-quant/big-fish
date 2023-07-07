@@ -18,14 +18,16 @@ from tensorflow.python.keras.engine.training import Model
 
 # ### Convolution blocks ###
 
-class SameConv(Model):
 
-    def __init__(self,
-                 filters,
-                 kernel_size=(3, 3),
-                 normalization=True,
-                 activation="relu",
-                 **kwargs):
+class SameConv(Model):
+    def __init__(
+        self,
+        filters,
+        kernel_size=(3, 3),
+        normalization=True,
+        activation="relu",
+        **kwargs,
+    ):
         super(SameConv, self).__init__(**kwargs)
 
         # initialize parameters
@@ -36,15 +38,13 @@ class SameConv(Model):
 
         # define layers
         self.conv = Conv2D(
-            filters=self.filters,
-            kernel_size=self.kernel_size,
-            padding='same')
+            filters=self.filters, kernel_size=self.kernel_size, padding="same"
+        )
         if self.normalization:
             self.norm = tfa.layers.InstanceNormalization()
         else:
             self.norm = None
-        self.act = Activation(
-            activation=self.activation)
+        self.act = Activation(activation=self.activation)
 
     def call(self, inputs, training=False, mask=None):
         # compute layers
@@ -57,23 +57,25 @@ class SameConv(Model):
 
     def get_config(self):
         config = {
-            'filters': self.filters,
-            'kernel_size': self.kernel_size,
-            'normalization': self.normalization,
-            'activation': self.activation}
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "normalization": self.normalization,
+            "activation": self.activation,
+        }
 
         return config
 
 
 class UpConv(Model):
-
-    def __init__(self,
-                 filters,
-                 kernel_size=(3, 3),
-                 normalization=True,
-                 activation="relu",
-                 interpolation="bilinear",
-                 **kwargs):
+    def __init__(
+        self,
+        filters,
+        kernel_size=(3, 3),
+        normalization=True,
+        activation="relu",
+        interpolation="bilinear",
+        **kwargs,
+    ):
         super(UpConv, self).__init__(**kwargs)
 
         # initialize parameters
@@ -85,13 +87,14 @@ class UpConv(Model):
 
         # define layers
         self.resize = UpSampling2D(
-            size=(2, 2),
-            interpolation=self.interpolation)
+            size=(2, 2), interpolation=self.interpolation
+        )
         self.conv = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
 
     def call(self, inputs, training=False, mask=None):
         # resize and convolve image
@@ -102,24 +105,26 @@ class UpConv(Model):
 
     def get_config(self):
         config = {
-            'filters': self.filters,
-            'kernel_size': self.kernel_size,
-            'normalization': self.normalization,
-            'activation': self.activation,
-            'interpolation': self.interpolation}
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "normalization": self.normalization,
+            "activation": self.activation,
+            "interpolation": self.interpolation,
+        }
 
         return config
 
 
 class DownBlock(Model):
-
-    def __init__(self,
-                 filters,
-                 kernel_size=(3, 3),
-                 normalization=True,
-                 activation="relu",
-                 pool_size=(2, 2),
-                 **kwargs):
+    def __init__(
+        self,
+        filters,
+        kernel_size=(3, 3),
+        normalization=True,
+        activation="relu",
+        pool_size=(2, 2),
+        **kwargs,
+    ):
         super(DownBlock, self).__init__(**kwargs)
 
         # initialize parameters
@@ -134,30 +139,34 @@ class DownBlock(Model):
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.conv_2 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.residual = SameConv(
             filters=self.filters,
             kernel_size=(1, 1),
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.add = Add()
         self.conv_3 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.conv_4 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
-        self.pool = MaxPooling2D(
-            pool_size=self.pool_size)
+            activation=self.activation,
+        )
+        self.pool = MaxPooling2D(pool_size=self.pool_size)
 
     def call(self, inputs, training=False, mask=None):
         # two convolution layers
@@ -179,24 +188,26 @@ class DownBlock(Model):
 
     def get_config(self):
         config = {
-            'filters': self.filters,
-            'kernel_size': self.kernel_size,
-            'normalization': self.normalization,
-            'activation': self.activation,
-            'pool_size': self.pool_size}
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "normalization": self.normalization,
+            "activation": self.activation,
+            "pool_size": self.pool_size,
+        }
 
         return config
 
 
 class UpBlock(Model):
-
-    def __init__(self,
-                 filters,
-                 kernel_size=(3, 3),
-                 normalization=True,
-                 activation="relu",
-                 interpolation="bilinear",
-                 **kwargs):
+    def __init__(
+        self,
+        filters,
+        kernel_size=(3, 3),
+        normalization=True,
+        activation="relu",
+        interpolation="bilinear",
+        **kwargs,
+    ):
         super(UpBlock, self).__init__(**kwargs)
 
         # initialize parameters
@@ -212,29 +223,34 @@ class UpBlock(Model):
             kernel_size=self.kernel_size,
             normalization=self.normalization,
             activation=self.activation,
-            interpolation=self.interpolation)
+            interpolation=self.interpolation,
+        )
         self.add_1 = Add()
         self.conv_1 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.conv_2 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.add_2 = Add()
         self.conv_3 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
         self.conv_4 = SameConv(
             filters=self.filters,
             kernel_size=self.kernel_size,
             normalization=self.normalization,
-            activation=self.activation)
+            activation=self.activation,
+        )
 
     def call(self, inputs, training=False, mask=None):
         # get inputs
@@ -261,19 +277,18 @@ class UpBlock(Model):
 
     def get_config(self):
         config = {
-            'filters': self.filters,
-            'kernel_size': self.kernel_size,
-            'normalization': self.normalization,
-            'activation': self.activation,
-            'interpolation': self.interpolation}
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "normalization": self.normalization,
+            "activation": self.activation,
+            "interpolation": self.interpolation,
+        }
 
         return config
 
 
 class Encoder(Model):
-
-    def __init__(self,
-                 **kwargs):
+    def __init__(self, **kwargs):
         super(Encoder, self).__init__(**kwargs)
 
         # define layers
@@ -310,9 +325,7 @@ class Encoder(Model):
 
 
 class Decoder(Model):
-
-    def __init__(self,
-                 **kwargs):
+    def __init__(self, **kwargs):
         super(Decoder, self).__init__(**kwargs)
 
         # define layers
@@ -340,9 +353,7 @@ class Decoder(Model):
 
 
 class EncoderDecoder(Model):
-
-    def __init__(self,
-                 **kwargs):
+    def __init__(self, **kwargs):
         super(EncoderDecoder, self).__init__(**kwargs)
 
         # initialize parameters
@@ -351,8 +362,9 @@ class EncoderDecoder(Model):
 
     def call(self, inputs, training=False, mask=None):
         # encode
-        (x, residual_1, residual_2,
-         residual_3, residual_4) = self.encoder(inputs)
+        (x, residual_1, residual_2, residual_3, residual_4) = self.encoder(
+            inputs
+        )
 
         # decode
         x = self.decoder([x, residual_1, residual_2, residual_3, residual_4])

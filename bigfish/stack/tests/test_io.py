@@ -21,14 +21,27 @@ from numpy.testing import assert_array_equal
 # TODO test bigfish.stack.save_cell_extracted
 
 
-@pytest.mark.parametrize("shape", [
-    (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64, bool])
-@pytest.mark.parametrize("extension", [
-    "png", "jpg", "jpeg", "tif", "tiff"])
+@pytest.mark.parametrize(
+    "shape", [(8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)]
+)
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float16,
+        np.float32,
+        np.float64,
+        bool,
+    ],
+)
+@pytest.mark.parametrize("extension", ["png", "jpg", "jpeg", "tif", "tiff"])
 def test_image(shape, dtype, extension):
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -36,37 +49,47 @@ def test_image(shape, dtype, extension):
         path = os.path.join(tmp_dir, "test." + extension)
 
         # error: boolean multidimensional image
-        if (extension in ["png", "jpg", "jpeg", "tif", "tiff"]
-                and len(test.shape) > 2
-                and test.dtype == bool):
+        if (
+            extension in ["png", "jpg", "jpeg", "tif", "tiff"]
+            and len(test.shape) > 2
+            and test.dtype == bool
+        ):
             with pytest.raises(ValueError):
                 stack.save_image(test, path)
 
         # error: non-boolean multidimensional image with 'png', 'jpg' or 'jpeg'
-        elif (extension in ["png", "jpg", "jpeg"]
-                and len(test.shape) > 2
-                and test.dtype != bool):
+        elif (
+            extension in ["png", "jpg", "jpeg"]
+            and len(test.shape) > 2
+            and test.dtype != bool
+        ):
             with pytest.raises(ValueError):
                 stack.save_image(test, path)
 
         # error: boolean 2-d image with 'tig' and 'tiff'
-        elif (extension in ["tif", "tiff"]
-                and len(test.shape) == 2
-                and test.dtype == bool):
+        elif (
+            extension in ["tif", "tiff"]
+            and len(test.shape) == 2
+            and test.dtype == bool
+        ):
             with pytest.raises(ValueError):
                 stack.save_image(test, path)
 
         # error: non-boolean 2-d image with 'png', 'jpg' or 'jpeg'
-        elif (extension in ["png", "jpg", "jpeg"]
-                and len(test.shape) == 2
-                and test.dtype != bool):
+        elif (
+            extension in ["png", "jpg", "jpeg"]
+            and len(test.shape) == 2
+            and test.dtype != bool
+        ):
             with pytest.raises(ValueError):
                 stack.save_image(test, path)
 
         # warning: boolean 2-d image with 'png', 'jpg' or 'jpeg'
-        elif (extension in ["png", "jpg", "jpeg"]
-                and len(test.shape) == 2
-                and test.dtype == bool):
+        elif (
+            extension in ["png", "jpg", "jpeg"]
+            and len(test.shape) == 2
+            and test.dtype == bool
+        ):
             with pytest.warns(UserWarning):
                 stack.save_image(test, path)
                 tensor = stack.read_image(path, sanity_check=True)
@@ -127,12 +150,26 @@ def test_dv(dtype):
         assert test.dtype == tensor.dtype
 
 
-@pytest.mark.parametrize("shape", [
-    (8,), (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64, bool])
+@pytest.mark.parametrize(
+    "shape", [(8,), (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)]
+)
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float16,
+        np.float32,
+        np.float64,
+        bool,
+    ],
+)
 def test_npy(shape, dtype):
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -144,12 +181,26 @@ def test_npy(shape, dtype):
         assert test.dtype == tensor.dtype
 
 
-@pytest.mark.parametrize("shape", [
-    (8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)])
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64, bool])
+@pytest.mark.parametrize(
+    "shape", [(8, 8), (8, 8, 8), (8, 8, 8, 8), (8, 8, 8, 8, 8)]
+)
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float16,
+        np.float32,
+        np.float64,
+        bool,
+    ],
+)
 def test_npz(shape, dtype):
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -165,10 +216,22 @@ def test_npz(shape, dtype):
         assert test_2.dtype == data["test_2"].dtype
 
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float16,
+        np.float32,
+        np.float64,
+    ],
+)
 @pytest.mark.parametrize("delimiter", [";", ",", ":", "\t"])
 def test_csv_numpy(dtype, delimiter):
     # build a temporary directory
@@ -192,9 +255,9 @@ def test_csv_pandas(delimiter):
     with tempfile.TemporaryDirectory() as tmp_dir:
         # save pandas objects in csv file
         test_series = pd.Series([0.1, 2.5, 3.7], name="a")
-        test_dataframe = pd.DataFrame({"a": [0, 2, 3],
-                                       "b": [0.1, 2.5, 3.7],
-                                       "c": ["dog", "cat", "bird"]})
+        test_dataframe = pd.DataFrame(
+            {"a": [0, 2, 3], "b": [0.1, 2.5, 3.7], "c": ["dog", "cat", "bird"]}
+        )
         path = os.path.join(tmp_dir, "test_series.csv")
         stack.save_data_to_csv(test_series, path, delimiter=delimiter)
         path = os.path.join(tmp_dir, "test_dataframe.csv")

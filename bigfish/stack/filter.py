@@ -16,6 +16,7 @@ from .preprocess import cast_img_uint16
 
 import skimage
 from sklearn.utils.fixes import parse_version
+
 if parse_version(skimage.__version__) < parse_version("0.19.0"):
     from skimage.morphology.selem import square
     from skimage.morphology.selem import diamond
@@ -38,6 +39,7 @@ from scipy.ndimage import convolve
 
 
 # ### Filters ###
+
 
 def _define_kernel(shape, size, dtype):
     """Build a kernel to apply a filter on images.
@@ -71,9 +73,11 @@ def _define_kernel(shape, size, dtype):
     elif shape == "square":
         kernel = square(size, dtype=dtype)
     else:
-        raise ValueError("Kernel definition is wrong. Shape of the kernel "
-                         "should be 'diamond', 'disk', 'rectangle' or "
-                         "'square'. Not {0}.".format(shape))
+        raise ValueError(
+            "Kernel definition is wrong. Shape of the kernel "
+            "should be 'diamond', 'disk', 'rectangle' or "
+            "'square'. Not {0}.".format(shape)
+        )
 
     return kernel
 
@@ -100,18 +104,14 @@ def mean_filter(image, kernel_shape, kernel_size):
     """
     # check parameters
     check_array(
-        image,
-        ndim=2,
-        dtype=[np.float32, np.float64, np.uint8, np.uint16])
-    check_parameter(
-        kernel_shape=str,
-        kernel_size=(int, tuple, list))
+        image, ndim=2, dtype=[np.float32, np.float64, np.uint8, np.uint16]
+    )
+    check_parameter(kernel_shape=str, kernel_size=(int, tuple, list))
 
     # build kernel
     kernel = _define_kernel(
-        shape=kernel_shape,
-        size=kernel_size,
-        dtype=np.float64)
+        shape=kernel_shape, size=kernel_size, dtype=np.float64
+    )
     n = kernel.sum()
     kernel /= n
 
@@ -142,19 +142,13 @@ def median_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(
-        image,
-        ndim=2,
-        dtype=[np.uint8, np.uint16])
-    check_parameter(
-        kernel_shape=str,
-        kernel_size=(int, tuple, list))
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    check_parameter(kernel_shape=str, kernel_size=(int, tuple, list))
 
     # get kernel
     kernel = _define_kernel(
-        shape=kernel_shape,
-        size=kernel_size,
-        dtype=image.dtype)
+        shape=kernel_shape, size=kernel_size, dtype=image.dtype
+    )
 
     # apply filter
     image_filtered = rank.median(image, kernel)
@@ -183,19 +177,13 @@ def maximum_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(
-        image,
-        ndim=2,
-        dtype=[np.uint8, np.uint16])
-    check_parameter(
-        kernel_shape=str,
-        kernel_size=(int, tuple, list))
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    check_parameter(kernel_shape=str, kernel_size=(int, tuple, list))
 
     # get kernel
     kernel = _define_kernel(
-        shape=kernel_shape,
-        size=kernel_size,
-        dtype=image.dtype)
+        shape=kernel_shape, size=kernel_size, dtype=image.dtype
+    )
 
     # apply filter
     image_filtered = rank.maximum(image, kernel)
@@ -224,19 +212,13 @@ def minimum_filter(image, kernel_shape, kernel_size):
 
     """
     # check parameters
-    check_array(
-        image,
-        ndim=2,
-        dtype=[np.uint8, np.uint16])
-    check_parameter(
-        kernel_shape=str,
-        kernel_size=(int, tuple, list))
+    check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
+    check_parameter(kernel_shape=str, kernel_size=(int, tuple, list))
 
     # get kernel
     kernel = _define_kernel(
-        shape=kernel_shape,
-        size=kernel_size,
-        dtype=image.dtype)
+        shape=kernel_shape, size=kernel_size, dtype=image.dtype
+    )
 
     # apply filter
     image_filtered = rank.minimum(image, kernel)
@@ -269,9 +251,8 @@ def log_filter(image, sigma):
     """
     # check parameters
     check_array(
-        image,
-        ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32, np.float64]
+    )
     check_parameter(sigma=(float, int, tuple, list))
 
     # we cast the data in np.float to allow negative values
@@ -285,8 +266,10 @@ def log_filter(image, sigma):
     # check sigma
     if isinstance(sigma, (tuple, list)):
         if len(sigma) != image.ndim:
-            raise ValueError("'sigma' must be a scalar or a sequence with {0} "
-                             "elements.".format(image.ndim))
+            raise ValueError(
+                "'sigma' must be a scalar or a sequence with {0} "
+                "elements.".format(image.ndim)
+            )
 
     # we apply LoG filter
     image_filtered = gaussian_laplace(image_float, sigma=sigma)
@@ -329,22 +312,22 @@ def gaussian_filter(image, sigma, allow_negative=False):
     """
     # check parameters
     check_array(
-        image,
-        ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
-    check_parameter(
-        sigma=(float, int, tuple, list),
-        allow_negative=bool)
+        image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32, np.float64]
+    )
+    check_parameter(sigma=(float, int, tuple, list), allow_negative=bool)
 
     # check parameters consistency
     if image.dtype in [np.uint8, np.uint16] and allow_negative:
-        raise ValueError("Negative values are impossible with unsigned "
-                         "integer image.")
+        raise ValueError(
+            "Negative values are impossible with unsigned " "integer image."
+        )
     # check sigma
     if isinstance(sigma, (tuple, list)):
         if len(sigma) != image.ndim:
-            raise ValueError("'sigma' must be a scalar or a sequence with {0} "
-                             "elements.".format(image.ndim))
+            raise ValueError(
+                "'sigma' must be a scalar or a sequence with {0} "
+                "elements.".format(image.ndim)
+            )
 
     # we cast the data in np.float to allow negative values
     if image.dtype == np.uint8:
@@ -394,17 +377,15 @@ def remove_background_mean(image, kernel_shape="disk", kernel_size=200):
     """
     # compute background noise with a large mean filter
     background = mean_filter(
-        image,
-        kernel_shape=kernel_shape,
-        kernel_size=kernel_size)
+        image, kernel_shape=kernel_shape, kernel_size=kernel_size
+    )
 
     # subtract the background from the original image, clipping negative
     # values to 0
     mask = image > background
     image_without_back = np.subtract(
-        image, background,
-        out=np.zeros_like(image),
-        where=mask)
+        image, background, out=np.zeros_like(image), where=mask
+    )
 
     return image_without_back
 
@@ -434,10 +415,12 @@ def remove_background_gaussian(image, sigma):
     # subtract the gaussian filter
     out = np.zeros_like(image)
     image_no_background = np.subtract(
-        image, image_filtered,
+        image,
+        image_filtered,
         out=out,
         where=(image > image_filtered),
-        dtype=image.dtype)
+        dtype=image.dtype,
+    )
 
     return image_no_background
 
@@ -468,19 +451,20 @@ def dilation_filter(image, kernel_shape=None, kernel_size=None):
     check_array(
         image,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
+        dtype=[np.uint8, np.uint16, np.float32, np.float64, bool],
+    )
     check_parameter(
         kernel_shape=(str, type(None)),
-        kernel_size=(int, tuple, list, type(None)))
+        kernel_size=(int, tuple, list, type(None)),
+    )
 
     # get kernel
     if kernel_shape is None or kernel_size is None:
         kernel = None
     else:
         kernel = _define_kernel(
-            shape=kernel_shape,
-            size=kernel_size,
-            dtype=image.dtype)
+            shape=kernel_shape, size=kernel_size, dtype=image.dtype
+        )
 
     # apply filter
     if image.dtype == bool:
@@ -517,19 +501,20 @@ def erosion_filter(image, kernel_shape=None, kernel_size=None):
     check_array(
         image,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64, bool])
+        dtype=[np.uint8, np.uint16, np.float32, np.float64, bool],
+    )
     check_parameter(
         kernel_shape=(str, type(None)),
-        kernel_size=(int, tuple, list, type(None)))
+        kernel_size=(int, tuple, list, type(None)),
+    )
 
     # get kernel
     if kernel_shape is None or kernel_size is None:
         kernel = None
     else:
         kernel = _define_kernel(
-            shape=kernel_shape,
-            size=kernel_size,
-            dtype=image.dtype)
+            shape=kernel_shape, size=kernel_size, dtype=image.dtype
+        )
 
     # apply filter
     if image.dtype == bool:

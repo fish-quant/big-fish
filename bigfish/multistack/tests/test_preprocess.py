@@ -20,6 +20,7 @@ from numpy.testing import assert_array_equal
 
 # ### Test stack building ###
 
+
 def test_build_stacks_from_recipe():
     # build a temporary directory and save tensors inside
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -46,11 +47,13 @@ def test_build_stacks_from_recipe():
         stack.save_image(test_rna, path_rna)
 
         # define recipe to read tensors
-        recipe_1 = {"fov": ["1", "2"],
-                    "c": ["nuc", "cyt", "rna"],
-                    "opt": "test",
-                    "ext": "tif",
-                    "pattern": "opt_c_fov.ext"}
+        recipe_1 = {
+            "fov": ["1", "2"],
+            "c": ["nuc", "cyt", "rna"],
+            "opt": "test",
+            "ext": "tif",
+            "pattern": "opt_c_fov.ext",
+        }
 
         # build tensor without prior information
         tensor = multistack.build_stack(recipe_1, input_folder=tmp_dir)
@@ -59,44 +62,44 @@ def test_build_stacks_from_recipe():
         assert tensor.dtype == np.uint8
 
         # build tensor with prior information
-        tensor = multistack.build_stack(recipe_1,
-                                        input_folder=tmp_dir,
-                                        input_dimension=3)
+        tensor = multistack.build_stack(
+            recipe_1, input_folder=tmp_dir, input_dimension=3
+        )
         expected_tensor = np.zeros((1, 3, 8, 8, 8), dtype=np.uint8)
         assert_array_equal(tensor, expected_tensor)
         assert tensor.dtype == np.uint8
 
         # build tensors with different fields of view
-        tensor = multistack.build_stack(recipe_1,
-                                        input_folder=tmp_dir,
-                                        input_dimension=3,
-                                        i_fov=0)
+        tensor = multistack.build_stack(
+            recipe_1, input_folder=tmp_dir, input_dimension=3, i_fov=0
+        )
         expected_tensor = np.zeros((1, 3, 8, 8, 8), dtype=np.uint8)
         assert_array_equal(tensor, expected_tensor)
         assert tensor.dtype == np.uint8
-        tensor = multistack.build_stack(recipe_1,
-                                        input_folder=tmp_dir,
-                                        input_dimension=3,
-                                        i_fov=1)
+        tensor = multistack.build_stack(
+            recipe_1, input_folder=tmp_dir, input_dimension=3, i_fov=1
+        )
         expected_tensor = np.zeros((1, 3, 5, 5, 5), dtype=np.uint16)
         assert_array_equal(tensor, expected_tensor)
         assert tensor.dtype == np.uint16
 
         # wrong recipe
-        recipe_wrong = {"fov": "test",
-                        "c": ["nuc", "cyt", "rna"],
-                        "ext": "tif",
-                        "pattern": "fov_c.ext"}
+        recipe_wrong = {
+            "fov": "test",
+            "c": ["nuc", "cyt", "rna"],
+            "ext": "tif",
+            "pattern": "fov_c.ext",
+        }
         with pytest.raises(FileNotFoundError):
-            multistack.build_stack(recipe_wrong,
-                                   input_folder=tmp_dir,
-                                   input_dimension=3)
+            multistack.build_stack(
+                recipe_wrong, input_folder=tmp_dir, input_dimension=3
+            )
 
         # wrong path
         with pytest.raises(FileNotFoundError):
-            multistack.build_stack(recipe_1,
-                                   input_folder="/foo/bar",
-                                   input_dimension=3)
+            multistack.build_stack(
+                recipe_1, input_folder="/foo/bar", input_dimension=3
+            )
 
 
 def test_build_stacks_from_datamap():
@@ -125,35 +128,43 @@ def test_build_stacks_from_datamap():
         stack.save_image(test_rna, path_rna)
 
         # define datamap to read  tensors
-        recipe_1 = {"fov": ["1", "2"],
-                    "c": ["nuc", "cyt", "rna"],
-                    "opt": "test",
-                    "ext": "tif",
-                    "pattern": "opt_c_fov.ext"}
-        recipe_2 = {"fov": "2",
-                    "c": ["nuc", "cyt", "rna"],
-                    "opt": "test",
-                    "ext": "tif",
-                    "pattern": "opt_c_fov.ext"}
+        recipe_1 = {
+            "fov": ["1", "2"],
+            "c": ["nuc", "cyt", "rna"],
+            "opt": "test",
+            "ext": "tif",
+            "pattern": "opt_c_fov.ext",
+        }
+        recipe_2 = {
+            "fov": "2",
+            "c": ["nuc", "cyt", "rna"],
+            "opt": "test",
+            "ext": "tif",
+            "pattern": "opt_c_fov.ext",
+        }
         data_map = [(recipe_1, tmp_dir), (recipe_2, tmp_dir)]
 
         # build stacks from generator
         generator = multistack.build_stacks(data_map, input_dimension=3)
-        expected_tensors = [np.zeros((1, 3, 8, 8, 8), dtype=np.uint8),
-                            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16),
-                            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16)]
+        expected_tensors = [
+            np.zeros((1, 3, 8, 8, 8), dtype=np.uint8),
+            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16),
+            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16),
+        ]
         for i, tensor in enumerate(generator):
             expected_tensor = expected_tensors[i]
             assert_array_equal(tensor, expected_tensor)
             assert tensor.dtype == expected_tensor.dtype
 
         # build stacks from generator with metadata
-        generator = multistack.build_stacks(data_map,
-                                            input_dimension=3,
-                                            return_origin=True)
-        expected_tensors = [np.zeros((1, 3, 8, 8, 8), dtype=np.uint8),
-                            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16),
-                            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16)]
+        generator = multistack.build_stacks(
+            data_map, input_dimension=3, return_origin=True
+        )
+        expected_tensors = [
+            np.zeros((1, 3, 8, 8, 8), dtype=np.uint8),
+            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16),
+            np.zeros((1, 3, 5, 5, 5), dtype=np.uint16),
+        ]
         expected_recipes = [recipe_1, recipe_1, recipe_2]
         expected_i_fov = [0, 1, 0]
         for i, (tensor, input_folder, recipe, i_fov) in enumerate(generator):

@@ -41,12 +41,10 @@ _spots = [
     "local_maximum_detection",
     "spots_thresholding",
     "automated_threshold_setting",
-    "get_elbow_values"]
+    "get_elbow_values",
+]
 
-_dense = [
-    "decompose_dense",
-    "get_dense_region",
-    "simulate_gaussian_mixture"]
+_dense = ["decompose_dense", "get_dense_region", "simulate_gaussian_mixture"]
 
 _model = [
     "modelize_spot",
@@ -54,10 +52,10 @@ _model = [
     "gaussian_2d",
     "gaussian_3d",
     "precompute_erf",
-    "fit_subpixel"]
+    "fit_subpixel",
+]
 
-_clusters = [
-    "detect_clusters"]
+_clusters = ["detect_clusters"]
 
 _utils = [
     "convert_spot_coordinates",
@@ -67,6 +65,7 @@ _utils = [
     "get_spot_volume",
     "get_spot_surface",
     "compute_snr_spots",
-    "get_breaking_point"]
+    "get_breaking_point",
+]
 
 __all__ = _spots + _dense + _model + _clusters + _utils

@@ -23,6 +23,7 @@ from .utils import check_parameter
 
 # ### Read ###
 
+
 def read_image(path, sanity_check=False):
     """Read an image with ``png``, ``jpg``, ``jpeg``, ``tif`` or ``tiff``
     extension.
@@ -41,9 +42,7 @@ def read_image(path, sanity_check=False):
 
     """
     # check path
-    check_parameter(
-        path=str,
-        sanity_check=bool)
+    check_parameter(path=str, sanity_check=bool)
 
     # read image
     image = io.imread(path)
@@ -52,12 +51,23 @@ def read_image(path, sanity_check=False):
     if sanity_check:
         check_array(
             image,
-            dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                   np.int8, np.int16, np.int32, np.int64,
-                   np.float16, np.float32, np.float64,
-                   bool],
+            dtype=[
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.float16,
+                np.float32,
+                np.float64,
+                bool,
+            ],
             ndim=[2, 3, 4, 5],
-            allow_nan=False)
+            allow_nan=False,
+        )
 
     return image
 
@@ -79,9 +89,7 @@ def read_dv(path, sanity_check=False):
 
     """
     # check path
-    check_parameter(
-        path=str,
-        sanity_check=bool)
+    check_parameter(path=str, sanity_check=bool)
 
     # read video file
     video = mrc.imread(path)
@@ -92,7 +100,8 @@ def read_dv(path, sanity_check=False):
         check_array(
             video,
             dtype=[np.uint16, np.int16, np.int32, np.float32],
-            allow_nan=False)
+            allow_nan=False,
+        )
 
     return video
 
@@ -121,11 +130,8 @@ def read_array(path):
 
 
 def read_array_from_csv(
-        path,
-        dtype=None,
-        delimiter=";",
-        encoding="utf-8",
-        skiprows=0):
+    path, dtype=None, delimiter=";", encoding="utf-8", skiprows=0
+):
     """Read a numpy array saved in a ``csv`` file.
 
     Parameters
@@ -150,17 +156,13 @@ def read_array_from_csv(
     """
     # check parameters
     check_parameter(
-        path=str,
-        dtype=(type, type(None)),
-        delimiter=str,
-        encoding=str)
+        path=str, dtype=(type, type(None)), delimiter=str, encoding=str
+    )
 
     # read csv file
     array = np.loadtxt(
-        path,
-        delimiter=delimiter,
-        encoding=encoding,
-        skiprows=skiprows)
+        path, delimiter=delimiter, encoding=encoding, skiprows=skiprows
+    )
 
     # cast array dtype
     if dtype is not None:
@@ -188,10 +190,7 @@ def read_dataframe_from_csv(path, delimiter=";", encoding="utf-8"):
 
     """
     # check parameters
-    check_parameter(
-        path=str,
-        delimiter=str,
-        encoding=str)
+    check_parameter(path=str, delimiter=str, encoding=str)
 
     # read csv file
     df = pd.read_csv(path, sep=delimiter, encoding=encoding)
@@ -216,9 +215,7 @@ def read_uncompressed(path, verbose=False):
 
     """
     # check parameters
-    check_parameter(
-        path=str,
-        verbose=bool)
+    check_parameter(path=str, verbose=bool)
 
     # read array file
     data = np.load(path)
@@ -265,6 +262,7 @@ def read_cell_extracted(path, verbose=False):
 
 # ### Write ###
 
+
 def save_image(image, path, extension="tif"):
     """Save an image.
 
@@ -296,17 +294,26 @@ def save_image(image, path, extension="tif"):
 
     """
     # check image and parameters
-    check_parameter(
-        path=str,
-        extension=str)
+    check_parameter(path=str, extension=str)
     check_array(
         image,
-        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64,
-               np.float16, np.float32, np.float64,
-               bool],
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.float16,
+            np.float32,
+            np.float64,
+            bool,
+        ],
         ndim=[2, 3, 4, 5],
-        allow_nan=False)
+        allow_nan=False,
+    )
 
     # check extension and build path
     if "/" in path:
@@ -325,37 +332,62 @@ def save_image(image, path, extension="tif"):
         else:
             path += ".{0}".format(extension)
     if extension not in ["png", "jpg", "jpeg", "tif", "tiff"]:
-        raise ValueError("{0} extension is not supported, please choose among "
-                         "'png', 'jpg', 'jpeg', 'tif' or 'tiff'."
-                         .format(extension))
+        raise ValueError(
+            "{0} extension is not supported, please choose among "
+            "'png', 'jpg', 'jpeg', 'tif' or 'tiff'.".format(extension)
+        )
 
     # warn about extension
-    if (extension in ["png", "jpg", "jpeg"] and len(image.shape) > 2
-            and image.dtype != bool):
-        raise ValueError("Extension {0} is not fitted with multidimensional "
-                         "images. Use 'tif' or 'tiff' extension instead."
-                         .format(extension))
-    if (extension in ["png", "jpg", "jpeg"] and len(image.shape) == 2
-            and image.dtype != bool):
-        raise ValueError("Extension {0} is not supported with dtype. Use "
-                         "'tif' or 'tiff' extension instead."
-                         .format(extension))
-    if (extension in ["png", "jpg", "jpeg"] and len(image.shape) == 2
-            and image.dtype == bool):
-        warnings.warn("Extension {0} is not consistent with dtype. To prevent "
-                      "'image' from being cast you should use "
-                      "'bigfish.stack.save_array' function instead."
-                      .format(extension), UserWarning)
-    if (extension in ["tif", "tiff"] and len(image.shape) == 2
-            and image.dtype == bool):
-        raise ValueError("Extension {0} is not fitted with boolean images. "
-                         "Use 'bigfish.stack.save_array' function instead."
-                         .format(extension))
-    if (extension in ["png", "jpg", "jpeg", "tif", "tiff"]
-            and len(image.shape) > 2 and image.dtype == bool):
-        raise ValueError("Extension {0} is not fitted with multidimensional "
-                         "boolean images. Use 'bigfish.stack.save_array' "
-                         "function instead.".format(extension))
+    if (
+        extension in ["png", "jpg", "jpeg"]
+        and len(image.shape) > 2
+        and image.dtype != bool
+    ):
+        raise ValueError(
+            "Extension {0} is not fitted with multidimensional "
+            "images. Use 'tif' or 'tiff' extension instead.".format(extension)
+        )
+    if (
+        extension in ["png", "jpg", "jpeg"]
+        and len(image.shape) == 2
+        and image.dtype != bool
+    ):
+        raise ValueError(
+            "Extension {0} is not supported with dtype. Use "
+            "'tif' or 'tiff' extension instead.".format(extension)
+        )
+    if (
+        extension in ["png", "jpg", "jpeg"]
+        and len(image.shape) == 2
+        and image.dtype == bool
+    ):
+        warnings.warn(
+            "Extension {0} is not consistent with dtype. To prevent "
+            "'image' from being cast you should use "
+            "'bigfish.stack.save_array' function instead.".format(extension),
+            UserWarning,
+        )
+    if (
+        extension in ["tif", "tiff"]
+        and len(image.shape) == 2
+        and image.dtype == bool
+    ):
+        raise ValueError(
+            "Extension {0} is not fitted with boolean images. "
+            "Use 'bigfish.stack.save_array' function instead.".format(
+                extension
+            )
+        )
+    if (
+        extension in ["png", "jpg", "jpeg", "tif", "tiff"]
+        and len(image.shape) > 2
+        and image.dtype == bool
+    ):
+        raise ValueError(
+            "Extension {0} is not fitted with multidimensional "
+            "boolean images. Use 'bigfish.stack.save_array' "
+            "function instead.".format(extension)
+        )
 
     # save image without warnings
     with warnings.catch_warnings():
@@ -381,11 +413,22 @@ def save_array(array, path):
     check_parameter(path=str)
     check_array(
         array,
-        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64,
-               np.float16, np.float32, np.float64,
-               bool],
-        ndim=[1, 2, 3, 4, 5])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.float16,
+            np.float32,
+            np.float64,
+            bool,
+        ],
+        ndim=[1, 2, 3, 4, 5],
+    )
 
     # add extension if necessary
     if ".npy" not in path:
@@ -413,9 +456,8 @@ def save_data_to_csv(data, path, delimiter=";"):
     """
     # check parameters
     check_parameter(
-        data=(pd.DataFrame, pd.Series, np.ndarray),
-        path=str,
-        delimiter=str)
+        data=(pd.DataFrame, pd.Series, np.ndarray), path=str, delimiter=str
+    )
 
     # add extension if necessary
     if ".csv" not in path:
@@ -425,10 +467,21 @@ def save_data_to_csv(data, path, delimiter=";"):
     if not isinstance(data, (pd.DataFrame, pd.Series)):
         check_array(
             data,
-            dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                   np.int8, np.int16, np.int32, np.int64,
-                   np.float16, np.float32, np.float64],
-            ndim=2)
+            dtype=[
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.float16,
+                np.float32,
+                np.float64,
+            ],
+            ndim=2,
+        )
 
         if data.dtype == np.float16:
             fmt = "%.4f"
@@ -444,18 +497,12 @@ def save_data_to_csv(data, path, delimiter=";"):
     elif isinstance(data, pd.Series):
         data = data.to_frame()
         data.to_csv(
-            path,
-            sep=delimiter,
-            header=True,
-            index=False,
-            encoding="utf-8")
+            path, sep=delimiter, header=True, index=False, encoding="utf-8"
+        )
     else:
         data.to_csv(
-            path,
-            sep=delimiter,
-            header=True,
-            index=False,
-            encoding="utf-8")
+            path, sep=delimiter, header=True, index=False, encoding="utf-8"
+        )
 
 
 def save_cell_extracted(cell_results, path):
@@ -478,9 +525,7 @@ def save_cell_extracted(cell_results, path):
 
     """
     # check parameters
-    check_parameter(
-        cell_results=dict,
-        path=str)
+    check_parameter(cell_results=dict, path=str)
 
     # add extension if necessary
     if ".npz" not in path:

@@ -17,10 +17,20 @@ from numpy.testing import assert_array_almost_equal
 
 # ### Test normalization ###
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,
-    np.int8, np.int16, np.int32,
-    np.float32, np.float64])
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.float32,
+        np.float64,
+    ],
+)
 def test_rescale(dtype):
     # build a 5x5 random matrix with a limited range of values
     tensor = np.random.randint(35, 105, 25).reshape((5, 5)).astype(dtype)
@@ -45,29 +55,41 @@ def test_stretching():
 
     # integer
     tensor = np.array(x).reshape((3, 3)).astype(np.uint16)
-    tensor_rescaled = stack.rescale(tensor,
-                                    channel_to_stretch=0,
-                                    stretching_percentile=50)
-    expected_tensor = np.array([[0, 0, 0],
-                                [65535, 65535, 65535],
-                                [65535, 65535, 65535]], dtype=np.uint16)
+    tensor_rescaled = stack.rescale(
+        tensor, channel_to_stretch=0, stretching_percentile=50
+    )
+    expected_tensor = np.array(
+        [[0, 0, 0], [65535, 65535, 65535], [65535, 65535, 65535]],
+        dtype=np.uint16,
+    )
     assert_array_equal(tensor_rescaled, expected_tensor)
 
     # float
     tensor = np.array(x).reshape((3, 3)).astype(np.float32)
-    rescaled_tensor = stack.rescale(tensor,
-                                    channel_to_stretch=0,
-                                    stretching_percentile=50)
-    expected_tensor = np.array([[0., 0., 0.],
-                                [1., 1., 1.],
-                                [1., 1., 1.]], dtype=np.float32)
+    rescaled_tensor = stack.rescale(
+        tensor, channel_to_stretch=0, stretching_percentile=50
+    )
+    expected_tensor = np.array(
+        [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], dtype=np.float32
+    )
     assert_array_equal(rescaled_tensor, expected_tensor)
 
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float32, np.float64])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float32,
+        np.float64,
+    ],
+)
 def test_cast_uint8(dtype):
     # from integer to np.uint8
     if np.issubdtype(dtype, np.integer):
@@ -90,10 +112,21 @@ def test_cast_uint8(dtype):
         assert_array_equal(tensor_uint8, tensor)
 
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float32, np.float64])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float32,
+        np.float64,
+    ],
+)
 def test_cast_uint16(dtype):
     # from integer to np.uint16
     if np.issubdtype(dtype, np.integer):
@@ -116,10 +149,21 @@ def test_cast_uint16(dtype):
         assert_array_equal(tensor_uint16, tensor)
 
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float32, np.float64])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float32,
+        np.float64,
+    ],
+)
 def test_cast_float32(dtype):
     # from integer to np.float32
     if np.issubdtype(dtype, np.integer):
@@ -148,10 +192,21 @@ def test_cast_float32(dtype):
         assert_array_almost_equal(tensor_float32, tensor)
 
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32, np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float32, np.float64])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float32,
+        np.float64,
+    ],
+)
 def test_cast_float64(dtype):
     # from integer to np.float64
     if np.issubdtype(dtype, np.integer):

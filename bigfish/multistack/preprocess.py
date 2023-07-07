@@ -23,11 +23,10 @@ from .utils import count_nb_fov
 
 # ### Building stack ###
 
+
 def build_stacks(
-        data_map,
-        input_dimension=None,
-        sanity_check=False,
-        return_origin=False):
+    data_map, input_dimension=None, sanity_check=False, return_origin=False
+):
     """Generator to build several stacks from recipe-folder pairs.
 
     To build a stack, a recipe should be linked to a directory including all
@@ -127,12 +126,12 @@ def build_stacks(
         data_map=list,
         input_dimension=(int, type(None)),
         sanity_check=bool,
-        return_origin=bool)
+        return_origin=bool,
+    )
     check_datamap(data_map)
 
     # load and generate tensors for each recipe-folder pair
     for recipe, input_folder in data_map:
-
         # load and generate tensors for each fov stored in a recipe
         nb_fov = count_nb_fov(recipe)
         for i_fov in range(nb_fov):
@@ -141,7 +140,8 @@ def build_stacks(
                 input_folder,
                 input_dimension=input_dimension,
                 sanity_check=sanity_check,
-                i_fov=i_fov)
+                i_fov=i_fov,
+            )
             if return_origin:
                 yield tensor, input_folder, recipe, i_fov
             else:
@@ -149,11 +149,8 @@ def build_stacks(
 
 
 def build_stack(
-        recipe,
-        input_folder,
-        input_dimension=None,
-        sanity_check=False,
-        i_fov=0):
+    recipe, input_folder, input_dimension=None, sanity_check=False, i_fov=0
+):
     """Build a 5-d stack from the same field of view (fov).
 
     The recipe dictionary for one field of view takes the form:
@@ -236,7 +233,8 @@ def build_stack(
         input_folder=str,
         input_dimension=(int, type(None)),
         i_fov=int,
-        sanity_check=bool)
+        sanity_check=bool,
+    )
 
     # build stack from recipe and tif files
     tensor = _load_stack(recipe, input_folder, input_dimension, i_fov)
@@ -245,12 +243,23 @@ def build_stack(
     if sanity_check:
         stack.check_array(
             tensor,
-            dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                   np.int8, np.int16, np.int32, np.int64,
-                   np.float16, np.float32, np.float64,
-                   bool],
+            dtype=[
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.float16,
+                np.float32,
+                np.float64,
+                bool,
+            ],
             ndim=5,
-            allow_nan=False)
+            allow_nan=False,
+        )
 
     return tensor
 
@@ -321,31 +330,24 @@ def _load_stack(recipe, input_folder, input_dimension=None, i_fov=0):
     # we stack our files according to their initial dimension
     if input_dimension == 2:
         stack_ = _build_stack_from_2d(
-            recipe,
-            input_folder,
-            fov=i_fov,
-            nb_r=nb_r,
-            nb_c=nb_c,
-            nb_z=nb_z)
+            recipe, input_folder, fov=i_fov, nb_r=nb_r, nb_c=nb_c, nb_z=nb_z
+        )
     elif input_dimension == 3:
         stack_ = _build_stack_from_3d(
-            recipe,
-            input_folder,
-            fov=i_fov,
-            nb_r=nb_r,
-            nb_c=nb_c)
+            recipe, input_folder, fov=i_fov, nb_r=nb_r, nb_c=nb_c
+        )
     elif input_dimension == 4:
         stack_ = _build_stack_from_4d(
-            recipe,
-            input_folder,
-            fov=i_fov,
-            nb_r=nb_r)
+            recipe, input_folder, fov=i_fov, nb_r=nb_r
+        )
     elif input_dimension == 5:
         stack_ = _build_stack_from_5d(recipe, input_folder, fov=i_fov)
     else:
-        raise ValueError("Files do not have the right number of dimensions: "
-                         "{0}. The files we stack should have between 2 and "
-                         "5 dimensions.".format(input_dimension))
+        raise ValueError(
+            "Files do not have the right number of dimensions: "
+            "{0}. The files we stack should have between 2 and "
+            "5 dimensions.".format(input_dimension)
+        )
 
     return stack_
 
@@ -380,21 +382,15 @@ def _build_stack_from_2d(recipe, input_folder, fov=0, nb_r=1, nb_c=1, nb_z=1):
     # load and stack successively z, channel then round elements
     tensors_4d = []
     for r in range(nb_r):
-
         # load and stack channel elements (3-d tensors)
         tensors_3d = []
         for c in range(nb_c):
-
             # load and stack z elements (2-d tensors)
             tensors_2d = []
             for z in range(nb_z):
                 path = get_path_from_recipe(
-                    recipe,
-                    input_folder,
-                    fov=fov,
-                    r=r,
-                    c=c,
-                    z=z)
+                    recipe, input_folder, fov=fov, r=r, c=c, z=z
+                )
                 tensor_2d = stack.read_image(path)
                 tensors_2d.append(tensor_2d)
 
@@ -439,16 +435,12 @@ def _build_stack_from_3d(recipe, input_folder, fov=0, nb_r=1, nb_c=1):
     # load and stack successively channel elements then round elements
     tensors_4d = []
     for r in range(nb_r):
-
         # load and stack channel elements (3-d tensors)
         tensors_3d = []
         for c in range(nb_c):
             path = get_path_from_recipe(
-                recipe,
-                input_folder,
-                fov=fov,
-                r=r,
-                c=c)
+                recipe, input_folder, fov=fov, r=r, c=c
+            )
             tensor_3d = stack.read_image(path)
             tensors_3d.append(tensor_3d)
 
@@ -525,7 +517,7 @@ def _build_stack_from_5d(recipe, input_folder, fov=0):
 
 
 def _get_input_dimension(recipe, input_folder):
-    """ Load an arbitrary image to get the original dimension of the files.
+    """Load an arbitrary image to get the original dimension of the files.
 
     Parameters
     ----------
@@ -573,9 +565,8 @@ def build_stack_no_recipe(paths, input_dimension=None, sanity_check=False):
     """
     # check parameters
     stack.check_parameter(
-        paths=(str, list),
-        input_dimension=(int, type(None)),
-        sanity_check=bool)
+        paths=(str, list), input_dimension=(int, type(None)), sanity_check=bool
+    )
 
     # build stack from tif files
     tensor = _load_stack_no_recipe(paths, input_dimension)
@@ -584,12 +575,23 @@ def build_stack_no_recipe(paths, input_dimension=None, sanity_check=False):
     if sanity_check:
         stack.check_array(
             tensor,
-            dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-                   np.int8, np.int16, np.int32, np.int64,
-                   np.float16, np.float32, np.float64,
-                   bool],
+            dtype=[
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.float16,
+                np.float32,
+                np.float64,
+                bool,
+            ],
             ndim=5,
-            allow_nan=False)
+            allow_nan=False,
+        )
 
     return tensor
 
@@ -636,8 +638,10 @@ def _load_stack_no_recipe(paths, input_dimension=None):
     elif input_dimension == 5 and len(stacks) == 1:
         tensor_5d = stacks[0]
     else:
-        raise ValueError("Files do not have the right number of dimensions: "
-                         "{0}. The files we stack should have between 2 and "
-                         "5 dimensions.".format(input_dimension))
+        raise ValueError(
+            "Files do not have the right number of dimensions: "
+            "{0}. The files we stack should have between 2 and "
+            "5 dimensions.".format(input_dimension)
+        )
 
     return tensor_5d

@@ -42,8 +42,10 @@ def save_plot(path_output, ext):
                 path_output += extension
             plt.savefig(path_output, format=ext_)
     else:
-        Warning("Plot is not saved because the extension is not valid: "
-                "{0}.".format(ext))
+        Warning(
+            "Plot is not saved because the extension is not valid: "
+            "{0}.".format(ext)
+        )
 
 
 def get_minmax_values(tensor):
@@ -90,6 +92,6 @@ def create_colormap():
     values = np.linspace(0, 1, 256)
     np.random.shuffle(values)
     colormap = plt.cm.colors.ListedColormap(plt.cm.YlGnBu(values))
-    colormap.set_bad(color='black')
+    colormap.set_bad(color="black")
 
     return colormap

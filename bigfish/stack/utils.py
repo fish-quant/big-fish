@@ -18,6 +18,7 @@ from urllib.request import urlretrieve
 
 # ### Sanity checks dataframe ###
 
+
 def check_df(df, features=None, features_without_nan=None):
     """Full safety check of a dataframe.
 
@@ -40,7 +41,8 @@ def check_df(df, features=None, features_without_nan=None):
     check_parameter(
         df=(pd.DataFrame, pd.Series),
         features=(list, type(None)),
-        features_without_nan=(list, type(None)))
+        features_without_nan=(list, type(None)),
+    )
 
     # check features
     if features is not None:
@@ -67,9 +69,12 @@ def _check_features_df(df, features):
     """
     # check columns
     if not set(features).issubset(df.columns):
-        raise ValueError("The dataframe does not seem to have the right "
-                         "features. {0} instead of {1}"
-                         .format(list(df.columns.values), features))
+        raise ValueError(
+            "The dataframe does not seem to have the right "
+            "features. {0} instead of {1}".format(
+                list(df.columns.values), features
+            )
+        )
 
 
 def _check_nan_df(df, features_to_check=None):
@@ -97,11 +102,14 @@ def _check_nan_df(df, features_to_check=None):
         nan_count = nan_count[features_to_check]
         x = nan_count.sum()
         if x > 0:
-            raise ValueError("The dataframe has {0} NaN values for the "
-                             "requested features: \n{1}.".format(x, nan_count))
+            raise ValueError(
+                "The dataframe has {0} NaN values for the "
+                "requested features: \n{1}.".format(x, nan_count)
+            )
 
 
 # ### Sanity checks array ###
+
 
 def check_array(array, ndim=None, dtype=None, allow_nan=True):
     """Full safety check of an array.
@@ -128,7 +136,8 @@ def check_array(array, ndim=None, dtype=None, allow_nan=True):
         array=np.ndarray,
         ndim=(int, list, type(None)),
         dtype=(type, list, type(None)),
-        allow_nan=bool)
+        allow_nan=bool,
+    )
 
     # check the dtype
     if dtype is not None:
@@ -168,8 +177,10 @@ def _check_dtype_array(array, dtype):
             break
 
     if error:
-        raise TypeError("{0} is not supported yet. Use one of those dtypes "
-                        "instead: {1}.".format(array.dtype, dtype))
+        raise TypeError(
+            "{0} is not supported yet. Use one of those dtypes "
+            "instead: {1}.".format(array.dtype, dtype)
+        )
 
 
 def _check_dim_array(array, ndim):
@@ -189,8 +200,10 @@ def _check_dim_array(array, ndim):
 
     # check the number of dimensions of the array
     if array.ndim not in ndim:
-        raise ValueError("Array can't have {0} dimension(s). Expected "
-                         "dimensions are: {1}.".format(array.ndim, ndim))
+        raise ValueError(
+            "Array can't have {0} dimension(s). Expected "
+            "dimensions are: {1}.".format(array.ndim, ndim)
+        )
 
 
 def _check_nan_array(array):
@@ -231,16 +244,21 @@ def check_range_value(array, min_=None, max_=None):
     """
     # check lowest and highest bounds
     if min_ is not None and array.min() < min_:
-        raise ValueError("The array should have a lower bound of {0}, but its "
-                         "minimum value is {1}.".format(min_, array.min()))
+        raise ValueError(
+            "The array should have a lower bound of {0}, but its "
+            "minimum value is {1}.".format(min_, array.min())
+        )
     if max_ is not None and array.max() > max_:
-        raise ValueError("The array should have an upper bound of {0}, but "
-                         "its maximum value is {1}.".format(max_, array.max()))
+        raise ValueError(
+            "The array should have an upper bound of {0}, but "
+            "its maximum value is {1}.".format(max_, array.max())
+        )
 
     return True
 
 
 # ### Sanity checks parameters ###
+
 
 def check_parameter(**kwargs):
     """Check dtype of the function's parameters.
@@ -271,13 +289,16 @@ def check_parameter(**kwargs):
                 target = "(" + ", ".join(target) + ")"
             else:
                 target = expected_dtype.__name__
-            raise TypeError("Parameter {0} should be a {1}. It is a {2} "
-                            "instead.".format(arg, target, actual))
+            raise TypeError(
+                "Parameter {0} should be a {1}. It is a {2} "
+                "instead.".format(arg, target, actual)
+            )
 
     return True
 
 
 # ### Constants ###
+
 
 def get_margin_value():
     """Return the margin pixel around a cell coordinate used to define its
@@ -307,6 +328,7 @@ def get_eps_float32():
 
 # ### Fetch data ###
 
+
 def load_and_save_url(remote_url, directory, filename=None):
     """Download remote data and save them
 
@@ -326,10 +348,7 @@ def load_and_save_url(remote_url, directory, filename=None):
 
     """
     # check parameters
-    check_parameter(
-        remote_url=str,
-        directory=str,
-        filename=(str, type(None)))
+    check_parameter(remote_url=str, directory=str, filename=(str, type(None)))
 
     # get output path
     if filename is None:
@@ -359,18 +378,19 @@ def check_hash(path, expected_hash):
 
     """
     # check parameter
-    check_parameter(
-        path=str,
-        expected_hash=str)
+    check_parameter(path=str, expected_hash=str)
 
     # compute hash value
     hash_value = compute_hash(path)
 
     # compare checksum
     if hash_value != expected_hash:
-        raise IOError("File {0} has an SHA256 checksum ({1}) differing from "
-                      "expected ({2}). File may be corrupted."
-                      .format(path, hash_value, expected_hash))
+        raise IOError(
+            "File {0} has an SHA256 checksum ({1}) differing from "
+            "expected ({2}). File may be corrupted.".format(
+                path, hash_value, expected_hash
+            )
+        )
 
     return True
 
@@ -422,6 +442,7 @@ def check_input_data(input_directory, input_segmentation=False):
 
     """
     # parameters
+    # fmt: off
     filename_input_dapi = "experiment_1_dapi_fov_1.tif"
     url_input_dapi = "https://github.com/fish-quant/big-fish-examples/releases/download/data/experiment_1_dapi_fov_1.tif"
     hash_input_dapi = "3ce6dcfbece75da41326943432ada4cc9bacd06750e59dc2818bb253b6e7fdcd"
@@ -434,120 +455,127 @@ def check_input_data(input_directory, input_segmentation=False):
     filename_input_cell_full = "example_cell_full.tif"
     url_input_cell_full = "https://github.com/fish-quant/big-fish-examples/releases/download/data/example_cell_full.tif"
     hash_input_cell_full = "36981955ed97e9cab8a69241140a9aac3bdcf32dc157d6957fd37edcb16b34bd"
+    # fmt: on
 
     # check if input dapi image exists
     path = os.path.join(input_directory, filename_input_dapi)
     if os.path.isfile(path):
-
         # check that image is not corrupted
         try:
             check_hash(path, hash_input_dapi)
-            print("{0} is already in the directory"
-                  .format(filename_input_dapi))
+            print(
+                "{0} is already in the directory".format(filename_input_dapi)
+            )
 
         # otherwise download it
         except IOError:
             print("{0} seems corrupted".format(filename_input_dapi))
             print("downloading {0}...".format(filename_input_dapi))
-            load_and_save_url(url_input_dapi,
-                              input_directory,
-                              filename_input_dapi)
+            load_and_save_url(
+                url_input_dapi, input_directory, filename_input_dapi
+            )
             check_hash(path, hash_input_dapi)
 
     # if file does not exist we directly download it
     else:
         print("downloading {0}...".format(filename_input_dapi))
-        load_and_save_url(url_input_dapi,
-                          input_directory,
-                          filename_input_dapi)
+        load_and_save_url(url_input_dapi, input_directory, filename_input_dapi)
         check_hash(path, hash_input_dapi)
 
     # check if input smfish image exists
     path = os.path.join(input_directory, filename_input_smfish)
     if os.path.isfile(path):
-
         # check that image is not corrupted
         try:
             check_hash(path, hash_input_smfish)
-            print("{0} is already in the directory"
-                  .format(filename_input_smfish))
+            print(
+                "{0} is already in the directory".format(filename_input_smfish)
+            )
 
         # otherwise download it
         except IOError:
             print("{0} seems corrupted".format(filename_input_smfish))
             print("downloading {0}...".format(filename_input_smfish))
-            load_and_save_url(url_input_smfish,
-                              input_directory,
-                              filename_input_smfish)
+            load_and_save_url(
+                url_input_smfish, input_directory, filename_input_smfish
+            )
             check_hash(path, hash_input_smfish)
 
     # if file does not exist we directly download it
     else:
         print("downloading {0}...".format(filename_input_smfish))
-        load_and_save_url(url_input_smfish,
-                          input_directory,
-                          filename_input_smfish)
+        load_and_save_url(
+            url_input_smfish, input_directory, filename_input_smfish
+        )
         check_hash(path, hash_input_smfish)
 
     # stop here or check segmentation examples
     if input_segmentation:
-
         # check if example nucleus exists
         path = os.path.join(input_directory, filename_input_nuc_full)
         if os.path.isfile(path):
-
             # check that image is not corrupted
             try:
                 check_hash(path, hash_input_nuc_full)
-                print("{0} is already in the directory"
-                      .format(filename_input_nuc_full))
+                print(
+                    "{0} is already in the directory".format(
+                        filename_input_nuc_full
+                    )
+                )
 
             # otherwise download it
             except IOError:
                 print("{0} seems corrupted".format(filename_input_nuc_full))
                 print("downloading {0}...".format(filename_input_nuc_full))
-                load_and_save_url(url_input_nuc_full,
-                                  input_directory,
-                                  filename_input_nuc_full)
+                load_and_save_url(
+                    url_input_nuc_full,
+                    input_directory,
+                    filename_input_nuc_full,
+                )
                 check_hash(path, hash_input_nuc_full)
 
         # if file does not exist we directly download it
         else:
             print("downloading {0}...".format(filename_input_nuc_full))
-            load_and_save_url(url_input_nuc_full,
-                              input_directory,
-                              filename_input_nuc_full)
+            load_and_save_url(
+                url_input_nuc_full, input_directory, filename_input_nuc_full
+            )
             check_hash(path, hash_input_nuc_full)
 
         # check if example cell exists
         path = os.path.join(input_directory, filename_input_cell_full)
         if os.path.isfile(path):
-
             # check that image is not corrupted
             try:
                 check_hash(path, hash_input_cell_full)
-                print("{0} is already in the directory"
-                      .format(filename_input_cell_full))
+                print(
+                    "{0} is already in the directory".format(
+                        filename_input_cell_full
+                    )
+                )
 
             # otherwise download it
             except IOError:
                 print("{0} seems corrupted".format(filename_input_cell_full))
                 print("downloading {0}...".format(filename_input_cell_full))
-                load_and_save_url(url_input_cell_full,
-                                  input_directory,
-                                  filename_input_cell_full)
+                load_and_save_url(
+                    url_input_cell_full,
+                    input_directory,
+                    filename_input_cell_full,
+                )
                 check_hash(path, hash_input_cell_full)
 
         # if file does not exist we directly download it
         else:
             print("downloading {0}...".format(filename_input_cell_full))
-            load_and_save_url(url_input_cell_full,
-                              input_directory,
-                              filename_input_cell_full)
+            load_and_save_url(
+                url_input_cell_full, input_directory, filename_input_cell_full
+            )
             check_hash(path, hash_input_cell_full)
 
 
 # ### Computation ###
+
 
 def moving_average(array, n):
     """Compute a trailing average.
@@ -573,7 +601,7 @@ def moving_average(array, n):
     cumsum = [0]
     results = []
     for i, x in enumerate(array, 1):
-        cumsum.append(cumsum[i-1] + x)
+        cumsum.append(cumsum[i - 1] + x)
         if i >= n:
             ma = (cumsum[i] - cumsum[i - n]) / n
             results.append(ma)

@@ -22,6 +22,7 @@ from skimage.morphology import reconstruction
 
 # ### Unet model ###
 
+
 def unet_3_classes_nuc():
     """Load a pretrained Unet model to predict 3 classes from nucleus images:
     background, edge and foreground.
@@ -42,10 +43,8 @@ def unet_3_classes_nuc():
 
 
 def apply_unet_3_classes(
-        model,
-        image,
-        target_size=None,
-        test_time_augmentation=False):
+    model, image, target_size=None, test_time_augmentation=False
+):
     """Segment image with a 3-classes trained model.
 
     Parameters
@@ -72,8 +71,8 @@ def apply_unet_3_classes(
     """
     # check parameters
     stack.check_parameter(
-        target_size=(int, type(None)),
-        test_time_augmentation=bool)
+        target_size=(int, type(None)), test_time_augmentation=bool
+    )
     stack.check_array(image, ndim=2, dtype=[np.uint8, np.uint16])
 
     # get original shape
@@ -101,7 +100,8 @@ def apply_unet_3_classes(
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
     image_to_process = np.pad(
-        image_to_process, pad_width=marge_padding, mode='symmetric')
+        image_to_process, pad_width=marge_padding, mode="symmetric"
+    )
 
     # standardize and cast image
     image_to_process = stack.compute_image_standardization(image_to_process)
@@ -118,7 +118,6 @@ def apply_unet_3_classes(
     # loop over augmentations
     predictions_augmented = []
     for i in range(n_augmentations):
-
         # get images
         image_to_process_ = image_to_process[i]
         image_to_process_ = image_to_process_[np.newaxis, :, :, np.newaxis]
@@ -137,10 +136,12 @@ def apply_unet_3_classes(
         if target_size is not None:
             if i in [0, 1, 2, 6]:
                 prediction = stack.resize_image(
-                    prediction, (height, width), "bilinear")
+                    prediction, (height, width), "bilinear"
+                )
             else:
                 prediction = stack.resize_image(
-                    prediction, (width, height), "bilinear")
+                    prediction, (width, height), "bilinear"
+                )
 
         # store predictions
         predictions_augmented.append(prediction)
@@ -194,6 +195,7 @@ def from_3_classes_to_instances(label_3_classes):
 
 
 # ### Utility functions ###
+
 
 def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
     """Remove the nuclei we have already segmented in an image.
@@ -257,9 +259,8 @@ def remove_segmented_nuc(image, nuc_mask, size_nuclei=2000):
     # build the binary mask for the missing nuclei
     missing_mask = image_filtered > 0
     missing_mask = clean_segmentation(
-        missing_mask,
-        small_object_size=size_nuclei,
-        fill_holes=True)
+        missing_mask, small_object_size=size_nuclei, fill_holes=True
+    )
     missing_mask = stack.dilation_filter(missing_mask, "disk", 20)
 
     # TODO improve the thresholds
