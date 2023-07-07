@@ -7,6 +7,7 @@
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
 [![Python version](https://img.shields.io/pypi/pyversions/big-fish.svg)](https://pypi.python.org/pypi/big-fish/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 **Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **analyze microscopy images**, such **spot detection** and **segmentation of cells and nuclei**. The package allows the user represent the extract properties of a cell as coordinates (see figure below). The ultimate goal is to simplify **large scale statistical analysis** and quantification.
 
