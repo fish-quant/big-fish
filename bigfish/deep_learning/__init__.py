@@ -12,7 +12,7 @@ except ImportError:
     raise ImportError(
         "Tensorflow package is missing. You can install it by running the "
         "command 'pip install tensorflow>=2.3.0' in a bash shell."
-    )
+    ) from None
 
 # check tensorflow-addons package
 try:
@@ -21,7 +21,7 @@ except ImportError:
     raise ImportError(
         "Tensorflow addons package is missing. You can install it by running "
         "the command 'pip install tensorflow-addons>=0.12.1' in a bash shell."
-    )
+    ) from None
 
 from .utils_models import SameConv
 from .utils_models import UpConv

@@ -312,7 +312,7 @@ def remove_disjoint(image):
 
         # get an index for each disconnected part of the instance
         labelled_mask = label(mask)
-        indices = sorted(list(set(labelled_mask.ravel())))
+        indices = sorted(set(labelled_mask.ravel()))
         if 0 in indices:
             indices = indices[1:]
 

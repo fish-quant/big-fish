@@ -319,7 +319,7 @@ class Encoder(Model):
         return x, residual_1, residual_2, residual_3, residual_4
 
     def get_config(self):
-        config = dict()
+        config = {}
 
         return config
 
@@ -347,7 +347,7 @@ class Decoder(Model):
         return x
 
     def get_config(self):
-        config = dict()
+        config = {}
 
         return config
 
@@ -372,6 +372,6 @@ class EncoderDecoder(Model):
         return x
 
     def get_config(self):
-        config = dict()
+        config = {}
 
         return config

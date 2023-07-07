@@ -22,7 +22,7 @@ with open("bigfish/__init__.py", encoding="utf-8") as f:
 
 # package dependencies
 with open("requirements.txt", encoding="utf-8") as f:
-    REQUIREMENTS = [l.strip() for l in f.readlines() if l]
+    REQUIREMENTS = [row.strip() for row in f.readlines() if row]
 DEEPLEARNING_REQUIREMENTS = [
     "tensorflow >= 2.3.0",
     "tensorflow-addons >= 0.12.1",

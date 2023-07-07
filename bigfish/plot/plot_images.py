@@ -256,7 +256,7 @@ def plot_images(
     else:
         # we complete the row with empty frames
         r = nrow * 3 - len(images)
-        images_completed = [image for image in images] + [None] * r
+        images_completed = images + [None] * r
 
         for i, image in enumerate(images_completed):
             row = i // 3
@@ -558,7 +558,7 @@ def plot_segmentation_boundary(
         elif cell_label is not None:
             instances = regionprops(cell_label)
         else:
-            instances = list()
+            instances = []
         for instance in instances:
             label = instance.label
             y, x = instance.centroid
@@ -1623,8 +1623,7 @@ def plot_cell_coordinates(
     else:
         # we complete the row with empty frames
         r = nrow * 3 - len(cell_coord)
-        cell_coord_completed = [cell_coord_ for cell_coord_ in cell_coord]
-        cell_coord_completed += [None] * r
+        cell_coord_completed = cell_coord + [None] * r
 
         # loop over instance coordinates
         for i in range(len(cell_coord_completed)):

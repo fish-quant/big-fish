@@ -89,7 +89,7 @@ def plot_sharpness(
 
     # plot
     plt.figure(figsize=framesize)
-    y = np.array([i for i in range(length)])
+    y = np.array(list(range(length)))
     for i, focus_measure in enumerate(focus_measures):
         if labels is not None:
             plt.plot(focus_measure, y, label=labels[i])

@@ -443,7 +443,7 @@ def _filter_connected_region(image, connected_component, spots):
     # get different features of the regions
     area = []
     bbox = []
-    for i, region in enumerate(regions):
+    for _, region in enumerate(regions):
         area.append(region.area)
         bbox.append(region.bbox)
     regions = np.array(regions)

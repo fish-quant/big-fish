@@ -188,9 +188,9 @@ def focus_projection(
 
     # build a binary matrix with the same shape of our in-focus image to keep
     # the top focus pixels only
-    mask = [
+    mask = [  # noqa: C416
         mask_
-        for mask_ in map(
+        for mask_ in map(  # noqa: C417
             lambda indices: _one_hot_3d(
                 indices, depth=in_focus_image.shape[0]
             ),

@@ -589,7 +589,7 @@ def _get_candidate_thresholds(pixel_values):
     if end_range < 100:
         thresholds = np.linspace(start_range, end_range, num=100)
     else:
-        thresholds = [i for i in range(start_range, end_range + 1)]
+        thresholds = list(range(start_range, end_range + 1))
     thresholds = np.array(thresholds)
 
     return thresholds

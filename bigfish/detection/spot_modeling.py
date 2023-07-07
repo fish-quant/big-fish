@@ -927,8 +927,8 @@ def precompute_erf(ndim, voxel_size, sigma, max_grid=200):
     # build a grid with a spatial resolution of 1 nm and a size of
     # max_grid * resolution nm
     max_size_yx = np.ceil(max_grid * voxel_size[-1]).astype(np.int64)
-    yy = np.array([i for i in range(0, max_size_yx)])
-    xx = np.array([i for i in range(0, max_size_yx)])
+    yy = np.array(list(range(0, max_size_yx)))
+    xx = np.array(list(range(0, max_size_yx)))
     mu_y, mu_x = 0, 0
 
     # compute erf values for this grid
@@ -953,7 +953,7 @@ def precompute_erf(ndim, voxel_size, sigma, max_grid=200):
 
     else:
         max_size_z = np.ceil(max_grid * voxel_size[0]).astype(np.int64)
-        zz = np.array([i for i in range(0, max_size_z)])
+        zz = np.array(list(range(0, max_size_z)))
         mu_z = 0
         erf_z = _rescaled_erf(
             low=zz - voxel_size[0] / 2,

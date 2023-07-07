@@ -311,7 +311,7 @@ def _build_reference_spot_3d(image, spots, radius, alpha):
     yx_shape = radius_yx * 2 + 1
 
     # randomly choose some spots to aggregate
-    indices = [i for i in range(spots.shape[0])]
+    indices = list(range(0, spots.shape[0]))
     np.random.shuffle(indices)
     indices = indices[: min(2000, spots.shape[0])]
     candidate_spots = spots[indices, :]
@@ -428,7 +428,7 @@ def _build_reference_spot_2d(image, spots, radius, alpha):
     yx_shape = radius_yx * 2 + 1
 
     # randomly choose some spots to aggregate
-    indices = [i for i in range(spots.shape[0])]
+    indices = list(range(0, spots.shape[0]))
     np.random.shuffle(indices)
     indices = indices[: min(2000, spots.shape[0])]
     candidate_spots = spots[indices, :]
