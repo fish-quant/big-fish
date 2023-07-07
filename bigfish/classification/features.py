@@ -17,7 +17,7 @@ from sklearn.utils.fixes import parse_version
 if parse_version(skimage.__version__) < parse_version("0.19.0"):
     from skimage.morphology.selem import disk
 else:
-    from skimage.morphology.footprints import disk
+    from skimage.morphology import disk
 
 import bigfish.stack as stack
 from .input_preparation import prepare_extracted_data
