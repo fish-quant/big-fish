@@ -1,7 +1,7 @@
 # Big-FISH
 
 [![PyPI version](https://badge.fury.io/py/big-fish.svg)](https://badge.fury.io/py/big-fish)
-[![Build Status](https://travis-ci.com/fish-quant/big-fish.svg?branch=master)](https://travis-ci.com/fish-quant/big-fish)
+[![Running test](https://github.com/fish-quant/big-fish/actions/workflows/running_test.yml/badge.svg)](https://github.com/fish-quant/big-fish/actions/workflows/running_test.yml)
 [![Documentation Status](https://readthedocs.org/projects/big-fish/badge/?version=stable)](https://big-fish.readthedocs.io/en/latest/?badge=stable)
 [![codecov](https://codecov.io/gh/fish-quant/big-fish/branch/master/graph/badge.svg)](https://codecov.io/gh/fish-quant/big-fish)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
