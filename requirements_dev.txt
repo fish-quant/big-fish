@@ -2,4 +2,3 @@ pytest
 codecov
 pytest-cov
 black
-ruff
