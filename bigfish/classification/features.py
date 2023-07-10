@@ -13,10 +13,11 @@ from scipy import ndimage as ndi
 from skimage.morphology import binary_opening
 import skimage
 from sklearn.utils.fixes import parse_version
+
 if parse_version(skimage.__version__) < parse_version("0.19.0"):
     from skimage.morphology.selem import disk
 else:
-    from skimage.morphology.footprints import disk
+    from skimage.morphology import disk
 
 import bigfish.stack as stack
 from .input_preparation import prepare_extracted_data
@@ -24,24 +25,26 @@ from .input_preparation import prepare_extracted_data
 
 # ### Main functions ###
 
+
 def compute_features(
-        cell_mask,
-        nuc_mask,
-        ndim,
-        rna_coord,
-        smfish=None,
-        voxel_size_yx=None,
-        foci_coord=None,
-        centrosome_coord=None,
-        compute_distance=False,
-        compute_intranuclear=False,
-        compute_protrusion=False,
-        compute_dispersion=False,
-        compute_topography=False,
-        compute_foci=False,
-        compute_area=False,
-        compute_centrosome=False,
-        return_names=False):
+    cell_mask,
+    nuc_mask,
+    ndim,
+    rna_coord,
+    smfish=None,
+    voxel_size_yx=None,
+    foci_coord=None,
+    centrosome_coord=None,
+    compute_distance=False,
+    compute_intranuclear=False,
+    compute_protrusion=False,
+    compute_dispersion=False,
+    compute_topography=False,
+    compute_foci=False,
+    compute_area=False,
+    compute_centrosome=False,
+    return_names=False,
+):
     """Compute requested features.
 
     Parameters
@@ -106,7 +109,8 @@ def compute_features(
         compute_foci=bool,
         compute_area=bool,
         compute_centrosome=bool,
-        return_names=bool)
+        return_names=bool,
+    )
     if smfish is not None:
         stack.check_array(smfish, ndim=[2, 3], dtype=[np.uint8, np.uint16])
         if smfish.ndim == 3:
@@ -115,17 +119,27 @@ def compute_features(
         stack.check_array(foci_coord, ndim=2, dtype=[np.int32, np.int64])
 
     # prepare input data
-    (cell_mask,
-     distance_cell, distance_cell_normalized,
-     centroid_cell, distance_centroid_cell,
-     nuc_mask, cell_mask_out_nuc,
-     distance_nuc, distance_nuc_normalized,
-     centroid_nuc, distance_centroid_nuc,
-     rna_coord_out_nuc,
-     centroid_rna, distance_centroid_rna,
-     centroid_rna_out_nuc, distance_centroid_rna_out_nuc,
-     distance_centrosome) = prepare_extracted_data(
-        cell_mask, nuc_mask, ndim, rna_coord, centrosome_coord)
+    (
+        cell_mask,
+        distance_cell,
+        distance_cell_normalized,
+        centroid_cell,
+        distance_centroid_cell,
+        nuc_mask,
+        cell_mask_out_nuc,
+        distance_nuc,
+        distance_nuc_normalized,
+        centroid_nuc,
+        distance_centroid_nuc,
+        rna_coord_out_nuc,
+        centroid_rna,
+        distance_centroid_rna,
+        centroid_rna_out_nuc,
+        distance_centroid_rna_out_nuc,
+        distance_centrosome,
+    ) = prepare_extracted_data(
+        cell_mask, nuc_mask, ndim, rna_coord, centrosome_coord
+    )
 
     # initialization
     features = ()
@@ -141,72 +155,110 @@ def compute_features(
     # distance related features
     if compute_distance:
         features += features_distance(
-            rna_coord, distance_cell, distance_nuc, cell_mask, ndim, False)
+            rna_coord, distance_cell, distance_nuc, cell_mask, ndim, False
+        )
         names_features_distance = True
 
     # nucleus related features
     if compute_intranuclear:
         features += features_in_out_nucleus(
-            rna_coord, rna_coord_out_nuc, False)
+            rna_coord, rna_coord_out_nuc, False
+        )
         names_features_intranuclear = True
 
     # protrusion related features
     if compute_protrusion:
         features += features_protrusion(
-            rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx, False)
+            rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx, False
+        )
         names_features_protrusion = True
 
     # dispersion indices
     if compute_dispersion and smfish is not None:
         features += features_dispersion(
-            smfish, rna_coord, centroid_rna, cell_mask, centroid_cell,
-            centroid_nuc, ndim, False)
+            smfish,
+            rna_coord,
+            centroid_rna,
+            cell_mask,
+            centroid_cell,
+            centroid_nuc,
+            ndim,
+            False,
+        )
         names_features_dispersion = True
     elif compute_dispersion and smfish is None:
-        raise ValueError("Dispersion features can't be computed because "
-                         "'smfish' is not provided.")
+        raise ValueError(
+            "Dispersion features can't be computed because "
+            "'smfish' is not provided."
+        )
 
     # topographic features
     if compute_topography and voxel_size_yx is not None:
         features += features_topography(
-            rna_coord, cell_mask, nuc_mask, cell_mask_out_nuc, ndim,
-            voxel_size_yx, False)
+            rna_coord,
+            cell_mask,
+            nuc_mask,
+            cell_mask_out_nuc,
+            ndim,
+            voxel_size_yx,
+            False,
+        )
         names_features_topography = True
     elif compute_topography and voxel_size_yx is None:
-        raise ValueError("Topographic features can't be computed because "
-                         "'voxel_size_yx' is not provided.")
+        raise ValueError(
+            "Topographic features can't be computed because "
+            "'voxel_size_yx' is not provided."
+        )
 
     # foci related features
     if compute_foci and foci_coord is not None:
-        features += features_foci(
-            rna_coord, foci_coord, ndim, False)
+        features += features_foci(rna_coord, foci_coord, ndim, False)
         names_features_foci = True
     elif compute_foci and foci_coord is None:
-        raise ValueError("Foci related features can't be computed because "
-                         "'foci_coord' is not provided.")
+        raise ValueError(
+            "Foci related features can't be computed because "
+            "'foci_coord' is not provided."
+        )
 
     # area related features
     if compute_area:
         features += features_area(
-            cell_mask, nuc_mask, cell_mask_out_nuc, False)
+            cell_mask, nuc_mask, cell_mask_out_nuc, False
+        )
         names_features_area = True
 
     # centrosome related features
-    if (compute_centrosome and centrosome_coord is not None
-            and voxel_size_yx is not None and smfish is not None):
+    if (
+        compute_centrosome
+        and centrosome_coord is not None
+        and voxel_size_yx is not None
+        and smfish is not None
+    ):
         features += features_centrosome(
-            smfish, rna_coord, distance_centrosome, cell_mask, ndim,
-            voxel_size_yx, False)
+            smfish,
+            rna_coord,
+            distance_centrosome,
+            cell_mask,
+            ndim,
+            voxel_size_yx,
+            False,
+        )
         names_features_centrosome = True
     elif compute_centrosome and centrosome_coord is None:
-        raise ValueError("Centrosome related features can't be computed "
-                         "because 'centrosome_coord' is not provided.")
+        raise ValueError(
+            "Centrosome related features can't be computed "
+            "because 'centrosome_coord' is not provided."
+        )
     elif compute_centrosome and voxel_size_yx is None:
-        raise ValueError("Centrosome related features can't be computed "
-                         "because 'voxel_size_yx' is not provided.")
+        raise ValueError(
+            "Centrosome related features can't be computed "
+            "because 'voxel_size_yx' is not provided."
+        )
     elif compute_centrosome and smfish is None:
-        raise ValueError("Centrosome related features can't be computed "
-                         "because 'smfish' is not provided.")
+        raise ValueError(
+            "Centrosome related features can't be computed "
+            "because 'smfish' is not provided."
+        )
 
     # format features
     features = np.array(features, dtype=np.float32)
@@ -221,21 +273,23 @@ def compute_features(
             names_features_topography=names_features_topography,
             names_features_foci=names_features_foci,
             names_features_area=names_features_area,
-            names_features_centrosome=names_features_centrosome)
+            names_features_centrosome=names_features_centrosome,
+        )
         return features, features_names
 
     return features
 
 
 def get_features_name(
-        names_features_distance=False,
-        names_features_intranuclear=False,
-        names_features_protrusion=False,
-        names_features_dispersion=False,
-        names_features_topography=False,
-        names_features_foci=False,
-        names_features_area=False,
-        names_features_centrosome=False):
+    names_features_distance=False,
+    names_features_intranuclear=False,
+    names_features_protrusion=False,
+    names_features_dispersion=False,
+    names_features_topography=False,
+    names_features_foci=False,
+    names_features_area=False,
+    names_features_centrosome=False,
+):
     """Return the current list of features names.
 
     Parameters
@@ -274,7 +328,8 @@ def get_features_name(
         names_features_topography=bool,
         names_features_foci=bool,
         names_features_area=bool,
-        names_features_centrosome=bool)
+        names_features_centrosome=bool,
+    )
 
     # initialization
     features_name = []
@@ -285,43 +340,47 @@ def get_features_name(
             "index_mean_distance_cell",
             "index_median_distance_cell",
             "index_mean_distance_nuc",
-            "index_median_distance_nuc"]
+            "index_median_distance_nuc",
+        ]
 
     if names_features_intranuclear:
         features_name += [
             "proportion_rna_in_nuc",
             "nb_rna_out_nuc",
-            "nb_rna_in_nuc"]
+            "nb_rna_in_nuc",
+        ]
 
     if names_features_protrusion:
         features_name += [
             "index_rna_protrusion",
             "proportion_rna_protrusion",
-            "protrusion_area"]
+            "protrusion_area",
+        ]
 
     if names_features_dispersion:
         features_name += [
             "index_polarization",
             "index_dispersion",
-            "index_peripheral_distribution"]
+            "index_peripheral_distribution",
+        ]
 
     if names_features_topography:
-        features_name += [
-            "index_rna_nuc_edge",
-            "proportion_rna_nuc_edge"]
+        features_name += ["index_rna_nuc_edge", "proportion_rna_nuc_edge"]
 
         a = 500
         for b in range(1000, 3001, 500):
             features_name += [
                 "index_rna_nuc_radius_{}_{}".format(a, b),
-                "proportion_rna_nuc_radius_{}_{}".format(a, b)]
+                "proportion_rna_nuc_radius_{}_{}".format(a, b),
+            ]
             a = b
 
         a = 0
         for b in range(500, 3001, 500):
             features_name += [
                 "index_rna_cell_radius_{}_{}".format(a, b),
-                "proportion_rna_cell_radius_{}_{}".format(a, b)]
+                "proportion_rna_cell_radius_{}_{}".format(a, b),
+            ]
             a = b
 
     if names_features_foci:
@@ -332,7 +391,8 @@ def get_features_name(
             "proportion_nuc_area",
             "cell_area",
             "nuc_area",
-            "cell_area_out_nuc"]
+            "cell_area_out_nuc",
+        ]
 
     if names_features_centrosome:
         features_name += [
@@ -340,20 +400,18 @@ def get_features_name(
             "index_median_distance_centrosome",
             "index_rna_centrosome",
             "proportion_rna_centrosome",
-            "index_centrosome_dispersion"]
+            "index_centrosome_dispersion",
+        ]
 
     return features_name
 
 
 # ### Features functions ###
 
+
 def features_distance(
-        rna_coord,
-        distance_cell,
-        distance_nuc,
-        cell_mask,
-        ndim,
-        check_input=True):
+    rna_coord, distance_cell, distance_nuc, cell_mask, ndim, check_input=True
+):
     """Compute distance related features.
 
     Parameters
@@ -390,29 +448,24 @@ def features_distance(
         stack.check_parameter(ndim=int)
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
+        stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
         stack.check_array(
-            rna_coord,
-            ndim=2,
-            dtype=[np.int32, np.int64])
+            distance_cell, ndim=2, dtype=[np.float16, np.float32, np.float64]
+        )
         stack.check_array(
-            distance_cell,
-            ndim=2,
-            dtype=[np.float16, np.float32, np.float64])
-        stack.check_array(
-            distance_nuc,
-            ndim=2,
-            dtype=[np.float16, np.float32, np.float64])
+            distance_nuc, ndim=2, dtype=[np.float16, np.float32, np.float64]
+        )
         stack.check_array(cell_mask, ndim=2, dtype=bool)
 
     # case where no mRNAs are detected
     if len(rna_coord) == 0:
-        features = (1., 1., 1., 1.)
+        features = (1.0, 1.0, 1.0, 1.0)
         return features
 
     # compute mean and median distance to cell membrane
     rna_distance_cell = distance_cell[
-        rna_coord[:, ndim - 2],
-        rna_coord[:, ndim - 1]]
+        rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+    ]
     expected_distance = np.mean(distance_cell[cell_mask])
     index_mean_dist_cell = np.mean(rna_distance_cell) / expected_distance
     expected_distance = np.median(distance_cell[cell_mask])
@@ -422,8 +475,8 @@ def features_distance(
 
     # compute mean and median distance to nucleus
     rna_distance_nuc = distance_nuc[
-        rna_coord[:, ndim - 2],
-        rna_coord[:, ndim - 1]]
+        rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+    ]
     expected_distance = np.mean(distance_nuc[cell_mask])
     index_mean_dist_nuc = np.mean(rna_distance_nuc) / expected_distance
     expected_distance = np.median(distance_nuc[cell_mask])
@@ -463,14 +516,15 @@ def features_in_out_nucleus(rna_coord, rna_coord_out_nuc, check_input=True):
     if check_input:
         stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
         stack.check_array(
-            rna_coord_out_nuc, ndim=2, dtype=[np.int32, np.int64])
+            rna_coord_out_nuc, ndim=2, dtype=[np.int32, np.int64]
+        )
 
     # count total number of rna
     nb_rna = float(len(rna_coord))
 
     # case where no rna are detected
     if nb_rna == 0:
-        features = (0., 0., 0.)
+        features = (0.0, 0.0, 0.0)
         return features
 
     # number of rna outside and inside nucleus
@@ -486,12 +540,8 @@ def features_in_out_nucleus(rna_coord, rna_coord_out_nuc, check_input=True):
 
 
 def features_protrusion(
-        rna_coord,
-        cell_mask,
-        nuc_mask,
-        ndim,
-        voxel_size_yx,
-        check_input=True):
+    rna_coord, cell_mask, nuc_mask, ndim, voxel_size_yx, check_input=True
+):
     """Compute protrusion related features.
 
     Parameters
@@ -527,9 +577,7 @@ def features_protrusion(
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_parameter(
-            ndim=int,
-            voxel_size_yx=(int, float))
+        stack.check_parameter(ndim=int, voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
@@ -549,14 +597,14 @@ def features_protrusion(
 
     # case where we do not detect any
     if nb_rna == 0:
-        features = (1., 0., protrusion_area)
+        features = (1.0, 0.0, protrusion_area)
         return features
 
     if protrusion_area > 0:
         expected_rna_protrusion = nb_rna * protrusion_area / cell_area
         mask_rna = mask_cell_opened[
-            rna_coord[:, ndim - 2],
-            rna_coord[:, ndim - 1]]
+            rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+        ]
         rna_after_opening = rna_coord[mask_rna]
         nb_rna_protrusion = nb_rna - len(rna_after_opening)
         index_rna_protrusion = nb_rna_protrusion / expected_rna_protrusion
@@ -565,22 +613,24 @@ def features_protrusion(
         features = (
             index_rna_protrusion,
             proportion_rna_protrusion,
-            protrusion_area)
+            protrusion_area,
+        )
     else:
-        features = (1., 0., 0.)
+        features = (1.0, 0.0, 0.0)
 
     return features
 
 
 def features_dispersion(
-        smfish,
-        rna_coord,
-        centroid_rna,
-        cell_mask,
-        centroid_cell,
-        centroid_nuc,
-        ndim,
-        check_input=True):
+    smfish,
+    rna_coord,
+    centroid_rna,
+    cell_mask,
+    centroid_cell,
+    centroid_nuc,
+    ndim,
+    check_input=True,
+):
     """Compute RNA Distribution Index features (RDI) described in:
 
     RDI Calculator: An analysis Tool to assess RNA distributions in cells,
@@ -631,7 +681,7 @@ def features_dispersion(
 
     # case where no mRNAs are detected
     if len(rna_coord) == 0:
-        features = (0., 1., 1.)
+        features = (0.0, 1.0, 1.0)
         return features
 
     # initialization
@@ -704,19 +754,20 @@ def _rmsd(coord, reference_coord):
     # compute RMSD between 'coord' and 'reference_coord'
     n = len(coord)
     diff = coord - reference_coord
-    rmsd = float(np.sqrt((diff ** 2).sum() / n))
+    rmsd = float(np.sqrt((diff**2).sum() / n))
 
     return rmsd
 
 
 def features_topography(
-        rna_coord,
-        cell_mask,
-        nuc_mask,
-        cell_mask_out_nuc,
-        ndim,
-        voxel_size_yx,
-        check_input=True):
+    rna_coord,
+    cell_mask,
+    nuc_mask,
+    cell_mask_out_nuc,
+    ndim,
+    voxel_size_yx,
+    check_input=True,
+):
     """Compute topographic features.
 
     Parameters
@@ -762,9 +813,7 @@ def features_topography(
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_parameter(
-            ndim=int,
-            voxel_size_yx=(int, float))
+        stack.check_parameter(ndim=int, voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(rna_coord, ndim=2, dtype=[np.int32, np.int64])
@@ -777,28 +826,30 @@ def features_topography(
     nb_rna = len(rna_coord)
     marge = int(500 / voxel_size_yx)
     if marge < 1:
-        warnings.warn(UserWarning, "'voxel_size_yx' is greater than 500 "
-                                   "nanometers ({0}). Topographic features "
-                                   "use contour lines every 500 nanometers so "
-                                   "they can't be computed here."
-                      .format(voxel_size_yx))
-        features = (0., 0.)
-        features += (0., 0.) * 5
-        features += (0., 0.) * 6
+        warnings.warn(
+            UserWarning,
+            "'voxel_size_yx' is greater than 500 "
+            "nanometers ({0}). Topographic features "
+            "use contour lines every 500 nanometers so "
+            "they can't be computed here.".format(voxel_size_yx),
+        )
+        features = (0.0, 0.0)
+        features += (0.0, 0.0) * 5
+        features += (0.0, 0.0) * 6
         return features
 
     # case where no mRNAs are detected
     if nb_rna == 0:
-        features = (0., 0.)
-        features += (0., 0.) * 5
-        features += (0., 0.) * 6
+        features = (0.0, 0.0)
+        features += (0.0, 0.0) * 5
+        features += (0.0, 0.0) * 6
         return features
 
     # build a distance map from nucleus boundary and from cell membrane
     distance_map_nuc_out = ndi.distance_transform_edt(~nuc_mask)
     distance_map_nuc_in = ndi.distance_transform_edt(~cell_mask_out_nuc)
     distance_map_nuc = distance_map_nuc_out + distance_map_nuc_in
-    distance_map_nuc[~cell_mask] = 0.
+    distance_map_nuc[~cell_mask] = 0.0
     distance_map_cell = ndi.distance_transform_edt(cell_mask)
 
     # count mRNAs along nucleus edge (less than 500nm to the nucleus boundary)
@@ -806,7 +857,7 @@ def features_topography(
     mask_nuc_marge[~cell_mask] = False
     marge_area = max(mask_nuc_marge.sum(), 1)
     expected_rna_nuc_marge = nb_rna * marge_area / cell_area
-    mask_rna = mask_nuc_marge[rna_coord[:, ndim-2], rna_coord[:, ndim-1]]
+    mask_rna = mask_nuc_marge[rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]]
     nb_rna_nuc_marge = len(rna_coord[mask_rna])
     index_rna_nuc_marge = nb_rna_nuc_marge / expected_rna_nuc_marge
     proportion_rna_nuc_marge = nb_rna_nuc_marge / nb_rna
@@ -824,7 +875,9 @@ def features_topography(
         mask_cumulated_marge |= mask_nuc_marge
         marge_area = max(mask_nuc_marge.sum(), 1)
         expected_rna_nuc_marge = nb_rna * marge_area / cell_area
-        mask_rna = mask_nuc_marge[rna_coord[:, ndim-2], rna_coord[:, ndim-1]]
+        mask_rna = mask_nuc_marge[
+            rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+        ]
         nb_rna_nuc_marge = len(rna_coord[mask_rna])
         index_rna_nuc_marge = nb_rna_nuc_marge / expected_rna_nuc_marge
         proportion_rna_nuc_marge = nb_rna_nuc_marge / nb_rna
@@ -842,7 +895,9 @@ def features_topography(
         mask_cumulated_marge |= mask_cell_marge
         marge_area = max(mask_cell_marge.sum(), 1)
         expected_rna_cell_marge = nb_rna * marge_area / cell_area
-        mask_rna = mask_cell_marge[rna_coord[:, ndim-2], rna_coord[:, ndim-1]]
+        mask_rna = mask_cell_marge[
+            rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+        ]
         nb_rna_cell_marge = len(rna_coord[mask_rna])
         index_rna_cell_marge = nb_rna_cell_marge / expected_rna_cell_marge
         proportion_rna_cell_marge = nb_rna_cell_marge / nb_rna
@@ -885,7 +940,7 @@ def features_foci(rna_coord, foci_coord, ndim, check_input=True):
         stack.check_array(foci_coord, ndim=2, dtype=[np.int32, np.int64])
 
     if len(rna_coord) == 0 or len(foci_coord) == 0:
-        features = (0.,)
+        features = (0.0,)
         return features
 
     # compute proportion RNAs in foci
@@ -948,13 +1003,14 @@ def features_area(cell_mask, nuc_mask, cell_mask_out_nuc, check_input=True):
 
 
 def features_centrosome(
-        smfish,
-        rna_coord,
-        distance_centrosome,
-        cell_mask,
-        ndim,
-        voxel_size_yx,
-        check_input=True):
+    smfish,
+    rna_coord,
+    distance_centrosome,
+    cell_mask,
+    ndim,
+    voxel_size_yx,
+    check_input=True,
+):
     """Compute centrosome related features (in 2 dimensions).
 
     Parameters
@@ -994,9 +1050,7 @@ def features_centrosome(
     # check parameters
     stack.check_parameter(check_input=bool)
     if check_input:
-        stack.check_parameter(
-            ndim=int,
-            voxel_size_yx=(int, float))
+        stack.check_parameter(ndim=int, voxel_size_yx=(int, float))
         if ndim not in [2, 3]:
             raise ValueError("'ndim' should be 2 or 3, not {0}.".format(ndim))
         stack.check_array(smfish, ndim=2, dtype=[np.uint8, np.uint16])
@@ -1004,12 +1058,13 @@ def features_centrosome(
         stack.check_array(
             distance_centrosome,
             ndim=2,
-            dtype=[np.float16, np.float32, np.float64])
+            dtype=[np.float16, np.float32, np.float64],
+        )
         stack.check_array(cell_mask, ndim=2, dtype=bool)
 
     # case where no mRNAs are detected
     if len(rna_coord) == 0:
-        features = (1., 1., 1., 0., 1.)
+        features = (1.0, 1.0, 1.0, 0.0, 1.0)
         return features
 
     # initialization
@@ -1018,8 +1073,8 @@ def features_centrosome(
 
     # compute mean and median distances from the centrosomes
     rna_distance_cent = distance_centrosome[
-        rna_coord[:, ndim - 2],
-        rna_coord[:, ndim - 1]]
+        rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+    ]
     expected_distance = np.mean(distance_centrosome[cell_mask])
     index_mean_dist_cent = np.mean(rna_distance_cent) / expected_distance
     expected_distance = np.median(distance_centrosome[cell_mask])
@@ -1030,11 +1085,13 @@ def features_centrosome(
     # compute proportion of mRNAs next to the centrosomes (<2000nm)
     radius = int(2000 / voxel_size_yx)
     if radius < 1:
-        warnings.warn(UserWarning, "'voxel_size_yx' is greater than 2000 "
-                                   "nanometers ({0}). Centrosome neighborhood "
-                                   "is defined with a radius of 2000 "
-                                   "nanometers so it can't be computed here."
-                      .format(voxel_size_yx))
+        warnings.warn(
+            UserWarning,
+            "'voxel_size_yx' is greater than 2000 "
+            "nanometers ({0}). Centrosome neighborhood "
+            "is defined with a radius of 2000 "
+            "nanometers so it can't be computed here.".format(voxel_size_yx),
+        )
         features += (1, 0)
     else:
         mask_centrosome = distance_centrosome < radius
@@ -1042,8 +1099,8 @@ def features_centrosome(
         centrosome_area = max(mask_centrosome.sum(), 1)
         expected_nb_rna = nb_rna * centrosome_area / cell_area
         mask_rna = mask_centrosome[
-            rna_coord[:, ndim - 2],
-            rna_coord[:, ndim - 1]]
+            rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]
+        ]
         nb_rna_centrosome = len(rna_coord[mask_rna])
         index_rna_centrosome = nb_rna_centrosome / expected_nb_rna
         proportion_rna_centrosome = nb_rna_centrosome / len(rna_coord)
@@ -1061,9 +1118,10 @@ def features_centrosome(
     total_intensity_cell = cell_value.sum()
 
     # compute attraction index
-    r = distance_centrosome[
-            rna_coord[:, ndim - 2],
-            rna_coord[:, ndim - 1]] ** 2
+    r = (
+        distance_centrosome[rna_coord[:, ndim - 2], rna_coord[:, ndim - 1]]
+        ** 2
+    )
     a = np.sum((r * rna_value) / total_intensity_rna)
     r = distance_centrosome[cell_coord[:, 0], cell_coord[:, 1]] ** 2
     b = np.sum((r * cell_value) / total_intensity_cell)

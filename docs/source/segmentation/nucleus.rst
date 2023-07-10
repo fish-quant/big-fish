@@ -17,6 +17,9 @@ Thresholding is the most standard and direct binary segmentation method:
 Apply a Unet-based model (3-classes)
 ====================================
 
+Two additional dependencies can be requested for these functions: tensorflow
+(>= 2.3.0) and tensorflow-addons (>= 0.12.1).
+
 Load a pretrained model:
 
 * :func:`bigfish.segmentation.unet_3_classes_nuc`

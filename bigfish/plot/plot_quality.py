@@ -18,17 +18,19 @@ from .utils import save_plot
 
 # ### Focus - sharpness ###
 
+
 def plot_sharpness(
-        focus_measures,
-        labels=None,
-        title=None,
-        framesize=(5, 5),
-        size_title=20,
-        size_axes=15,
-        size_legend=15,
-        path_output=None,
-        ext="png",
-        show=True):
+    focus_measures,
+    labels=None,
+    title=None,
+    framesize=(5, 5),
+    size_title=20,
+    size_axes=15,
+    size_legend=15,
+    path_output=None,
+    ext="png",
+    show=True,
+):
     """Plot focus measures of a 3-d image, at the z-slice level.
 
     A measure of focus for each z-slice can be computed by averaging the
@@ -76,18 +78,18 @@ def plot_sharpness(
         size_legend=int,
         path_output=(str, type(None)),
         ext=(str, list),
-        show=bool)
+        show=bool,
+    )
     length = 0
     for focus_measure in focus_measures:
         stack.check_array(
-            focus_measure,
-            ndim=1,
-            dtype=[np.float32, np.float64])
+            focus_measure, ndim=1, dtype=[np.float32, np.float64]
+        )
         length = max(length, focus_measure.size)
 
     # plot
     plt.figure(figsize=framesize)
-    y = np.array([i for i in range(length)])
+    y = np.array(list(range(length)))
     for i, focus_measure in enumerate(focus_measures):
         if labels is not None:
             plt.plot(focus_measure, y, label=labels[i])
@@ -100,7 +102,7 @@ def plot_sharpness(
     plt.xlabel("sharpness measure", fontweight="bold", fontsize=size_axes)
     plt.ylabel("z-slices", fontweight="bold", fontsize=size_axes)
     if labels is not None:
-        plt.legend(prop={'size': size_legend})
+        plt.legend(prop={"size": size_legend})
 
     plt.tight_layout()
     if path_output is not None:
@@ -113,20 +115,22 @@ def plot_sharpness(
 
 # ### Elbow plots ###
 
+
 def plot_elbow(
-        images,
-        voxel_size=None,
-        spot_radius=None,
-        log_kernel_size=None,
-        minimum_distance=None,
-        title=None,
-        framesize=(5, 5),
-        size_title=20,
-        size_axes=15,
-        size_legend=15,
-        path_output=None,
-        ext="png",
-        show=True):
+    images,
+    voxel_size=None,
+    spot_radius=None,
+    log_kernel_size=None,
+    minimum_distance=None,
+    title=None,
+    framesize=(5, 5),
+    size_title=20,
+    size_axes=15,
+    size_legend=15,
+    path_output=None,
+    ext="png",
+    show=True,
+):
     """Plot the elbow curve that allows an automated spot detection.
 
     Parameters
@@ -184,7 +188,8 @@ def plot_elbow(
         size_legend=int,
         path_output=(str, type(None)),
         ext=(str, list),
-        show=bool)
+        show=bool,
+    )
 
     # get candidate thresholds and spots count to plot the elbow curve
     thresholds, count_spots, threshold = detection.get_elbow_values(
@@ -192,7 +197,8 @@ def plot_elbow(
         voxel_size=voxel_size,
         spot_radius=spot_radius,
         log_kernel_size=log_kernel_size,
-        minimum_distance=minimum_distance)
+        minimum_distance=minimum_distance,
+    )
 
     # plot
     plt.figure(figsize=framesize)
@@ -205,7 +211,8 @@ def plot_elbow(
             marker="D",
             c="#d7191c",
             s=60,
-            label="Selected threshold")
+            label="Selected threshold",
+        )
 
     # axes
     if title is not None:
@@ -214,9 +221,10 @@ def plot_elbow(
     plt.ylabel(
         "Number of mRNAs detected (log scale)",
         fontweight="bold",
-        fontsize=size_axes)
+        fontsize=size_axes,
+    )
     if threshold is not None:
-        plt.legend(prop={'size': size_legend})
+        plt.legend(prop={"size": size_legend})
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)
@@ -227,18 +235,19 @@ def plot_elbow(
 
 
 def plot_elbow_colocalized(
-        spots_1,
-        spots_2,
-        voxel_size,
-        threshold_max=None,
-        title=None,
-        framesize=(5, 5),
-        size_title=20,
-        size_axes=15,
-        size_legend=15,
-        path_output=None,
-        ext="png",
-        show=True):
+    spots_1,
+    spots_2,
+    voxel_size,
+    threshold_max=None,
+    title=None,
+    framesize=(5, 5),
+    size_title=20,
+    size_axes=15,
+    size_legend=15,
+    path_output=None,
+    ext="png",
+    show=True,
+):
     """Plot the elbow curve that allows an automated colocalized spot
     detection.
 
@@ -283,14 +292,17 @@ def plot_elbow_colocalized(
         size_legend=int,
         path_output=(str, type(None)),
         ext=(str, list),
-        show=bool)
+        show=bool,
+    )
 
     # get thresholds and colocalized spots count to plot the elbow curve
-    (thresholds, count_colocalized,
-     threshold) = multistack.get_elbow_value_colocalized(
-        spots_1=spots_1,
-        spots_2=spots_2,
-        voxel_size=voxel_size)
+    (
+        thresholds,
+        count_colocalized,
+        threshold,
+    ) = multistack.get_elbow_value_colocalized(
+        spots_1=spots_1, spots_2=spots_2, voxel_size=voxel_size
+    )
 
     # plot
     plt.figure(figsize=framesize)
@@ -300,19 +312,22 @@ def plot_elbow_colocalized(
         thresholds[-1],
         colors="forestgreen",
         linestyles="--",
-        label="Spots 1")
+        label="Spots 1",
+    )
     plt.hlines(
         len(spots_2),
         thresholds[0],
         thresholds[-1],
         colors="steelblue",
         linestyles="--",
-        label="Spots 2")
+        label="Spots 2",
+    )
     plt.plot(
         thresholds,
         count_colocalized,
         color="firebrick",
-        label="Colocalized spots")
+        label="Colocalized spots",
+    )
     if threshold is not None:
         i_threshold = np.argmax(thresholds == threshold)
         plt.scatter(
@@ -321,7 +336,8 @@ def plot_elbow_colocalized(
             marker="D",
             c="#d7191c",
             s=60,
-            label="Selected threshold")
+            label="Selected threshold",
+        )
 
     #  define xlim
     if threshold_max is not None:
@@ -332,11 +348,10 @@ def plot_elbow_colocalized(
         plt.title(title, fontweight="bold", fontsize=size_title)
     plt.xlabel("Thresholds", fontweight="bold", fontsize=size_axes)
     plt.ylabel(
-        "Number of mRNAs detected",
-        fontweight="bold",
-        fontsize=size_axes)
+        "Number of mRNAs detected", fontweight="bold", fontsize=size_axes
+    )
     if threshold is not None:
-        plt.legend(prop={'size': size_legend})
+        plt.legend(prop={"size": size_legend})
     plt.tight_layout()
     if path_output is not None:
         save_plot(path_output, ext)

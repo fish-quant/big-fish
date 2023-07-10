@@ -31,7 +31,6 @@ from .postprocess import center_mask_coord
 from .postprocess import from_boundaries_to_surface
 from .postprocess import from_surface_to_boundaries
 from .postprocess import from_binary_to_coord
-from .postprocess import complete_coord_boundaries
 from .postprocess import from_coord_to_frame
 from .postprocess import from_coord_to_surface
 
@@ -44,16 +43,15 @@ _utils = [
     "get_path_from_recipe",
     "get_nb_element_per_dimension",
     "count_nb_fov",
-    "check_datamap"]
+    "check_datamap",
+]
 
-_preprocess = [
-    "build_stacks",
-    "build_stack",
-    "build_stack_no_recipe"]
+_preprocess = ["build_stacks", "build_stack", "build_stack_no_recipe"]
 
 _colocalization = [
     "detect_spots_colocalization",
-    "get_elbow_value_colocalized"]
+    "get_elbow_value_colocalized",
+]
 
 _postprocess = [
     "identify_objects_in_region",
@@ -66,8 +64,8 @@ _postprocess = [
     "from_boundaries_to_surface",
     "from_surface_to_boundaries",
     "from_binary_to_coord",
-    "complete_coord_boundaries",
     "from_coord_to_frame",
-    "from_coord_to_surface"]
+    "from_coord_to_surface",
+]
 
 __all__ = _utils + _preprocess + _colocalization + _postprocess

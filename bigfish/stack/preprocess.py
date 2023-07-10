@@ -28,6 +28,7 @@ from sklearn.utils.fixes import parse_version
 
 # ### Image normalization ###
 
+
 def compute_image_standardization(image):
     """Normalize image by computing its z score.
 
@@ -44,14 +45,16 @@ def compute_image_standardization(image):
     """
     # check parameters
     check_array(
-        image,
-        ndim=2,
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        image, ndim=2, dtype=[np.uint8, np.uint16, np.float32, np.float64]
+    )
 
     # check image is in 2D
     if len(image.shape) != 2:
-        raise ValueError("'image' should be a 2-d array. Not {0}-d array"
-                         .format(len(image.shape)))
+        raise ValueError(
+            "'image' should be a 2-d array. Not {0}-d array".format(
+                len(image.shape)
+            )
+        )
 
     # compute mean and standard deviation
     m = np.mean(image)
@@ -68,7 +71,7 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     or between 0 and 1 (float).
 
     Each round and each channel is rescaled independently. Tensor has between
-    2 to 5 dimensions, in the following order: (round, channel, z, y, x).
+    2 and 5 dimensions, in the following order: (round, channel, z, y, x).
 
     By default, we rescale the tensor intensity range to its dtype range (or
     between 0 and 1 for float tensor). We can improve the contrast by
@@ -101,13 +104,22 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     check_parameter(
         tensor=np.ndarray,
         channel_to_stretch=(int, list, tuple, type(None)),
-        stretching_percentile=(int, float))
+        stretching_percentile=(int, float),
+    )
     check_array(
         tensor,
         ndim=[2, 3, 4, 5],
-        dtype=[np.uint8, np.uint16, np.uint32,
-               np.int8, np.int16, np.int32,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.float32,
+            np.float64,
+        ],
+    )
     check_range_value(tensor, min_=0)
 
     # enlist 'channel_to_stretch' if necessary
@@ -123,7 +135,8 @@ def rescale(tensor, channel_to_stretch=None, stretching_percentile=99.9):
     tensor_5d = _rescale_5d(
         tensor_5d,
         channel_to_stretch=channel_to_stretch,
-        stretching_percentile=stretching_percentile)
+        stretching_percentile=stretching_percentile,
+    )
 
     # rebuild the original tensor shape
     tensor = _unwrap_5d(tensor_5d, original_ndim)
@@ -222,7 +235,7 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
 
     """
     # target intensity range
-    target_range = 'dtype'
+    target_range = "dtype"
     dtype = tensor.dtype
     if dtype in [np.float16, np.float32, np.float64]:
         target_range = (0, 1)
@@ -230,11 +243,9 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
     # rescale each round independently
     rounds = []
     for r in range(tensor.shape[0]):
-
         # rescale each channel independently
         channels = []
         for c in range(tensor.shape[1]):
-
             # get channel
             channel = tensor[r, c, :, :, :]
 
@@ -242,13 +253,12 @@ def _rescale_5d(tensor, channel_to_stretch, stretching_percentile):
             if c in channel_to_stretch:
                 pa, pb = np.percentile(channel, (0, stretching_percentile))
                 channel_rescaled = rescale_intensity(
-                    channel,
-                    in_range=(pa, pb),
-                    out_range=target_range)
+                    channel, in_range=(pa, pb), out_range=target_range
+                )
             else:
                 channel_rescaled = rescale_intensity(
-                    channel,
-                    out_range=target_range)
+                    channel, out_range=target_range
+                )
             channels.append(channel_rescaled)
 
         # stack channels
@@ -287,9 +297,19 @@ def cast_img_uint8(tensor):
     check_array(
         tensor,
         ndim=[2, 3, 4, 5],
-        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+        ],
+    )
     if tensor.dtype in [np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
     elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
@@ -298,13 +318,18 @@ def cast_img_uint8(tensor):
     if tensor.dtype == np.uint8:
         return tensor
 
-    if (tensor.dtype in [np.uint16, np.uint32, np.uint64,
-                         np.int16, np.int32, np.int64]
-            and tensor.max() <= 255):
-        raise ValueError("Tensor values are between {0} and {1}. It fits in 8 "
-                         "bits and won't be scaled between 0 and 255. Use "
-                         "'tensor.astype(np.uint8)' instead."
-                         .format(tensor.min(), tensor.max()))
+    if (
+        tensor.dtype
+        in [np.uint16, np.uint32, np.uint64, np.int16, np.int32, np.int64]
+        and tensor.max() <= 255
+    ):
+        raise ValueError(
+            "Tensor values are between {0} and {1}. It fits in 8 "
+            "bits and won't be scaled between 0 and 255. Use "
+            "'tensor.astype(np.uint8)' instead.".format(
+                tensor.min(), tensor.max()
+            )
+        )
 
     # cast tensor
     if parse_version(skimage.__version__) < parse_version("0.16.0"):
@@ -339,9 +364,19 @@ def cast_img_uint16(tensor):
     check_array(
         tensor,
         ndim=[2, 3, 4, 5],
-        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+        ],
+    )
     if tensor.dtype in [np.float32, np.float64]:
         check_range_value(tensor, min_=0, max_=1)
     elif tensor.dtype in [np.int8, np.int16, np.int32, np.int64]:
@@ -350,12 +385,17 @@ def cast_img_uint16(tensor):
     if tensor.dtype == np.uint16:
         return tensor
 
-    if (tensor.dtype in [np.uint32, np.uint64, np.int32, np.int64]
-            and tensor.max() <= 65535):
-        raise ValueError("Tensor values are between {0} and {1}. It fits in "
-                         "16 bits and won't be scaled between 0 and 65535. "
-                         "Use 'tensor.astype(np.uint16)' instead."
-                         .format(tensor.min(), tensor.max()))
+    if (
+        tensor.dtype in [np.uint32, np.uint64, np.int32, np.int64]
+        and tensor.max() <= 65535
+    ):
+        raise ValueError(
+            "Tensor values are between {0} and {1}. It fits in "
+            "16 bits and won't be scaled between 0 and 65535. "
+            "Use 'tensor.astype(np.uint16)' instead.".format(
+                tensor.min(), tensor.max()
+            )
+        )
 
     # cast tensor
     if parse_version(skimage.__version__) < parse_version("0.16.0"):
@@ -389,9 +429,19 @@ def cast_img_float32(tensor):
     check_array(
         tensor,
         ndim=[2, 3, 4, 5],
-        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+        ],
+    )
 
     # cast tensor
     if parse_version(skimage.__version__) < parse_version("0.16.0"):
@@ -425,9 +475,19 @@ def cast_img_float64(tensor):
     check_array(
         tensor,
         ndim=[2, 3, 4, 5],
-        dtype=[np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+        ],
+    )
 
     # cast tensor
     tensor = img_as_float64(tensor)
@@ -436,6 +496,7 @@ def cast_img_float64(tensor):
 
 
 # ### Format and crop images ###
+
 
 def resize_image(image, output_shape, method="bilinear"):
     """Resize an image with bilinear interpolation or nearest neighbor method.
@@ -458,9 +519,8 @@ def resize_image(image, output_shape, method="bilinear"):
     # check parameters
     check_parameter(output_shape=tuple, method=str)
     check_array(
-        image,
-        ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32, np.float64]
+    )
 
     # resize image
     if method == "bilinear":
@@ -470,7 +530,8 @@ def resize_image(image, output_shape, method="bilinear"):
             mode="reflect",
             preserve_range=True,
             order=1,
-            anti_aliasing=True)
+            anti_aliasing=True,
+        )
     elif method == "nearest":
         image_resized = resize(
             image,
@@ -478,10 +539,13 @@ def resize_image(image, output_shape, method="bilinear"):
             mode="reflect",
             preserve_range=True,
             order=0,
-            anti_aliasing=False)
+            anti_aliasing=False,
+        )
     else:
-        raise ValueError("Method {0} is not available. Choose between "
-                         "'bilinear' or 'nearest' instead.".format(method))
+        raise ValueError(
+            "Method {0} is not available. Choose between "
+            "'bilinear' or 'nearest' instead.".format(method)
+        )
 
     # cast output dtype
     image_resized = image_resized.astype(image.dtype)
@@ -519,7 +583,9 @@ def get_marge_padding(height, width, x):
     marge_sup_width = x - (width % x)
     marge_sup_width_l = int(marge_sup_width / 2)
     marge_sup_width_r = marge_sup_width - marge_sup_width_l
-    marge_padding = [[marge_sup_height_l, marge_sup_height_r],
-                     [marge_sup_width_l, marge_sup_width_r]]
+    marge_padding = [
+        [marge_sup_height_l, marge_sup_height_r],
+        [marge_sup_width_l, marge_sup_width_r],
+    ]
 
     return marge_padding

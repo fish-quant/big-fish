@@ -26,6 +26,7 @@ from tensorflow.python.keras.engine.training import Model
 
 # ### Pre-trained models ###
 
+
 def load_pretrained_model(channel, model_name):
     """Build and compile a model, then load its pretrained weights.
 
@@ -45,9 +46,7 @@ def load_pretrained_model(channel, model_name):
     # TODO fix warning partial restoration with distance model
 
     # check parameters
-    stack.check_parameter(
-        channel=str,
-        model_name=str)
+    stack.check_parameter(channel=str, model_name=str)
 
     # unet 3-classes for nucleus segmentation
     if model_name == "3_classes" and channel == "nuc":
@@ -58,13 +57,14 @@ def load_pretrained_model(channel, model_name):
         model = build_compile_double_distance_model()
 
     else:
-        raise ValueError("Model name and channel to segment are not "
-                         "consistent: {0} - {1}.".format(channel, model_name))
+        raise ValueError(
+            "Model name and channel to segment are not "
+            "consistent: {0} - {1}.".format(channel, model_name)
+        )
 
     # load weights
     path_pretrained_directory = check_pretrained_weights(channel, model_name)
-    path_checkpoint = os.path.join(
-        path_pretrained_directory, "checkpoint")
+    path_checkpoint = os.path.join(path_pretrained_directory, "checkpoint")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model.load_weights(path_checkpoint)
@@ -89,9 +89,7 @@ def check_pretrained_weights(channel, model_name):
 
     """
     # check parameters
-    stack.check_parameter(
-        channel=str,
-        model_name=str)
+    stack.check_parameter(channel=str, model_name=str)
 
     # get path checkpoint
     path_weights_directory = _get_weights_directory()
@@ -101,33 +99,36 @@ def check_pretrained_weights(channel, model_name):
 
     # get url and hash
     if channel == "nuc" and model_name == "3_classes":
+        # fmt: off
         url_zip_file = "https://github.com/fish-quant/big-fish-examples/releases/download/weights_1/nuc_3_classes.zip"
         hash_checkpoint = "02988027faf3f16b4088ee83c2ade14098e8ffb325c23a576cc639dae48aa936"
         hash_data = "284d6b8cadb3eddd691f1407bfdd1a7e6fa085c57a2feac07446e84aa3b1baf8"
         hash_index = "c924f0f2be179340dc5c75e21833fd831d5a4efdfb48382edbbcff748a162bc4"
         hash_log = "b6d08b9fbacd3430d89eef2cd5c3246eb8c93e7b970ba17a76c8a9d72f58c8e7"
+        # fmt: on
     elif channel == "double" and model_name == "distance_edge":
+        # fmt: off
         url_zip_file = "https://github.com/fish-quant/big-fish-examples/releases/download/weights_0/double_distance_edge.zip"
         hash_checkpoint = "02988027faf3f16b4088ee83c2ade14098e8ffb325c23a576cc639dae48aa936"
         hash_data = "528aecbc6418df8d0d73fb23b3518ef779ae5135e15ca3e2e67518726f998d4d"
         hash_index = "cbebdd86868e46507733fccca589f940a438f4fde6f5d935e61f4112047db63e"
         hash_log = "63bc7e629d464bbf6cd3afd466f4d89a3be10edb2633de7ab825384a61326a09"
+        # fmt: on
     else:
-        raise ValueError("Model name and channel to segment are not "
-                         "consistent: {0} - {1}.".format(channel, model_name))
+        raise ValueError(
+            "Model name and channel to segment are not "
+            "consistent: {0} - {1}.".format(channel, model_name)
+        )
 
     # case where pretrained directory exists
     if os.path.isdir(path_directory):
-
         # paths
-        path_checkpoint = os.path.join(
-            path_directory, "checkpoint")
+        path_checkpoint = os.path.join(path_directory, "checkpoint")
         path_data = os.path.join(
-            path_directory, "checkpoint.data-00000-of-00001")
-        path_index = os.path.join(
-            path_directory, "checkpoint.index")
-        path_log = os.path.join(
-            path_directory, "log")
+            path_directory, "checkpoint.data-00000-of-00001"
+        )
+        path_index = os.path.join(path_directory, "checkpoint.index")
+        path_log = os.path.join(path_directory, "log")
 
         # checkpoint available and not corrupted
         if os.path.exists(path_checkpoint):
@@ -179,43 +180,52 @@ def check_pretrained_weights(channel, model_name):
 
         # download zipfile
         stack.load_and_save_url(
-            remote_url=url_zip_file,
-            directory=path_weights_directory)
+            remote_url=url_zip_file, directory=path_weights_directory
+        )
 
         # unzip
         path_zipfile = os.path.join(
-            path_weights_directory, "{0}.zip".format(pretrained_directory))
-        with ZipFile(path_zipfile, 'r') as z:
+            path_weights_directory, "{0}.zip".format(pretrained_directory)
+        )
+        with ZipFile(path_zipfile, "r") as z:
             z.extract(
                 member="{0}/checkpoint".format(pretrained_directory),
-                path=path_weights_directory)
+                path=path_weights_directory,
+            )
             z.extract(
                 member="{0}/checkpoint.data-00000-of-00001".format(
-                    pretrained_directory),
-                path=path_weights_directory)
+                    pretrained_directory
+                ),
+                path=path_weights_directory,
+            )
             z.extract(
                 member="{0}/checkpoint.index".format(pretrained_directory),
-                path=path_weights_directory)
+                path=path_weights_directory,
+            )
             z.extract(
                 member="{0}/log".format(pretrained_directory),
-                path=path_weights_directory)
+                path=path_weights_directory,
+            )
 
         # check files consistency
         path = os.path.join(
             path_weights_directory,
-            "{0}/checkpoint".format(pretrained_directory))
+            "{0}/checkpoint".format(pretrained_directory),
+        )
         stack.check_hash(path, hash_checkpoint)
         path = os.path.join(
             path_weights_directory,
-            "{0}/checkpoint.data-00000-of-00001".format(pretrained_directory))
+            "{0}/checkpoint.data-00000-of-00001".format(pretrained_directory),
+        )
         stack.check_hash(path, hash_data)
         path = os.path.join(
             path_weights_directory,
-            "{0}/checkpoint.index".format(pretrained_directory))
+            "{0}/checkpoint.index".format(pretrained_directory),
+        )
         stack.check_hash(path, hash_index)
         path = os.path.join(
-            path_weights_directory,
-            "{0}/log".format(pretrained_directory))
+            path_weights_directory, "{0}/log".format(pretrained_directory)
+        )
         stack.check_hash(path, hash_log)
 
         # remove zipfile
@@ -235,6 +245,7 @@ def _get_weights_directory():
 
 # ### Models 3-classes ###
 
+
 def build_compile_3_classes_model():
     """Build and compile a Unet model to predict 3 classes from nucleus or
     cell images: background, edge and foreground.
@@ -246,17 +257,11 @@ def build_compile_3_classes_model():
 
     """
     # define inputs
-    inputs_image = Input(
-        shape=(None, None, 1),
-        dtype="float32",
-        name="image")
+    inputs_image = Input(shape=(None, None, 1), dtype="float32", name="image")
 
     # define model
     outputs = _get_3_classes_model(inputs_image)
-    model_3_classes = Model(
-        inputs_image,
-        outputs,
-        name="3ClassesModel")
+    model_3_classes = Model(inputs_image, outputs, name="3ClassesModel")
 
     # losses
     loss = tf.keras.losses.SparseCategoricalCrossentropy()
@@ -265,10 +270,7 @@ def build_compile_3_classes_model():
     accuracy = tf.metrics.SparseCategoricalAccuracy(name="accuracy")
 
     # compile model
-    model_3_classes.compile(
-        optimizer='adam',
-        loss=loss,
-        metrics=accuracy)
+    model_3_classes.compile(optimizer="adam", loss=loss, metrics=accuracy)
 
     return model_3_classes
 
@@ -288,23 +290,25 @@ def _get_3_classes_model(inputs):
 
     """
     # compute feature map
-    features_core = EncoderDecoder(
-        name="encoder_decoder")(inputs)  # (B, H, W, 32)
+    features_core = EncoderDecoder(name="encoder_decoder")(
+        inputs
+    )  # (B, H, W, 32)
 
     # compute 3-classes output
     features_3_classes = SameConv(
-        filters=3,
-        kernel_size=(1, 1),
-        activation="linear",
-        name="final_conv")(features_core)  # (B, H, W, 3)
-    output = Softmax(
-        axis=-1,
-        name="label_3")(features_3_classes)  # (B, H, W, 3)
+        filters=3, kernel_size=(1, 1), activation="linear", name="final_conv"
+    )(
+        features_core
+    )  # (B, H, W, 3)
+    output = Softmax(axis=-1, name="label_3")(
+        features_3_classes
+    )  # (B, H, W, 3)
 
     return output
 
 
 # ### Models distance map ###
+
 
 def build_compile_distance_model():
     """Build and compile a Unet model to predict foreground and a distance map
@@ -317,18 +321,12 @@ def build_compile_distance_model():
 
     """
     # define inputs
-    inputs_image = Input(
-        shape=(None, None, 1),
-        dtype="float32",
-        name="image")
+    inputs_image = Input(shape=(None, None, 1), dtype="float32", name="image")
 
     # define model
     output_surface, output_distance = _get_distance_model(inputs_image)
     outputs = [output_surface, output_distance]
-    model_distance = Model(
-        inputs_image,
-        outputs,
-        name="DistanceModel")
+    model_distance = Model(inputs_image, outputs, name="DistanceModel")
 
     # losses
     loss_surface = tf.keras.losses.BinaryCrossentropy()
@@ -343,10 +341,11 @@ def build_compile_distance_model():
 
     # compile model
     model_distance.compile(
-        optimizer='adam',
+        optimizer="adam",
         loss=losses,
         loss_weights=losses_weight,
-        metrics=metrics)
+        metrics=metrics,
+    )
 
     return model_distance
 
@@ -369,22 +368,23 @@ def _get_distance_model(inputs):
 
     """
     # compute feature map
-    features_core = EncoderDecoder(
-        name="encoder_decoder")(inputs)  # (B, H, W, 32)
+    features_core = EncoderDecoder(name="encoder_decoder")(
+        inputs
+    )  # (B, H, W, 32)
 
     # compute surface output
     output_surface = SameConv(
-        filters=1,
-        kernel_size=(1, 1),
-        activation="sigmoid",
-        name="label_2")(features_core)  # (B, H, W, 1)
+        filters=1, kernel_size=(1, 1), activation="sigmoid", name="label_2"
+    )(
+        features_core
+    )  # (B, H, W, 1)
 
     # compute distance output
     output_distance = SameConv(
-        filters=1,
-        kernel_size=(1, 1),
-        activation="relu",
-        name="label_distance")(features_core)  # (B, H, W, 1)
+        filters=1, kernel_size=(1, 1), activation="relu", name="label_distance"
+    )(
+        features_core
+    )  # (B, H, W, 1)
 
     return output_surface, output_distance
 
@@ -402,46 +402,43 @@ def build_compile_double_distance_model():
 
     """
     # define inputs
-    inputs_nuc = Input(
-        shape=(None, None, 1),
-        dtype="float32",
-        name="nuc")
-    inputs_cell = Input(
-        shape=(None, None, 1),
-        dtype="float32",
-        name="cell")
+    inputs_nuc = Input(shape=(None, None, 1), dtype="float32", name="nuc")
+    inputs_cell = Input(shape=(None, None, 1), dtype="float32", name="cell")
     inputs = [inputs_nuc, inputs_cell]
 
     # define model
-    (output_distance_nuc, output_surface_cell,
-     output_distance_cell) = _get_double_distance_model(inputs)
+    (
+        output_distance_nuc,
+        output_surface_cell,
+        output_distance_cell,
+    ) = _get_double_distance_model(inputs)
     outputs = [output_distance_nuc, output_surface_cell, output_distance_cell]
-    model_distance = Model(
-        inputs,
-        outputs,
-        name="DoubleDistanceModel")
+    model_distance = Model(inputs, outputs, name="DoubleDistanceModel")
 
     # losses
     loss_distance_nuc = tf.keras.losses.MeanAbsoluteError()
     loss_surface_cell = tf.keras.losses.BinaryCrossentropy()
     loss_distance_cell = tf.keras.losses.MeanAbsoluteError()
-    losses = [[loss_distance_nuc],
-              [loss_surface_cell], [loss_distance_cell]]
+    losses = [[loss_distance_nuc], [loss_surface_cell], [loss_distance_cell]]
     losses_weight = [[1.0], [1.0], [1.0]]
 
     # metrics
     metric_distance_nuc = tf.metrics.MeanAbsoluteError(name="mae")
     metric_surface_cell = tf.metrics.BinaryAccuracy(name="accuracy")
     metric_distance_cell = tf.metrics.MeanAbsoluteError(name="mae")
-    metrics = [[metric_distance_nuc],
-               [metric_surface_cell], [metric_distance_cell]]
+    metrics = [
+        [metric_distance_nuc],
+        [metric_surface_cell],
+        [metric_distance_cell],
+    ]
 
     # compile model
     model_distance.compile(
-        optimizer='adam',
+        optimizer="adam",
         loss=losses,
         loss_weights=losses_weight,
-        metrics=metrics)
+        metrics=metrics,
+    )
 
     return model_distance
 
@@ -470,30 +467,39 @@ def _get_double_distance_model(inputs):
     """
     # compute feature map
     inputs_nuc, inputs_cell = inputs
-    inputs = Concatenate(
-        axis=-1)([inputs_nuc, inputs_cell])  # (B, H, W, 2)
-    features_core = EncoderDecoder(
-        name="encoder_decoder")(inputs)  # (B, H, W, 32)
+    inputs = Concatenate(axis=-1)([inputs_nuc, inputs_cell])  # (B, H, W, 2)
+    features_core = EncoderDecoder(name="encoder_decoder")(
+        inputs
+    )  # (B, H, W, 32)
 
     # compute distance output nucleus
     output_distance_nuc = SameConv(
         filters=1,
         kernel_size=(1, 1),
         activation="relu",
-        name="label_distance_nuc")(features_core)  # (B, H, W, 1)
+        name="label_distance_nuc",
+    )(
+        features_core
+    )  # (B, H, W, 1)
 
     # compute surface output cell
     output_surface_cell = SameConv(
         filters=1,
         kernel_size=(1, 1),
         activation="sigmoid",
-        name="label_2_cell")(features_core)  # (B, H, W, 1)
+        name="label_2_cell",
+    )(
+        features_core
+    )  # (B, H, W, 1)
 
     # compute distance output cell
     output_distance_cell = SameConv(
         filters=1,
         kernel_size=(1, 1),
         activation="relu",
-        name="label_distance_cell")(features_core)  # (B, H, W, 1)
+        name="label_distance_cell",
+    )(
+        features_core
+    )  # (B, H, W, 1)
 
     return output_distance_nuc, output_surface_cell, output_distance_cell

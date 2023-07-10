@@ -37,25 +37,29 @@ _cell = [
     "from_distance_to_instances",
     "cell_watershed",
     "get_watershed_relief",
-    "apply_watershed"]
+    "apply_watershed",
+]
 
 _nuc = [
     "unet_3_classes_nuc",
     "apply_unet_3_classes",
     "from_3_classes_to_instances",
-    "remove_segmented_nuc"]
+    "remove_segmented_nuc",
+]
 
 _postprocess = [
     "label_instances",
     "merge_labels",
     "clean_segmentation",
-    "remove_disjoint"]
+    "remove_disjoint",
+]
 
 _utils = [
     "thresholding",
     "compute_mean_diameter",
     "compute_mean_convexity_ratio",
     "compute_surface_ratio",
-    "count_instances"]
+    "count_instances",
+]
 
 __all__ = _cell + _nuc + _postprocess + _utils

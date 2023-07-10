@@ -15,6 +15,7 @@ import bigfish.stack as stack
 
 # ### Pixel - nanometer conversion
 
+
 def convert_spot_coordinates(spots, voxel_size):
     """Convert spots coordinates from pixel to nanometer.
 
@@ -38,17 +39,18 @@ def convert_spot_coordinates(spots, voxel_size):
     # check parameters
     stack.check_parameter(voxel_size=(int, float, tuple, list))
     stack.check_array(
-        spots,
-        ndim=2,
-        dtype=[np.float32, np.float64, np.int32, np.int64])
+        spots, ndim=2, dtype=[np.float32, np.float64, np.int32, np.int64]
+    )
     dtype = spots.dtype
 
     # check consistency between parameters
     ndim = spots.shape[1]
     if isinstance(voxel_size, (tuple, list)):
         if len(voxel_size) != ndim:
-            raise ValueError("'voxel_size' must be a scalar or a sequence "
-                             "with {0} elements.".format(ndim))
+            raise ValueError(
+                "'voxel_size' must be a scalar or a sequence "
+                "with {0} elements.".format(ndim)
+            )
     else:
         voxel_size = (voxel_size,) * ndim
 
@@ -78,11 +80,11 @@ def get_object_radius_pixel(voxel_size_nm, object_radius_nm, ndim):
     voxel_size_nm : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     object_radius_nm : int, float, Tuple(int, float) or List(int, float)
         Radius of the object, in nanometer. One value per spatial dimension
         (zyx or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     ndim : int
         Number of spatial dimension to consider.
 
@@ -97,19 +99,24 @@ def get_object_radius_pixel(voxel_size_nm, object_radius_nm, ndim):
     stack.check_parameter(
         voxel_size_nm=(int, float, tuple, list),
         object_radius_nm=(int, float, tuple, list),
-        ndim=int)
+        ndim=int,
+    )
 
     # check consistency between parameters
     if isinstance(voxel_size_nm, (tuple, list)):
         if len(voxel_size_nm) != ndim:
-            raise ValueError("'voxel_size_nm' must be a scalar or a sequence "
-                             "with {0} elements.".format(ndim))
+            raise ValueError(
+                "'voxel_size_nm' must be a scalar or a sequence "
+                "with {0} elements.".format(ndim)
+            )
     else:
         voxel_size_nm = (voxel_size_nm,) * ndim
     if isinstance(object_radius_nm, (tuple, list)):
         if len(object_radius_nm) != ndim:
-            raise ValueError("'object_radius_nm' must be a scalar or a "
-                             "sequence with {0} elements.".format(ndim))
+            raise ValueError(
+                "'object_radius_nm' must be a scalar or a "
+                "sequence with {0} elements.".format(ndim)
+            )
     else:
         object_radius_nm = (object_radius_nm,) * ndim
 
@@ -133,11 +140,11 @@ def get_object_radius_nm(voxel_size_nm, object_radius_px, ndim):
     voxel_size_nm : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     object_radius_px : int, float, Tuple(int, float) or List(int, float)
         Radius of the object, in pixel. One value per spatial dimension
         (zyx or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     ndim : int
         Number of spatial dimension to consider.
 
@@ -152,19 +159,24 @@ def get_object_radius_nm(voxel_size_nm, object_radius_px, ndim):
     stack.check_parameter(
         voxel_size_nm=(int, float, tuple, list),
         object_radius_px=(int, float, tuple, list),
-        ndim=int)
+        ndim=int,
+    )
 
     # check consistency between parameters
     if isinstance(voxel_size_nm, (tuple, list)):
         if len(voxel_size_nm) != ndim:
-            raise ValueError("'voxel_size_nm' must be a scalar or a sequence "
-                             "with {0} elements.".format(ndim))
+            raise ValueError(
+                "'voxel_size_nm' must be a scalar or a sequence "
+                "with {0} elements.".format(ndim)
+            )
     else:
         voxel_size_nm = (voxel_size_nm,) * ndim
     if isinstance(object_radius_px, (tuple, list)):
         if len(object_radius_px) != ndim:
-            raise ValueError("'object_radius_px' must be a scalar or a "
-                             "sequence with {0} elements.".format(ndim))
+            raise ValueError(
+                "'object_radius_px' must be a scalar or a "
+                "sequence with {0} elements.".format(ndim)
+            )
     else:
         object_radius_px = (object_radius_px,) * ndim
 
@@ -176,6 +188,7 @@ def get_object_radius_nm(voxel_size_nm, object_radius_px, ndim):
 
 
 # ### Reference spot ###
+
 
 def build_reference_spot(image, spots, voxel_size, spot_radius, alpha=0.5):
     """Build a median or mean spot in 3 or 2 dimensions as reference.
@@ -193,11 +206,11 @@ def build_reference_spot(image, spots, voxel_size, spot_radius, alpha=0.5):
     voxel_size : int, float, Tuple(int, float) or List(int, float)
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions.
+        dimension.
     spot_radius : int, float, Tuple(int, float) or List(int, float)
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions.
+        every dimension.
     alpha : int or float
         Intensity score of the reference spot, between 0 and 1. If 0, reference
         spot approximates the spot with the lowest intensity. If 1, reference
@@ -211,47 +224,49 @@ def build_reference_spot(image, spots, voxel_size, spot_radius, alpha=0.5):
     """
     # check parameters
     stack.check_array(
-        image,
-        ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32, np.float64]
+    )
     stack.check_array(
-        spots,
-        ndim=2,
-        dtype=[np.float32, np.float64, np.int32, np.int64])
+        spots, ndim=2, dtype=[np.float32, np.float64, np.int32, np.int64]
+    )
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
         spot_radius=(int, float, tuple, list),
-        alpha=(int, float))
+        alpha=(int, float),
+    )
     if alpha < 0 or alpha > 1:
-        raise ValueError("'alpha' should be a value between 0 and 1, not {0}"
-                         .format(alpha))
+        raise ValueError(
+            "'alpha' should be a value between 0 and 1, not {0}".format(alpha)
+        )
 
     # check consistency between parameters
     ndim = image.ndim
     if ndim != spots.shape[1]:
-        raise ValueError("Provided image has {0} dimensions but spots are "
-                         "detected in {1} dimensions."
-                         .format(ndim, spots.shape[1]))
+        raise ValueError(
+            "Provided image has {0} dimensions but spots are "
+            "detected in {1} dimensions.".format(ndim, spots.shape[1])
+        )
     if isinstance(voxel_size, (tuple, list)):
         if len(voxel_size) != ndim:
             raise ValueError(
                 "'voxel_size' must be a scalar or a sequence with {0} "
-                "elements.".format(ndim))
+                "elements.".format(ndim)
+            )
     else:
         voxel_size = (voxel_size,) * ndim
     if isinstance(spot_radius, (tuple, list)):
         if len(spot_radius) != ndim:
             raise ValueError(
                 "'spot_radius' must be a scalar or a sequence with {0} "
-                "elements.".format(ndim))
+                "elements.".format(ndim)
+            )
     else:
         spot_radius = (spot_radius,) * ndim
 
     # compute radius used to crop spot image
     radius_pixel = get_object_radius_pixel(
-        voxel_size_nm=voxel_size,
-        object_radius_nm=spot_radius,
-        ndim=ndim)
+        voxel_size_nm=voxel_size, object_radius_nm=spot_radius, ndim=ndim
+    )
     radius = [np.sqrt(ndim) * r for r in radius_pixel]
     radius = tuple(radius)
 
@@ -296,21 +311,22 @@ def _build_reference_spot_3d(image, spots, radius, alpha):
     yx_shape = radius_yx * 2 + 1
 
     # randomly choose some spots to aggregate
-    indices = [i for i in range(spots.shape[0])]
+    indices = list(range(0, spots.shape[0]))
     np.random.shuffle(indices)
-    indices = indices[:min(2000, spots.shape[0])]
+    indices = indices[: min(2000, spots.shape[0])]
     candidate_spots = spots[indices, :]
 
     # collect area around each spot
     l_reference_spot = []
     for i_spot in range(candidate_spots.shape[0]):
-
         # get spot coordinates
         spot_z, spot_y, spot_x = candidate_spots[i_spot, :]
 
         # get the volume of the spot
-        image_spot, _, = get_spot_volume(
-            image, spot_z, spot_y, spot_x, radius_z, radius_yx)
+        (
+            image_spot,
+            _,
+        ) = get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx)
 
         # keep images that are not cropped by the borders
         if image_spot.shape == (z_shape, yx_shape, yx_shape):
@@ -318,12 +334,15 @@ def _build_reference_spot_3d(image, spots, radius, alpha):
 
     # if not enough spots are detected
     if len(l_reference_spot) <= 30:
-        warnings.warn("Problem occurs during the computation of a reference "
-                      "spot. Not enough (uncropped) spots have been detected.",
-                      UserWarning)
+        warnings.warn(
+            "Problem occurs during the computation of a reference "
+            "spot. Not enough (uncropped) spots have been detected.",
+            UserWarning,
+        )
     if len(l_reference_spot) == 0:
         reference_spot = np.zeros(
-            (z_shape, yx_shape, yx_shape), dtype=image.dtype)
+            (z_shape, yx_shape, yx_shape), dtype=image.dtype
+        )
         return reference_spot
 
     # project the different spot images
@@ -343,13 +362,13 @@ def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     image : np.ndarray
         Image with shape (z, y, x).
     spot_z : int or float
-        Coordinate of the detected spot along the z axis.
+        Coordinate of the detected spot along the z-axis.
     spot_y : int or float
-        Coordinate of the detected spot along the y axis.
+        Coordinate of the detected spot along the y-axis.
     spot_x : int or float
-        Coordinate of the detected spot along the x axis.
+        Coordinate of the detected spot along the x-axis.
     radius_z : int or float
-        Radius in pixel of the detected spot, along the z axis.
+        Radius in pixel of the detected spot, along the z-axis.
     radius_yx : int or float
         Radius in pixel of the detected spot, on the yx plan.
 
@@ -370,9 +389,11 @@ def get_spot_volume(image, spot_z, spot_y, spot_x, radius_z, radius_yx):
     x_spot_max = min(image.shape[2], int(spot_x + radius_yx))
 
     # get the volume of the spot
-    image_spot = image[z_spot_min:z_spot_max + 1,
-                       y_spot_min:y_spot_max + 1,
-                       x_spot_min:x_spot_max + 1]
+    image_spot = image[
+        z_spot_min : z_spot_max + 1,
+        y_spot_min : y_spot_max + 1,
+        x_spot_min : x_spot_max + 1,
+    ]
 
     return image_spot, (z_spot_min, y_spot_min, x_spot_min)
 
@@ -407,15 +428,14 @@ def _build_reference_spot_2d(image, spots, radius, alpha):
     yx_shape = radius_yx * 2 + 1
 
     # randomly choose some spots to aggregate
-    indices = [i for i in range(spots.shape[0])]
+    indices = list(range(0, spots.shape[0]))
     np.random.shuffle(indices)
-    indices = indices[:min(2000, spots.shape[0])]
+    indices = indices[: min(2000, spots.shape[0])]
     candidate_spots = spots[indices, :]
 
     # collect area around each spot
     l_reference_spot = []
     for i_spot in range(candidate_spots.shape[0]):
-
         # get spot coordinates
         spot_y, spot_x = candidate_spots[i_spot, :]
 
@@ -428,9 +448,11 @@ def _build_reference_spot_2d(image, spots, radius, alpha):
 
     # if not enough spots are detected
     if len(l_reference_spot) <= 30:
-        warnings.warn("Problem occurs during the computation of a reference "
-                      "spot. Not enough (uncropped) spots have been detected.",
-                      UserWarning)
+        warnings.warn(
+            "Problem occurs during the computation of a reference "
+            "spot. Not enough (uncropped) spots have been detected.",
+            UserWarning,
+        )
     if len(l_reference_spot) == 0:
         reference_spot = np.zeros((yx_shape, yx_shape), dtype=image.dtype)
         return reference_spot
@@ -452,9 +474,9 @@ def get_spot_surface(image, spot_y, spot_x, radius_yx):
     image : np.ndarray
         Image with shape (y, x).
     spot_y : int or float
-        Coordinate of the detected spot along the y axis.
+        Coordinate of the detected spot along the y-axis.
     spot_x : int or float
-        Coordinate of the detected spot along the x axis.
+        Coordinate of the detected spot along the x-axis.
     radius_yx : int or float
         Radius in pixel of the detected spot, on the yx plan.
 
@@ -473,13 +495,15 @@ def get_spot_surface(image, spot_y, spot_x, radius_yx):
     x_spot_max = min(image.shape[1], int(spot_x + radius_yx))
 
     # get the surface of the spot
-    image_spot = image[y_spot_min:y_spot_max + 1,
-                       x_spot_min:x_spot_max + 1]
+    image_spot = image[
+        y_spot_min : y_spot_max + 1, x_spot_min : x_spot_max + 1
+    ]
 
     return image_spot, (y_spot_min, x_spot_min)
 
 
 # ### SNR ###
+
 
 def compute_snr_spots(image, spots, voxel_size, spot_radius):
     """Compute signal-to-noise ratio (SNR) based on spot coordinates.
@@ -502,52 +526,54 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
     voxel_size : int, float, Tuple(int, float), List(int, float) or None
         Size of a voxel, in nanometer. One value per spatial dimension (zyx or
         yx dimensions). If it's a scalar, the same value is applied to every
-        dimensions. Not used if 'log_kernel_size' and 'minimum_distance' are
+        dimension. Not used if 'log_kernel_size' and 'minimum_distance' are
         provided.
     spot_radius : int, float, Tuple(int, float), List(int, float) or None
         Radius of the spot, in nanometer. One value per spatial dimension (zyx
         or yx dimensions). If it's a scalar, the same radius is applied to
-        every dimensions. Not used if 'log_kernel_size' and 'minimum_distance'
+        every dimension. Not used if 'log_kernel_size' and 'minimum_distance'
         are provided.
 
     Returns
     -------
     snr : float
-        Median signal-to-noise ratio computed for every spots.
+        Median signal-to-noise ratio computed for every spot.
 
     """
     # check parameters
     stack.check_array(
-        image,
-        ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.float32, np.float64])
+        image, ndim=[2, 3], dtype=[np.uint8, np.uint16, np.float32, np.float64]
+    )
     stack.check_range_value(image, min_=0)
     stack.check_array(
-        spots,
-        ndim=2,
-        dtype=[np.float32, np.float64, np.int32, np.int64])
+        spots, ndim=2, dtype=[np.float32, np.float64, np.int32, np.int64]
+    )
     stack.check_parameter(
         voxel_size=(int, float, tuple, list),
-        spot_radius=(int, float, tuple, list))
+        spot_radius=(int, float, tuple, list),
+    )
 
     # check consistency between parameters
     ndim = image.ndim
     if ndim != spots.shape[1]:
-        raise ValueError("Provided image has {0} dimensions but spots are "
-                         "detected in {1} dimensions."
-                         .format(ndim, spots.shape[1]))
+        raise ValueError(
+            "Provided image has {0} dimensions but spots are "
+            "detected in {1} dimensions.".format(ndim, spots.shape[1])
+        )
     if isinstance(voxel_size, (tuple, list)):
         if len(voxel_size) != ndim:
             raise ValueError(
                 "'voxel_size' must be a scalar or a sequence with {0} "
-                "elements.".format(ndim))
+                "elements.".format(ndim)
+            )
     else:
         voxel_size = (voxel_size,) * ndim
     if isinstance(spot_radius, (tuple, list)):
         if len(spot_radius) != ndim:
             raise ValueError(
                 "'spot_radius' must be a scalar or a sequence with {0} "
-                "elements.".format(ndim))
+                "elements.".format(ndim)
+            )
     else:
         spot_radius = (spot_radius,) * ndim
 
@@ -569,9 +595,8 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
 
     # compute radius used to crop spot image
     radius_pixel = get_object_radius_pixel(
-        voxel_size_nm=voxel_size,
-        object_radius_nm=spot_radius,
-        ndim=ndim)
+        voxel_size_nm=voxel_size, object_radius_nm=spot_radius, ndim=ndim
+    )
     radius_signal_ = [np.sqrt(ndim) * r for r in radius_pixel]
     radius_signal_ = tuple(radius_signal_)
 
@@ -585,7 +610,6 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
     # loop over spots
     snr_spots = []
     for spot in spots:
-
         # extract spot images
         spot_y = spot[ndim - 2]
         spot_x = spot[ndim - 1]
@@ -597,8 +621,13 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
             radius_background_z = radius_background[0]
             max_signal = image_to_process[spot_z, spot_y, spot_x]
             spot_background_, _ = get_spot_volume(
-                image_to_process, spot_z, spot_y, spot_x,
-                radius_background_z, radius_background_yx)
+                image_to_process,
+                spot_z,
+                spot_y,
+                spot_x,
+                radius_background_z,
+                radius_background_yx,
+            )
             spot_background = spot_background_.copy()
 
             # discard spot if cropped at the border (along y and x dimensions)
@@ -608,15 +637,18 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
                 continue
 
             # remove signal from background crop
-            spot_background[:,
-                            edge_background_yx:-edge_background_yx,
-                            edge_background_yx:-edge_background_yx] = -1
+            spot_background[
+                :,
+                edge_background_yx:-edge_background_yx,
+                edge_background_yx:-edge_background_yx,
+            ] = -1
             spot_background = spot_background[spot_background >= 0]
 
         else:
             max_signal = image_to_process[spot_y, spot_x]
             spot_background_, _ = get_spot_surface(
-                image_to_process, spot_y, spot_x, radius_background_yx)
+                image_to_process, spot_y, spot_x, radius_background_yx
+            )
             spot_background = spot_background_.copy()
 
             # discard spot if cropped at the border
@@ -625,8 +657,10 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
                 continue
 
             # remove signal from background crop
-            spot_background[edge_background_yx:-edge_background_yx,
-                            edge_background_yx:-edge_background_yx] = -1
+            spot_background[
+                edge_background_yx:-edge_background_yx,
+                edge_background_yx:-edge_background_yx,
+            ] = -1
             spot_background = spot_background[spot_background >= 0]
 
         # compute mean background
@@ -641,7 +675,7 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
 
     #  average SNR
     if len(snr_spots) == 0:
-        snr = 0.
+        snr = 0.0
     else:
         snr = np.median(snr_spots)
 
@@ -650,8 +684,9 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
 
 # ### Miscellaneous ###
 
+
 def get_breaking_point(x, y):
-    """Select the x-axis value where a L-curve has a kink.
+    """Select the x-axis value where an L-curve has a kink.
 
     Assuming a L-curve from A to B, the 'breaking_point' is the more distant
     point to the segment [A, B].
@@ -675,13 +710,11 @@ def get_breaking_point(x, y):
     """
     # check parameters
     stack.check_array(
-        x,
-        ndim=1,
-        dtype=[np.float32, np.float64, np.int32, np.int64])
+        x, ndim=1, dtype=[np.float32, np.float64, np.int32, np.int64]
+    )
     stack.check_array(
-        y,
-        ndim=1,
-        dtype=[np.float32, np.float64, np.int32, np.int64])
+        y, ndim=1, dtype=[np.float32, np.float64, np.int32, np.int64]
+    )
 
     # select threshold where curve break
     slope = (y[-1] - y[0]) / len(y)

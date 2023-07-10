@@ -1,0 +1,15 @@
+# This workflow will run ruff to highlight syntactical and stylistic problems.
+
+name: Running Ruff
+
+on: [push]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: chartboost/ruff-action@v1

@@ -3,7 +3,7 @@
 # License: BSD 3 clause
 
 """
-Postprocessing functions functions for bigfish.segmentation subpackage.
+Postprocessing functions for bigfish.segmentation subpackage.
 """
 
 import bigfish.stack as stack
@@ -16,6 +16,7 @@ from skimage.morphology import remove_small_objects
 
 
 # ### Labelled images ###
+
 
 def label_instances(image_binary):
     """Count and label the different instances previously segmented in an
@@ -70,8 +71,10 @@ def merge_labels(image_label_1, image_label_2):
 
     # check if labels can be merged
     if nb_instances > np.iinfo(np.int64).max:
-        raise ValueError("Labels can not be merged. There are too many "
-                         "instances for a 64 bit image, labels could overlap.")
+        raise ValueError(
+            "Labels can not be merged. There are too many "
+            "instances for a 64 bit image, labels could overlap."
+        )
 
     # merge labels
     image_label_2[image_label_2 > 0] += image_label_1
@@ -83,11 +86,12 @@ def merge_labels(image_label_1, image_label_2):
 # ### Clean segmentation ###
 # TODO make it available for 3D images
 def clean_segmentation(
-        image,
-        small_object_size=None,
-        fill_holes=False,
-        smoothness=None,
-        delimit_instance=False):
+    image,
+    small_object_size=None,
+    fill_holes=False,
+    smoothness=None,
+    delimit_instance=False,
+):
     """Clean segmentation results (binary masks or integer labels).
 
     Parameters
@@ -99,7 +103,7 @@ def clean_segmentation(
     fill_holes : bool
         Fill holes within a labelled or masked area.
     smoothness : int or None
-        Radius of a median kernel filter. The higher the smoother instance
+        Radius of a median kernel filter. The higher, the smoother instance
         boundaries are.
     delimit_instance : bool
         Delimit clearly instances boundaries by preventing contact between each
@@ -117,7 +121,8 @@ def clean_segmentation(
         small_object_size=(int, type(None)),
         fill_holes=bool,
         smoothness=(int, type(None)),
-        delimit_instance=bool)
+        delimit_instance=bool,
+    )
 
     # initialize cleaned image
     image_cleaned = image.copy()
@@ -219,10 +224,12 @@ def _smooth_instance(image, radius):
             image_cleaned = stack.median_filter(image_cleaned, "disk", radius)
             image_cleaned = image_cleaned.astype(np.int64)
         else:
-            raise ValueError("Segmentation boundaries can't be smoothed "
-                             "because more than 65535 has been detected in "
-                             "the image. Smoothing is performed with 16-bit "
-                             "unsigned integer images.")
+            raise ValueError(
+                "Segmentation boundaries can't be smoothed "
+                "because more than 65535 has been detected in "
+                "the image. Smoothing is performed with 16-bit "
+                "unsigned integer images."
+            )
 
     return image_cleaned
 
@@ -281,7 +288,8 @@ def remove_disjoint(image):
     stack.check_array(
         image,
         ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool],
+    )
 
     # handle boolean array
     cast_to_bool = False
@@ -295,7 +303,6 @@ def remove_disjoint(image):
     # loop over instances
     max_label = image.max()
     for i in range(1, max_label + 1):
-
         # get instance mask
         mask = image == i
 
@@ -305,7 +312,7 @@ def remove_disjoint(image):
 
         # get an index for each disconnected part of the instance
         labelled_mask = label(mask)
-        indices = sorted(list(set(labelled_mask.ravel())))
+        indices = sorted(set(labelled_mask.ravel()))
         if 0 in indices:
             indices = indices[1:]
 

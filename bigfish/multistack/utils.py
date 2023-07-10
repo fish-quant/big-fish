@@ -15,6 +15,7 @@ import bigfish.stack as stack
 
 # ### Recipe management (sanity checks, fitting) ###
 
+
 def check_recipe(recipe, data_directory=None):
     """Check and validate a recipe.
 
@@ -38,18 +39,20 @@ def check_recipe(recipe, data_directory=None):
 
     """
     # check parameters
-    stack.check_parameter(
-        recipe=dict,
-        data_directory=(str, type(None)))
+    stack.check_parameter(recipe=dict, data_directory=(str, type(None)))
 
     # check the filename pattern
     if "pattern" not in recipe:
-        raise KeyError("A recipe should have a filename pattern "
-                       "('pattern' keyword).")
+        raise KeyError(
+            "A recipe should have a filename pattern " "('pattern' keyword)."
+        )
     recipe_pattern = recipe["pattern"]
     if not isinstance(recipe_pattern, str):
-        raise TypeError("'pattern' should be a string, not a {0}."
-                        .format(type(recipe_pattern)))
+        raise TypeError(
+            "'pattern' should be a string, not a {0}.".format(
+                type(recipe_pattern)
+            )
+        )
 
     # count the different dimensions to combinate in the recipe (among
     # 'fov', 'r', 'c' and 'z')
@@ -57,24 +60,30 @@ def check_recipe(recipe, data_directory=None):
 
     # each dimension can only appear once in the filename pattern
     if len(dimensions) != len(set(dimensions)):
-        raise ValueError("The pattern used in recipe is wrong, a dimension "
-                         "appears several times: {0}".format(recipe_pattern))
+        raise ValueError(
+            "The pattern used in recipe is wrong, a dimension "
+            "appears several times: {0}".format(recipe_pattern)
+        )
 
     # check keys and values of the recipe
     for key, value in recipe.items():
-        if key not in ['fov', 'r', 'c', 'z', 'ext', 'opt', 'pattern']:
-            raise KeyError("The recipe can only contain the keys 'fov', 'r', "
-                           "'c', 'z', 'ext', 'opt' or 'pattern'. Not '{0}'."
-                           .format(key))
+        if key not in ["fov", "r", "c", "z", "ext", "opt", "pattern"]:
+            raise KeyError(
+                "The recipe can only contain the keys 'fov', 'r', "
+                "'c', 'z', 'ext', 'opt' or 'pattern'. Not '{0}'.".format(key)
+            )
         if not isinstance(value, (list, str)):
-            raise TypeError("A recipe can only contain lists or strings, "
-                            "not {0}.".format(type(value)))
+            raise TypeError(
+                "A recipe can only contain lists or strings, "
+                "not {0}.".format(type(value))
+            )
 
     # check that requested files exist
     if data_directory is not None:
         if not os.path.isdir(data_directory):
-            raise NotADirectoryError("Directory does not exist: {0}"
-                                     .format(data_directory))
+            raise NotADirectoryError(
+                "Directory does not exist: {0}".format(data_directory)
+            )
         recipe = fit_recipe(recipe)
         nb_r, nb_c, nb_z = get_nb_element_per_dimension(recipe)
         nb_fov = count_nb_fov(recipe)
@@ -83,15 +92,12 @@ def check_recipe(recipe, data_directory=None):
                 for c in range(nb_c):
                     for z in range(nb_z):
                         path = get_path_from_recipe(
-                            recipe,
-                            data_directory,
-                            fov=fov,
-                            r=r,
-                            c=c,
-                            z=z)
+                            recipe, data_directory, fov=fov, r=r, c=c, z=z
+                        )
                         if not os.path.isfile(path):
-                            raise FileNotFoundError("File does not exist: {0}"
-                                                    .format(path))
+                            raise FileNotFoundError(
+                                "File does not exist: {0}".format(path)
+                            )
 
     return True
 
@@ -99,7 +105,7 @@ def check_recipe(recipe, data_directory=None):
 def fit_recipe(recipe):
     """Fit a recipe.
 
-    Fitting a recipe consists in wrapping every values of `fov`, `r`, `c` and
+    Fitting a recipe consists in wrapping every value of `fov`, `r`, `c` and
     `z` in a list (an empty one if necessary). Values for `ext` and `opt` are
     also initialized.
 
@@ -126,7 +132,7 @@ def fit_recipe(recipe):
     new_recipe = copy.deepcopy(recipe)
 
     # initialize and fit the dimensions 'fov', 'r', 'c' and 'z'
-    for key in ['fov', 'r', 'c', 'z']:
+    for key in ["fov", "r", "c", "z"]:
         if key not in new_recipe:
             new_recipe[key] = [None]
         value = new_recipe[key]
@@ -134,7 +140,7 @@ def fit_recipe(recipe):
             new_recipe[key] = [value]
 
     # initialize the dimensions 'ext', 'opt'
-    for key in ['ext', 'opt']:
+    for key in ["ext", "opt"]:
         if key not in new_recipe:
             new_recipe[key] = ""
 
@@ -144,7 +150,7 @@ def fit_recipe(recipe):
 def _is_recipe_fitted(recipe):
     """Check if a recipe is ready to be used.
 
-    Fitting a recipe consists in wrapping every values of `fov`, `r`, `c` and
+    Fitting a recipe consists in wrapping every value of `fov`, `r`, `c` and
     `z` in a list (an empty one if necessary). Values for `ext` and `opt` are
     also initialized.
 
@@ -162,13 +168,13 @@ def _is_recipe_fitted(recipe):
 
     """
     # all keys should be initialized in the new recipe, with a list or a string
-    for key in ['fov', 'r', 'c', 'z']:
+    for key in ["fov", "r", "c", "z"]:
         if key not in recipe or not isinstance(recipe[key], list):
             return False
-    for key in ['ext', 'opt']:
+    for key in ["ext", "opt"]:
         if key not in recipe or not isinstance(recipe[key], str):
             return False
-    if 'pattern' not in recipe or not isinstance(recipe['pattern'], str):
+    if "pattern" not in recipe or not isinstance(recipe["pattern"], str):
         return False
 
     return True
@@ -203,12 +209,8 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
     """
     # check parameters
     stack.check_parameter(
-        recipe=dict,
-        input_folder=str,
-        fov=int,
-        r=int,
-        c=int,
-        z=int)
+        recipe=dict, input_folder=str, fov=int, r=int, c=int, z=int
+    )
 
     # check if the recipe is fitted
     if not _is_recipe_fitted(recipe):
@@ -224,8 +226,7 @@ def get_path_from_recipe(recipe, input_folder, fov=0, r=0, c=0, z=0):
 
     # get filename recombining elements of the recipe
     filename = path_separators[0]  # usually an empty string
-    for (element_name, separator) in zip(path_elements, path_separators[1:]):
-
+    for element_name, separator in zip(path_elements, path_separators[1:]):
         # if we need an element from a list of elements of the same dimension
         # (eg. to pick a specific channel 'c' among a list of channels)
         if element_name in map_element_index:
@@ -304,8 +305,11 @@ def count_nb_fov(recipe):
 
     # a good recipe should have a list in the 'fov' key
     if not isinstance(recipe["fov"], list):
-        raise TypeError("'fov' should be a List or a str, not {0}"
-                        .format(type(recipe["fov"])))
+        raise TypeError(
+            "'fov' should be a List or a str, not {0}".format(
+                type(recipe["fov"])
+            )
+        )
     else:
         return len(recipe["fov"])
 
@@ -329,18 +333,26 @@ def check_datamap(data_map):
     stack.check_parameter(data_map=list)
     for pair in data_map:
         if not isinstance(pair, (tuple, list)):
-            raise TypeError("A data map is a list with tuples or lists. "
-                            "Not {0}".format(type(pair)))
+            raise TypeError(
+                "A data map is a list with tuples or lists. "
+                "Not {0}".format(type(pair))
+            )
         if len(pair) != 2:
-            raise ValueError("Elements of a data map are tuples or lists that "
-                             "map a recipe (dict) to an input directory "
-                             "(string). Here {0} elements are given {1}"
-                             .format(len(pair), pair))
+            raise ValueError(
+                "Elements of a data map are tuples or lists that "
+                "map a recipe (dict) to an input directory "
+                "(string). Here {0} elements are given {1}".format(
+                    len(pair), pair
+                )
+            )
         (recipe, input_folder) = pair
         if not isinstance(input_folder, str):
-            raise TypeError("A data map map a recipe (dict) to an input "
-                            "directory (string). Not ({0}, {1})"
-                            .format(type(recipe), type(input_folder)))
+            raise TypeError(
+                "A data map map a recipe (dict) to an input "
+                "directory (string). Not ({0}, {1})".format(
+                    type(recipe), type(input_folder)
+                )
+            )
         check_recipe(recipe, data_directory=input_folder)
 
     return True

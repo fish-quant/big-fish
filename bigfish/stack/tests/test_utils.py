@@ -23,73 +23,140 @@ import pandas as pd
 
 # ### Test sanity check functions ###
 
+
 def test_check_parameter():
     # define a function with different parameters to check
     def foo(a, b, c, d, e, f, g, h):
-        stack.check_parameter(a=(list, type(None)),
-                              b=str,
-                              c=int,
-                              d=float,
-                              e=np.ndarray,
-                              f=bool,
-                              g=(pd.DataFrame, pd.Series),
-                              h=pd.DataFrame)
+        stack.check_parameter(
+            a=(list, type(None)),
+            b=str,
+            c=int,
+            d=float,
+            e=np.ndarray,
+            f=bool,
+            g=(pd.DataFrame, pd.Series),
+            h=pd.DataFrame,
+        )
         return True
 
     # test the consistency of the check function when it works...
-    assert foo(a=[], b="bar", c=5, d=2.5, e=np.array([3, 6, 9]),
-               f=True, g=pd.DataFrame(), h=pd.DataFrame())
-    assert foo(a=None, b="", c=10, d=2.0, e=np.array([3, 6, 9]),
-               f=False, g=pd.Series(), h=pd.DataFrame())
+    assert foo(
+        a=[],
+        b="bar",
+        c=5,
+        d=2.5,
+        e=np.array([3, 6, 9]),
+        f=True,
+        g=pd.DataFrame(),
+        h=pd.DataFrame(),
+    )
+    assert foo(
+        a=None,
+        b="",
+        c=10,
+        d=2.0,
+        e=np.array([3, 6, 9]),
+        f=False,
+        g=pd.Series(),
+        h=pd.DataFrame(),
+    )
 
     # ... and when it should raise an error
     with pytest.raises(TypeError):
-        foo(a=(), b="bar", c=5, d=2.5, e=np.array([3, 6, 9]),
-            f=True, g=pd.DataFrame(), h=pd.DataFrame())
+        foo(
+            a=(),
+            b="bar",
+            c=5,
+            d=2.5,
+            e=np.array([3, 6, 9]),
+            f=True,
+            g=pd.DataFrame(),
+            h=pd.DataFrame(),
+        )
     with pytest.raises(TypeError):
-        foo(a=[], b="bar", c=5.0, d=2.5, e=np.array([3, 6, 9]),
-            f=True, g=pd.DataFrame(), h=pd.DataFrame())
+        foo(
+            a=[],
+            b="bar",
+            c=5.0,
+            d=2.5,
+            e=np.array([3, 6, 9]),
+            f=True,
+            g=pd.DataFrame(),
+            h=pd.DataFrame(),
+        )
     with pytest.raises(TypeError):
-        foo(a=[], b="bar", c=5, d=2, e=np.array([3, 6, 9]),
-            f=True, g=pd.DataFrame(), h=pd.DataFrame())
+        foo(
+            a=[],
+            b="bar",
+            c=5,
+            d=2,
+            e=np.array([3, 6, 9]),
+            f=True,
+            g=pd.DataFrame(),
+            h=pd.DataFrame(),
+        )
     with pytest.raises(TypeError):
-        foo(a=[], b="bar", c=5, d=2.5, e=[3, 6, 9],
-            f=True, g=pd.DataFrame(), h=pd.DataFrame())
+        foo(
+            a=[],
+            b="bar",
+            c=5,
+            d=2.5,
+            e=[3, 6, 9],
+            f=True,
+            g=pd.DataFrame(),
+            h=pd.DataFrame(),
+        )
     with pytest.raises(TypeError):
-        foo(a=[], b="bar", c=5, d=2.5, e=np.zeros((3, 3)),
-            f=True, g=pd.DataFrame(), h=pd.Series())
+        foo(
+            a=[],
+            b="bar",
+            c=5,
+            d=2.5,
+            e=np.zeros((3, 3)),
+            f=True,
+            g=pd.DataFrame(),
+            h=pd.Series(),
+        )
 
 
 def test_check_df():
     # build a dataframe to test
-    df = pd.DataFrame({"A": [3, 6, 9],
-                       "B": [2.5, np.nan, 1.3],
-                       "C": ["arthur", "florian", "thomas"],
-                       "D": [True, True, False]})
+    df = pd.DataFrame(
+        {
+            "A": [3, 6, 9],
+            "B": [2.5, np.nan, 1.3],
+            "C": ["arthur", "florian", "thomas"],
+            "D": [True, True, False],
+        }
+    )
 
     # test the consistency of the check function when it works...
-    assert stack.check_df(df,
-                          features=["A", "B", "C", "D"],
-                          features_without_nan=["A", "C", "D"])
-    assert stack.check_df(df,
-                          features=["B", "A"],
-                          features_without_nan=["C", "D", "A"])
-    assert stack.check_df(df,
-                          features=None,
-                          features_without_nan=["A", "C", "D"])
-    assert stack.check_df(df,
-                          features=["A", "B", "C", "D"],
-                          features_without_nan=None)
+    assert stack.check_df(
+        df, features=["A", "B", "C", "D"], features_without_nan=["A", "C", "D"]
+    )
+    assert stack.check_df(
+        df, features=["B", "A"], features_without_nan=["C", "D", "A"]
+    )
+    assert stack.check_df(
+        df, features=None, features_without_nan=["A", "C", "D"]
+    )
+    assert stack.check_df(
+        df, features=["A", "B", "C", "D"], features_without_nan=None
+    )
 
     # ... and when it should raise an error
     with pytest.raises(ValueError):
-        stack.check_df(df,
-                       features=["A", "B", "C", "D", "E"],
-                       features_without_nan=["A", "C", "D"])
+        stack.check_df(
+            df,
+            features=["A", "B", "C", "D", "E"],
+            features_without_nan=["A", "C", "D"],
+        )
     with pytest.raises(ValueError):
-        stack.check_df(df,
-                       features=["A", "B", "C", "D"],
-                       features_without_nan=["A", "B", "C", "D"])
+        stack.check_df(
+            df,
+            features=["A", "B", "C", "D"],
+            features_without_nan=["A", "B", "C", "D"],
+        )
 
 
 def test_check_array():
@@ -137,6 +204,7 @@ def test_check_range_value():
 
 
 # ### Constants ###
+
 
 def test_margin_value():
     # test margin value

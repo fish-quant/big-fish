@@ -79,7 +79,8 @@ _utils = [
     "compute_hash",
     "check_input_data",
     "moving_average",
-    "centered_moving_average"]
+    "centered_moving_average",
+]
 
 _io = [
     "read_image",
@@ -92,7 +93,8 @@ _io = [
     "save_image",
     "save_array",
     "save_cell_extracted",
-    "save_data_to_csv"]
+    "save_data_to_csv",
+]
 
 _preprocess = [
     "rescale",
@@ -102,7 +104,8 @@ _preprocess = [
     "cast_img_float64",
     "resize_image",
     "get_marge_padding",
-    "compute_image_standardization"]
+    "compute_image_standardization",
+]
 
 _filter = [
     "log_filter",
@@ -114,7 +117,8 @@ _filter = [
     "remove_background_mean",
     "remove_background_gaussian",
     "dilation_filter",
-    "erosion_filter"]
+    "erosion_filter",
+]
 
 _projection = [
     "maximum_projection",
@@ -122,17 +126,25 @@ _projection = [
     "median_projection",
     "in_focus_selection",
     "get_in_focus_indices",
-    "focus_projection"]
+    "focus_projection",
+]
 
 _augmentation = [
     "augment_2d",
     "augment_2d_function",
     "augment_8_times",
-    "augment_8_times_reversed"]
+    "augment_8_times_reversed",
+]
 
-_quality = [
-    "compute_focus"]
+_quality = ["compute_focus"]
 
 
-__all__ = (_utils + _io + _preprocess + _filter + _projection + _augmentation
-           + _quality)
+__all__ = (
+    _utils
+    + _io
+    + _preprocess
+    + _filter
+    + _projection
+    + _augmentation
+    + _quality
+)

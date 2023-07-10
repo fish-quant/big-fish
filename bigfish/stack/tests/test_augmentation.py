@@ -24,11 +24,16 @@ from numpy.testing import assert_array_equal
 
 
 # toy image
-x = np.array([[1, 0, 0, 0, 0],
-              [0, 1, 0, 0, 0],
-              [0, 1, 0, 0, 0],
-              [0, 1, 1, 1, 0],
-              [0, 0, 0, 0, 0]], dtype=np.uint8)
+x = np.array(
+    [
+        [1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0],
+        [0, 1, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+    ],
+    dtype=np.uint8,
+)
 
 
 def test_identity():
@@ -39,11 +44,16 @@ def test_identity():
 def test_flip_h():
     # one channel
     y = _flip_h(x)
-    expected_y = np.array([[0, 0, 0, 0, 0],
-                           [0, 1, 1, 1, 0],
-                           [0, 1, 0, 0, 0],
-                           [0, 1, 0, 0, 0],
-                           [1, 0, 0, 0, 0]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
     # multichannel
@@ -56,11 +66,16 @@ def test_flip_h():
 def test_flip_v():
     # one channel
     y = _flip_v(x)
-    expected_y = np.array([[0, 0, 0, 0, 1],
-                           [0, 0, 0, 1, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 1, 1, 1, 0],
-                           [0, 0, 0, 0, 0]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
     # multichannel
@@ -73,11 +88,16 @@ def test_flip_v():
 def test_transpose():
     # one channel
     y = _transpose(x)
-    expected_y = np.array([[1, 0, 0, 0, 0],
-                           [0, 1, 1, 1, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 0, 0, 0, 0]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [1, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
     # multichannel
@@ -89,64 +109,107 @@ def test_transpose():
 
 def test_transpose_inverse():
     y = _transpose_inverse(x)
-    expected_y = np.array([[0, 0, 0, 0, 0],
-                           [0, 1, 0, 0, 0],
-                           [0, 1, 0, 0, 0],
-                           [0, 1, 1, 1, 0],
-                           [0, 0, 0, 0, 1]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
 
 def test_rotation_90():
     y = _rotation_90(x)
-    expected_y = np.array([[0, 0, 0, 0, 1],
-                           [0, 1, 1, 1, 0],
-                           [0, 1, 0, 0, 0],
-                           [0, 1, 0, 0, 0],
-                           [0, 0, 0, 0, 0]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [0, 0, 0, 0, 1],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
 
 def test_rotation_180():
     y = _rotation_180(x)
-    expected_y = np.array([[0, 0, 0, 0, 0],
-                           [0, 1, 1, 1, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 0, 0, 0, 1]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
 
 def test_rotation_270():
     y = _rotation_270(x)
-    expected_y = np.array([[0, 0, 0, 0, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 0, 0, 1, 0],
-                           [0, 1, 1, 1, 0],
-                           [1, 0, 0, 0, 0]], dtype=np.uint8)
+    expected_y = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [1, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
     assert_array_equal(y, expected_y)
 
 
-@pytest.mark.parametrize("dtype", [
-    np.uint8, np.uint16, np.uint32,np.uint64,
-    np.int8, np.int16, np.int32, np.int64,
-    np.float16, np.float32, np.float64,
-    bool])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.float16,
+        np.float32,
+        np.float64,
+        bool,
+    ],
+)
 def test_augment_2d_dtype(dtype):
-    x = np.array([[1, 0, 0, 0, 0],
-                  [0, 1, 0, 0, 0],
-                  [0, 1, 0, 0, 0],
-                  [0, 1, 1, 1, 0],
-                  [0, 0, 0, 0, 0]], dtype=dtype)
+    x = np.array(
+        [
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=dtype,
+    )
     y = stack.augment_2d(x)
     assert y.dtype == dtype
 
 
 def test_augment_2d_function():
-    operations = [_identity,
-                  _flip_h, _flip_v,
-                  _transpose, _transpose_inverse,
-                  _rotation_90, _rotation_180, _rotation_270]
+    operations = [
+        _identity,
+        _flip_h,
+        _flip_v,
+        _transpose,
+        _transpose_inverse,
+        _rotation_90,
+        _rotation_180,
+        _rotation_270,
+    ]
     bytecodes = []
     for f in operations:
         bytecode = f.__code__.co_code
@@ -160,46 +223,86 @@ def test_augment_2d_function():
 def test_augment_8_times():
     # one channel
     expected_y_identity = x.copy()
-    expected_y_flip_h = np.array([[0, 0, 0, 0, 0],
-                                  [0, 1, 1, 1, 0],
-                                  [0, 1, 0, 0, 0],
-                                  [0, 1, 0, 0, 0],
-                                  [1, 0, 0, 0, 0]], dtype=np.uint8)
-    expected_y_flip_v = np.array([[0, 0, 0, 0, 1],
-                                  [0, 0, 0, 1, 0],
-                                  [0, 0, 0, 1, 0],
-                                  [0, 1, 1, 1, 0],
-                                  [0, 0, 0, 0, 0]], dtype=np.uint8)
-    expected_y_transpose = np.array([[1, 0, 0, 0, 0],
-                                     [0, 1, 1, 1, 0],
-                                     [0, 0, 0, 1, 0],
-                                     [0, 0, 0, 1, 0],
-                                     [0, 0, 0, 0, 0]], dtype=np.uint8)
-    expected_y_transpose_inverse = np.array([[0, 0, 0, 0, 0],
-                                             [0, 1, 0, 0, 0],
-                                             [0, 1, 0, 0, 0],
-                                             [0, 1, 1, 1, 0],
-                                             [0, 0, 0, 0, 1]], dtype=np.uint8)
-    expected_y_rotation_90 = np.array([[0, 0, 0, 0, 1],
-                                       [0, 1, 1, 1, 0],
-                                       [0, 1, 0, 0, 0],
-                                       [0, 1, 0, 0, 0],
-                                       [0, 0, 0, 0, 0]], dtype=np.uint8)
-    expected_y_rotation_180 = np.array([[0, 0, 0, 0, 0],
-                                        [0, 1, 1, 1, 0],
-                                        [0, 0, 0, 1, 0],
-                                        [0, 0, 0, 1, 0],
-                                        [0, 0, 0, 0, 1]], dtype=np.uint8)
-    expected_y_rotation_270 = np.array([[0, 0, 0, 0, 0],
-                                        [0, 0, 0, 1, 0],
-                                        [0, 0, 0, 1, 0],
-                                        [0, 1, 1, 1, 0],
-                                        [1, 0, 0, 0, 0]], dtype=np.uint8)
-    expected_y = [expected_y_identity,
-                  expected_y_flip_h, expected_y_flip_v,
-                  expected_y_transpose, expected_y_transpose_inverse,
-                  expected_y_rotation_90, expected_y_rotation_180,
-                  expected_y_rotation_270]
+    expected_y_flip_h = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y_flip_v = np.array(
+        [
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y_transpose = np.array(
+        [
+            [1, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y_transpose_inverse = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y_rotation_90 = np.array(
+        [
+            [0, 0, 0, 0, 1],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y_rotation_180 = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y_rotation_270 = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [1, 0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
+    expected_y = [
+        expected_y_identity,
+        expected_y_flip_h,
+        expected_y_flip_v,
+        expected_y_transpose,
+        expected_y_transpose_inverse,
+        expected_y_rotation_90,
+        expected_y_rotation_180,
+        expected_y_rotation_270,
+    ]
     augmented_arrays = stack.augment_8_times(x)
     assert isinstance(augmented_arrays, list)
     assert len(augmented_arrays) == len(expected_y)

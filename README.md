@@ -1,11 +1,13 @@
 # Big-FISH
 
 [![PyPI version](https://badge.fury.io/py/big-fish.svg)](https://badge.fury.io/py/big-fish)
-[![Build Status](https://travis-ci.com/fish-quant/big-fish.svg?branch=master)](https://travis-ci.com/fish-quant/big-fish)
+[![Running test](https://github.com/fish-quant/big-fish/actions/workflows/running_test.yml/badge.svg)](https://github.com/fish-quant/big-fish/actions/workflows/running_test.yml)
 [![Documentation Status](https://readthedocs.org/projects/big-fish/badge/?version=stable)](https://big-fish.readthedocs.io/en/latest/?badge=stable)
 [![codecov](https://codecov.io/gh/fish-quant/big-fish/branch/master/graph/badge.svg)](https://codecov.io/gh/fish-quant/big-fish)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-green)](https://github.com/fish-quant/big-fish/blob/master/LICENSE)
 [![Python version](https://img.shields.io/pypi/pyversions/big-fish.svg)](https://pypi.python.org/pypi/big-fish/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 **Big-FISH** is a python package for the analysis of smFISH images. It includes various methods to **analyze microscopy images**, such **spot detection** and **segmentation of cells and nuclei**. The package allows the user represent the extract properties of a cell as coordinates (see figure below). The ultimate goal is to simplify **large scale statistical analysis** and quantification.
 
@@ -28,19 +30,21 @@ Big-FISH requires Python 3.6 or newer. Additionally, it has the following depend
 - mrc (>= 0.1.5)
 
 For segmentation purpose, two additional dependencies can be requested:
-- tensorflow (== 2.3.0)
-- tensorflow-addons (== 0.12.1)
+- tensorflow (>= 2.3.0)
+- tensorflow-addons (>= 0.12.1)
 
 ### Virtual environment
 
-To avoid dependency conflicts, we recommend the the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment.  In a terminal run the command:
+To avoid dependency conflicts, we recommend the use of a dedicated [virtual](https://docs.python.org/3.6/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) environment.  In a terminal run the command:
 
 ```bash
-conda create -n bigfish_env python=3.6
+conda create -n bigfish_env python=X.Y
 source activate bigfish_env
 ```
 
-We recommend two options to then install Big-FISH in your virtual environment.
+With X.Y a valid Python version greater or equal than 3.6. Note that Big-FISH has been tested for Python 3.6, 3.7, 3.8, 3.9 and 3.10.
+
+We then recommend two options to install Big-FISH in your virtual environment: from PyPi or GitHub.
 
 #### Download the package from PyPi
 
@@ -50,9 +54,9 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Big-FIS
 pip install big-fish
 ```
 
-#### Clone package from Github
+#### Clone the package from GitHub
 
-Clone the project's [Github repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
+Clone the project's [GitHub repository](https://github.com/fish-quant/big-fish) and install it manually with the following commands:
 
 ```bash
 git clone git@github.com:fish-quant/big-fish.git
@@ -68,7 +72,7 @@ This package is part of the [FISH-Quant](https://fish-quant.github.io/) framewor
 
 ## Support
 
-If you have any question relative to the repository, please open an [issue](https://github.com/fish-quant/big-fish/issues). You can also contact [Arthur Imbert](mailto:arthur.imbert@mines-paristech.fr) or [Florian Mueller](mailto:muellerf.research@gmail.com).
+If you have any question relative to the repository, please open an [issue](https://github.com/fish-quant/big-fish/issues). You can also contact [Arthur Imbert](mailto:arthur.imbert.pro@gmail.com) or [Florian Mueller](mailto:muellerf.research@gmail.com).
 
 ## Roadmap (suggestion)
 
@@ -91,7 +95,7 @@ git checkout develop
 
 ### Contributing
 
-[Pull requests](https://github.com/fish-quant/big-fish/pulls) are welcome. For major changes, please open an [issue](https://github.com/fish-quant/big-fish/issues) first to discuss what you would like to change.
+[Pull requests](https://github.com/fish-quant/big-fish/pulls) on the `develop` branch are welcome. For major changes, please open an [issue](https://github.com/fish-quant/big-fish/issues) first to discuss what you would like to change.
 
 ### Testing
 
@@ -107,8 +111,23 @@ To perform unit tests, run :
 pytest bigfish
 ```
 
-## Citation
+## Bibtex citation
 
 If you exploit this package for your work, please cite:
 
-> Arthur Imbert, Wei Ouyang, Adham Safieddine, Emeline Coleno, Christophe Zimmer, Edouard Bertrand, Thomas Walter, Florian Mueller. FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis. bioRxiv (2021) https://doi.org/10.1101/2021.07.20.453024
+```bibtex
+@article{Imbert2022,
+    author  = {Imbert, Arthur and Ouyang, Wei and Safieddine, Adham and 
+               Coleno, Emeline and Zimmer, Christophe and 
+               Bertrand, Edouard and Walter, Thomas and Mueller, Florian},
+    doi     = {10.1261/rna.079073.121},
+    journal = {RNA},
+    month   = mar,
+    number  = {6},
+    pages   = {786--795},
+    title   = {{FISH-quant v2: a scalable and modular tool for smFISH image 
+                analysis}},
+    volume  = {28},
+    year    = {2022}
+}
+```

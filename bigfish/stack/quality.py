@@ -14,6 +14,7 @@ from .filter import mean_filter
 
 # ### Focus ###
 
+
 def compute_focus(image, neighborhood_size=31):
     """Helmli and Scherer’s mean method is used as a focus metric.
 
@@ -50,16 +51,28 @@ def compute_focus(image, neighborhood_size=31):
     check_array(
         image,
         ndim=[2, 3],
-        dtype=[np.uint8, np.uint16, np.int32, np.int64,
-               np.float32, np.float64])
+        dtype=[
+            np.uint8,
+            np.uint16,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+        ],
+    )
     check_parameter(neighborhood_size=(int, tuple, list))
-    if (isinstance(neighborhood_size, (tuple, list))
-            and len(neighborhood_size) != 2):
-        raise ValueError("Parameter 'neighborhood_size' should be an integer "
-                         "(to define a square neighborhood) or a sequence of "
-                         "two elements (to define a rectangular "
-                         "neighborhood). Not a sequence with {0} elements."
-                         .format(len(neighborhood_size)))
+    if (
+        isinstance(neighborhood_size, (tuple, list))
+        and len(neighborhood_size) != 2
+    ):
+        raise ValueError(
+            "Parameter 'neighborhood_size' should be an integer "
+            "(to define a square neighborhood) or a sequence of "
+            "two elements (to define a rectangular "
+            "neighborhood). Not a sequence with {0} elements.".format(
+                len(neighborhood_size)
+            )
+        )
 
     # cast image in float if necessary
     if image.dtype in [np.uint8, np.uint16, np.int32, np.int64]:
@@ -136,13 +149,14 @@ def _compute_focus_2d(image_2d, kernel_size):
     ratio_default_1 = np.ones_like(image_2d)
     ratio_default_2 = np.ones_like(image_filtered_mean)
     ratio_1 = np.divide(
-        image_2d, image_filtered_mean,
+        image_2d,
+        image_filtered_mean,
         out=ratio_default_1,
-        where=image_filtered_mean > 0)
+        where=image_filtered_mean > 0,
+    )
     ratio_2 = np.divide(
-        image_filtered_mean, image_2d,
-        out=ratio_default_2,
-        where=image_2d > 0)
+        image_filtered_mean, image_2d, out=ratio_default_2, where=image_2d > 0
+    )
     focus = np.where(image_2d >= image_filtered_mean, ratio_1, ratio_2)
 
     # cast focus dtype (np.float32 or np.float64)

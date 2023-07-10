@@ -5,7 +5,7 @@ Single-cell plot
 
 .. currentmodule:: bigfish.plot
 
-Function to visualize coordinate representation of individual cells:
+Function to visualize coordinate representation of individual cells in 2D:
 
 * :func:`bigfish.plot.plot_cell`
 * :func:`bigfish.plot.plot_cell_coordinates`

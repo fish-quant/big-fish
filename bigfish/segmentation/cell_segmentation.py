@@ -17,6 +17,7 @@ from scipy import ndimage as ndi
 
 import skimage
 from sklearn.utils.fixes import parse_version
+
 if parse_version(skimage.__version__) < parse_version("0.17.0"):
     from skimage.morphology import watershed
 else:
@@ -24,6 +25,7 @@ else:
 
 
 # ### Unet models ###
+
 
 def unet_distance_edge_double():
     """Load a pretrained Unet model to predict foreground and a distance map
@@ -45,12 +47,8 @@ def unet_distance_edge_double():
 
 
 def apply_unet_distance_double(
-        model,
-        nuc,
-        cell,
-        nuc_label,
-        target_size=None,
-        test_time_augmentation=False):
+    model, nuc, cell, nuc_label, target_size=None, test_time_augmentation=False
+):
     """Segment cell with a pretrained model to predict distance map and  use
     it with a watershed algorithm.
 
@@ -83,8 +81,8 @@ def apply_unet_distance_double(
     """
     # check parameters
     stack.check_parameter(
-        target_size=(int, type(None)),
-        test_time_augmentation=bool)
+        target_size=(int, type(None)), test_time_augmentation=bool
+    )
     stack.check_array(nuc, ndim=2, dtype=[np.uint8, np.uint16])
     stack.check_array(cell, ndim=2, dtype=[np.uint8, np.uint16])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
@@ -118,9 +116,11 @@ def apply_unet_distance_double(
     top, bottom = marge_padding[0]
     left, right = marge_padding[1]
     nuc_to_process = np.pad(
-        nuc_to_process, pad_width=marge_padding, mode='symmetric')
+        nuc_to_process, pad_width=marge_padding, mode="symmetric"
+    )
     cell_to_process = np.pad(
-        cell_to_process, pad_width=marge_padding, mode='symmetric')
+        cell_to_process, pad_width=marge_padding, mode="symmetric"
+    )
 
     # standardize and cast cell image
     nuc_to_process = stack.compute_image_standardization(nuc_to_process)
@@ -142,7 +142,6 @@ def apply_unet_distance_double(
     predictions_cell = []
     predictions_distance = []
     for i in range(n_augmentations):
-
         # get images
         nuc_to_process_ = nuc_to_process[i]
         nuc_to_process_ = nuc_to_process_[np.newaxis, :, :, np.newaxis]
@@ -165,14 +164,18 @@ def apply_unet_distance_double(
         if target_size is not None:
             if i in [0, 1, 2, 6]:
                 prediction_cell = stack.resize_image(
-                    prediction_cell, (height, width), "bilinear")
+                    prediction_cell, (height, width), "bilinear"
+                )
                 prediction_distance = stack.resize_image(
-                    prediction_distance, (height, width), "bilinear")
+                    prediction_distance, (height, width), "bilinear"
+                )
             else:
                 prediction_cell = stack.resize_image(
-                    prediction_cell, (width, height), "bilinear")
+                    prediction_cell, (width, height), "bilinear"
+                )
                 prediction_distance = stack.resize_image(
-                    prediction_distance, (width, height), "bilinear")
+                    prediction_distance, (width, height), "bilinear"
+                )
 
         # store predictions
         predictions_cell.append(prediction_cell)
@@ -182,7 +185,8 @@ def apply_unet_distance_double(
     if test_time_augmentation:
         predictions_cell = stack.augment_8_times_reversed(predictions_cell)
         predictions_distance = stack.augment_8_times_reversed(
-            predictions_distance)
+            predictions_distance
+        )
         mean_prediction_cell = np.mean(predictions_cell, axis=0)
         mean_prediction_distance = np.mean(predictions_distance, axis=0)
     else:
@@ -203,17 +207,19 @@ def apply_unet_distance_double(
         label_x_nuc=nuc_label_to_process,
         label_2_cell=mean_prediction_cell,
         label_distance=mean_prediction_distance,
-        compute_nuc_label=False)
+        compute_nuc_label=False,
+    )
 
     return cell_label_pred
 
 
 def from_distance_to_instances(
-        label_x_nuc,
-        label_2_cell,
-        label_distance,
-        nuc_3_classes=False,
-        compute_nuc_label=False):
+    label_x_nuc,
+    label_2_cell,
+    label_distance,
+    nuc_3_classes=False,
+    compute_nuc_label=False,
+):
     """Extract instance labels from a distance map and a binary surface
     prediction with a watershed algorithm.
 
@@ -242,9 +248,7 @@ def from_distance_to_instances(
 
     """
     # check parameters
-    stack.check_parameter(
-        nuc_3_classes=bool,
-        compute_nuc_label=bool)
+    stack.check_parameter(nuc_3_classes=bool, compute_nuc_label=bool)
     stack.check_array(label_x_nuc, ndim=2, dtype=[np.float32, np.int64])
     stack.check_array(label_2_cell, ndim=2, dtype=np.float32)
     stack.check_array(label_distance, ndim=2, dtype=np.uint16)
@@ -256,7 +260,8 @@ def from_distance_to_instances(
         nuc_label = label_instances(mask_nuc)
         nuc_label = nuc_label.astype(np.float64)
         nuc_label = stack.dilation_filter(
-            nuc_label, kernel_shape="disk", kernel_size=1)
+            nuc_label, kernel_shape="disk", kernel_size=1
+        )
         nuc_label = nuc_label.astype(np.int64)
         mask_nuc = nuc_label > 0
     elif not nuc_3_classes and compute_nuc_label:
@@ -281,6 +286,7 @@ def from_distance_to_instances(
 
 
 # ### Watershed ###
+
 
 def cell_watershed(image, nuc_label, threshold, alpha=0.8):
     """Apply watershed algorithm to segment cell instances.
@@ -324,9 +330,8 @@ def cell_watershed(image, nuc_label, threshold, alpha=0.8):
     cell_mask = thresholding(image_2d, threshold)
     cell_mask[nuc_label > 0] = True
     cell_mask = clean_segmentation(
-        cell_mask,
-        small_object_size=5000,
-        fill_holes=True)
+        cell_mask, small_object_size=5000, fill_holes=True
+    )
 
     # segment cells
     cell_label = apply_watershed(relief, nuc_label, cell_mask)
@@ -362,10 +367,7 @@ def get_watershed_relief(image, nuc_label, alpha):
 
     """
     # check parameters
-    stack.check_array(
-        image,
-        ndim=[2, 3],
-        dtype=[np.uint8, np.uint16])
+    stack.check_array(image, ndim=[2, 3], dtype=[np.uint8, np.uint16])
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_parameter(alpha=(int, float))
 
@@ -381,9 +383,8 @@ def get_watershed_relief(image, nuc_label, alpha):
         watershed_relief = image.max() - image
         watershed_relief[nuc_label > 0] = 0
         watershed_relief = np.true_divide(
-            watershed_relief,
-            watershed_relief.max(),
-            dtype=np.float64)
+            watershed_relief, watershed_relief.max(), dtype=np.float64
+        )
         watershed_relief = stack.cast_img_uint16(watershed_relief)
 
     # use distance from the nuclei
@@ -392,9 +393,8 @@ def get_watershed_relief(image, nuc_label, alpha):
         nuc_mask = nuc_label > 0
         watershed_relief = ndi.distance_transform_edt(~nuc_mask)
         watershed_relief = np.true_divide(
-            watershed_relief,
-            watershed_relief.max(),
-            dtype=np.float64)
+            watershed_relief, watershed_relief.max(), dtype=np.float64
+        )
         watershed_relief = stack.cast_img_uint16(watershed_relief)
 
     # use a combination of both previous methods
@@ -409,22 +409,21 @@ def get_watershed_relief(image, nuc_label, alpha):
         relief_pixel = image.max() - image
         relief_pixel[nuc_label > 0] = 0
         relief_pixel = np.true_divide(
-            relief_pixel,
-            relief_pixel.max(),
-            dtype=np.float64)
+            relief_pixel, relief_pixel.max(), dtype=np.float64
+        )
         nuc_mask = nuc_label > 0
         relief_distance = ndi.distance_transform_edt(~nuc_mask)
         relief_distance = np.true_divide(
-            relief_distance,
-            relief_distance.max(),
-            dtype=np.float64)
+            relief_distance, relief_distance.max(), dtype=np.float64
+        )
         watershed_relief = alpha * relief_pixel + (1 - alpha) * relief_distance
         watershed_relief = stack.cast_img_uint16(watershed_relief)
 
     else:
-        raise ValueError("Parameter 'alpha' is wrong. It must be comprised "
-                         "between 0 and 1. Currently 'alpha' is {0}"
-                         .format(alpha))
+        raise ValueError(
+            "Parameter 'alpha' is wrong. It must be comprised "
+            "between 0 and 1. Currently 'alpha' is {0}".format(alpha)
+        )
 
     return watershed_relief
 
@@ -460,7 +459,8 @@ def apply_watershed(watershed_relief, nuc_label, cell_mask):
     stack.check_array(
         watershed_relief,
         ndim=2,
-        dtype=[np.uint8, np.uint16, np.int32, np.int64])
+        dtype=[np.uint8, np.uint16, np.int32, np.int64],
+    )
     stack.check_array(nuc_label, ndim=2, dtype=np.int64)
     stack.check_array(cell_mask, ndim=2, dtype=bool)
 

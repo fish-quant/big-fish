@@ -57,10 +57,16 @@ def augment_2d_function(identity=False):
         return _identity
 
     # randomly choose an operator
-    operations = [_identity,
-                  _flip_h, _flip_v,
-                  _transpose, _transpose_inverse,
-                  _rotation_90, _rotation_180, _rotation_270]
+    operations = [
+        _identity,
+        _flip_h,
+        _flip_v,
+        _transpose,
+        _transpose_inverse,
+        _rotation_90,
+        _rotation_180,
+        _rotation_270,
+    ]
     random_operation = np.random.choice(operations)
 
     return random_operation
@@ -88,10 +94,16 @@ def augment_8_times(image):
     images_augmented = []
 
     # apply all operators
-    operations = [_identity,
-                  _flip_h, _flip_v,
-                  _transpose, _transpose_inverse,
-                  _rotation_90, _rotation_180, _rotation_270]
+    operations = [
+        _identity,
+        _flip_h,
+        _flip_v,
+        _transpose,
+        _transpose_inverse,
+        _rotation_90,
+        _rotation_180,
+        _rotation_270,
+    ]
     for operation in operations:
         augmented_image = operation(image)
         images_augmented.append(augmented_image)
@@ -122,10 +134,16 @@ def augment_8_times_reversed(images_augmented):
     images_original = []
 
     # apply all operators
-    operations = [_identity,
-                  _flip_h, _flip_v,
-                  _transpose, _transpose_inverse,
-                  _rotation_270, _rotation_180, _rotation_90]
+    operations = [
+        _identity,
+        _flip_h,
+        _flip_v,
+        _transpose,
+        _transpose_inverse,
+        _rotation_270,
+        _rotation_180,
+        _rotation_90,
+    ]
     for i, image_augmented in enumerate(images_augmented):
         operation = operations[i]
         image_original = operation(image_augmented)

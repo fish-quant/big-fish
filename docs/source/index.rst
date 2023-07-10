@@ -9,17 +9,21 @@ Big-FISH
 Getting started
 ===============
 
-To avoid dependency conflicts, we recommend the the use of a dedicated
+To avoid dependency conflicts, we recommend the use of a dedicated
 `virtual <https://docs.python.org/3.6/library/venv.html>`_ or `conda
 <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-
-environments.html>`_ environment.  In a terminal run the command:
+environments.html>`_ environment. In a terminal run the command:
 
 .. code-block:: bash
 
-   $ conda create -n bigfish_env python=3.6
+   $ conda create -n bigfish_env python=X.Y
    $ source activate bigfish_env
 
-We recommend two options to then install Big-FISH in your virtual environment.
+With X.Y a valid Python version greater or equal than 3.6. Note that Big-FISH
+is tested only for Python 3.6, 3.7, 3.8 and 3.9.
+
+We then recommend two options to install Big-FISH in your virtual environment:
+from PyPi or GitHub.
 
 Download the package from PyPi
 ------------------------------
@@ -31,10 +35,10 @@ Big-FISH. In a terminal run the command:
 
    $ pip install big-fish
 
-Clone package from Github
+Clone package from GitHub
 -------------------------
 
-Clone the project's `Github repository <https://github.com/fish-quant/big-
+Clone the project's `GitHub repository <https://github.com/fish-quant/big-
 fish>`_ and install it manually with the following commands:
 
 .. code-block:: bash
@@ -58,6 +62,26 @@ quant/big-fish-examples/tree/master/notebooks>`_:
 #. Detect spots.
 #. Extract cell level results.
 #. Analyze coordinates.
+
+To run these notebooks, you will need to clone the notebook repository:
+
+.. code-block:: bash
+
+   $ git clone git@github.com:fish-quant/big-fish-examples.git
+
+Activate your environment and install Big-FISH and Jupyter notebook dependencies inside:
+
+.. code-block:: bash
+
+   $ source activate bigfish_env
+   $ cd big-fish-examples
+   $ pip install .
+
+Then launch the notebooks:
+
+.. code-block:: bash
+
+   $ jupyter notebook
 
 You can also run these example online with `mybinder <https://mybinder.org/v2/
 gh/fish-quant/fq-imjoy/binder?urlpath=git-pull%3Frepo%3Dhttps%253A%252F%252F
@@ -139,7 +163,6 @@ If you exploit this package for your work, please cite:
 
 .. code-block:: text
 
-    Arthur Imbert, Wei Ouyang, Adham Safieddine, Emeline Coleno, Christophe
-    Zimmer, Edouard Bertrand, Thomas Walter, Florian Mueller. FISH-quant v2:
-    a scalable and modular analysis tool for smFISH image analysis. bioRxiv
-    (2021) https://doi.org/10.1101/2021.07.20.453024
+    Imbert A, Ouyang W, Safieddine A, Coleno E, Zimmer C, Bertrand E,
+    Walter T, Mueller F. FISH-quant v2: a scalable and modular tool for smFISH
+    image analysis. RNA (2022). doi: 10.1261/rna.079073.121.
